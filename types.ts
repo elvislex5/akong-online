@@ -15,7 +15,8 @@ export enum GameMode {
   VsAI,
   Simulation,
   OnlineHost,
-  OnlineGuest
+  OnlineGuest,
+  OnlineSpectator // New mode for watchers
 }
 
 export interface GameState {
@@ -51,7 +52,7 @@ export interface AnimationStep {
 }
 
 // Online Messages
-export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED';
+export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE';
 
 export interface OnlineMessage {
   type: OnlineMessageType;
