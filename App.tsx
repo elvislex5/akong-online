@@ -15,7 +15,8 @@ const App: React.FC = () => {
   const latestHandlersRef = useRef<{
       playMove: (idx: number) => void;
       playMoveAnimation: (idx: number, state?: GameState, steps?: AnimationStep[]) => void;
-  }>({ playMove: () => {}, playMoveAnimation: () => {} });
+      assignRole: (connId: string) => void;
+  }>({ playMove: () => {}, playMoveAnimation: () => {}, assignRole: () => {} });
 
   useEffect(() => {
       gameStateRef.current = gameState;
@@ -54,6 +55,8 @@ const App: React.FC = () => {
   const [joinInputId, setJoinInputId] = useState('');
   const [onlineStatus, setOnlineStatus] = useState<string>('');
   const [isGuest, setIsGuest] = useState(false);
+  // Track if a Player 2 has already joined the host
+  const [hasPlayer2, setHasPlayer2] = useState(false);
 
   // Initialize Audio Context
   useEffect(() => {
@@ -234,18 +237,43 @@ const App: React.FC = () => {
       if (gameMode === GameMode.OnlineHost) {
           const nextState = executeMove(currentState, pitIndex);
           const steps = getMoveSteps(currentState, pitIndex);
-          onlineManager.sendMessage(roomId, { type: 'REMOTE_MOVE', payload: { pitIndex, newState: nextState, steps } });
+          // Broadcast to everyone (Player 2 + Spectators)
+          onlineManager.broadcast({ type: 'REMOTE_MOVE', payload: { pitIndex, newState: nextState, steps } });
           playMoveAnimation(pitIndex, nextState, steps);
           return;
       }
 
       playMoveAnimation(pitIndex);
   };
+  
+  // Host logic to assign roles
+  const assignRole = (connId: string) => {
+      if (!hasPlayer2) {
+          // First person becomes Player 2
+          setHasPlayer2(true);
+          onlineManager.sendTo(connId, { type: 'ASSIGN_ROLE', payload: 'PLAYER' });
+          setOnlineStatus("Adversaire connecté !");
+          
+          // Start game for host if not started.
+          // We check gameMode because gameState.status is 'Playing' by default on init.
+          // If we are still in lobby (gameMode is null/undefined), start the game.
+          if (gameMode !== GameMode.OnlineHost) {
+              setTimeout(() => startGame(GameMode.OnlineHost), 500);
+          } else {
+              // If game already running (reconnect?), sync state
+              onlineManager.sendTo(connId, { type: 'SYNC_STATE', payload: gameStateRef.current });
+          }
+      } else {
+          // Subsequent people become Spectators
+          onlineManager.sendTo(connId, { type: 'ASSIGN_ROLE', payload: 'SPECTATOR' });
+          onlineManager.sendTo(connId, { type: 'SYNC_STATE', payload: gameStateRef.current });
+      }
+  };
 
   // Sync Ref for callbacks
   useEffect(() => {
-      latestHandlersRef.current = { playMove, playMoveAnimation };
-  }, [playMove, playMoveAnimation]);
+      latestHandlersRef.current = { playMove, playMoveAnimation, assignRole };
+  }, [playMove, playMoveAnimation, assignRole, hasPlayer2, gameMode]);
 
 
   const handlePitClick = useCallback((pitIndex: number) => {
@@ -258,6 +286,7 @@ const App: React.FC = () => {
     
     if (gameMode === GameMode.OnlineHost && currentState.currentPlayer !== Player.One) return;
     if (gameMode === GameMode.OnlineGuest && currentState.currentPlayer !== Player.Two) return;
+    if (gameMode === GameMode.OnlineSpectator) return;
 
     playMove(pitIndex);
   }, [gameMode, isAnimating, simSpeed, aiPlayer, isSimAuto, roomId]); 
@@ -271,7 +300,7 @@ const App: React.FC = () => {
     initialState.message = mode === GameMode.Simulation ? "Configuration" : "Nouvelle partie";
     
     if (mode === GameMode.OnlineHost) {
-        onlineManager.sendMessage(roomId, { type: 'SYNC_STATE', payload: initialState });
+        onlineManager.broadcast({ type: 'SYNC_STATE', payload: initialState });
     }
 
     setGameState(initialState);
@@ -304,7 +333,7 @@ const App: React.FC = () => {
   const restartGame = () => {
       if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
           if (gameMode === GameMode.OnlineHost) {
-              onlineManager.sendMessage(roomId, { type: 'RESTART' });
+              onlineManager.broadcast({ type: 'RESTART' });
               startGame(GameMode.OnlineHost);
           }
       } else if (gameMode === GameMode.Simulation && simulationInitialState) {
@@ -315,7 +344,7 @@ const App: React.FC = () => {
   };
 
   const exitToMenu = () => {
-    if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
+    if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest || gameMode === GameMode.OnlineSpectator) {
         onlineManager.destroy();
     }
     setGameMode(null);
@@ -325,6 +354,7 @@ const App: React.FC = () => {
     setRoomId('');
     setOnlineStatus('');
     setIsGuest(false);
+    setHasPlayer2(false);
   };
 
   // --- Edit Modal Logic (Simulation) ---
@@ -376,15 +406,17 @@ const App: React.FC = () => {
       try {
           const id = await onlineManager.init();
           setRoomId(id);
-          setOnlineStatus("En attente d'un adversaire...");
+          setOnlineStatus("En attente de joueurs...");
           setIsGuest(false);
+          setHasPlayer2(false);
           
-          onlineManager.onMessage((msg) => {
+          onlineManager.onMessage((msg, senderId) => {
              if (msg.type === 'PLAYER_JOINED') {
-                 setOnlineStatus("Adversaire connecté ! Démarrage...");
-                 setTimeout(() => {
-                     startGame(GameMode.OnlineHost);
-                 }, 1000);
+                 // Assign role to the newcomer. Check both arguments and payload for ID.
+                 const id = senderId || msg.payload?.connectionId;
+                 if (id) {
+                    latestHandlersRef.current.assignRole(id);
+                 }
              }
              else if (msg.type === 'MOVE_INTENT') {
                  // Host receives intent, executes authoritative move
@@ -403,17 +435,26 @@ const App: React.FC = () => {
           await onlineManager.init();
           onlineManager.joinRoom(joinInputId);
           setRoomId(joinInputId);
-          setOnlineStatus("Connexion à l'hôte...");
-          setIsGuest(true);
+          setOnlineStatus("Connexion...");
+          // We don't set isGuest true immediately, we wait for Role Assignment
           
           onlineManager.onMessage((msg) => {
-              if (msg.type === 'SYNC_STATE') {
-                  setOnlineStatus("Connecté !");
-                  setGameMode(GameMode.OnlineGuest);
+              if (msg.type === 'ASSIGN_ROLE') {
+                  if (msg.payload === 'PLAYER') {
+                      setIsGuest(true); // Inverts view
+                      setGameMode(GameMode.OnlineGuest);
+                      setOnlineStatus("Connecté en tant que JOUEUR 2");
+                  } else {
+                      setIsGuest(false); // Spectators see Host view (standard)
+                      setGameMode(GameMode.OnlineSpectator);
+                      setOnlineStatus("Connecté en tant que SPECTATEUR");
+                  }
+              }
+              else if (msg.type === 'SYNC_STATE') {
                   setGameState(msg.payload);
               }
               else if (msg.type === 'REMOTE_MOVE') {
-                  // Guest receives authoritative result + steps
+                  // Received authoritative result + steps
                   const { pitIndex, newState, steps } = msg.payload;
                   latestHandlersRef.current.playMoveAnimation(pitIndex, newState, steps);
               }
@@ -429,16 +470,6 @@ const App: React.FC = () => {
       }
   };
   
-  // Handling Online Message Setup (Moved to handlersRef logic to avoid stale closures)
-  useEffect(() => {
-      // Logic is now handled inline in handleCreateRoom/handleJoinRoom using refs or direct callback binding
-      // The latestHandlersRef is used inside those closures if needed, but since we bind callbacks once, 
-      // we need to ensure those callbacks use the ref.
-      // Actually, handleCreateRoom defines the callback once. 
-      // To ensure safety, we should rely on the ref inside the callback.
-      // Implemented above in handleCreateRoom/handleJoinRoom.
-  }, []);
-
 
   // --- SURRENDER ---
   const handleSurrender = (surrenderingPlayer: Player) => {
@@ -446,9 +477,6 @@ const App: React.FC = () => {
       setGameState(prev => {
           const winner = surrenderingPlayer === Player.One ? Player.Two : Player.One;
           const msg = surrenderingPlayer === Player.One ? "Joueur 1 a abandonné." : "Joueur 2 a abandonné.";
-          
-          // Online: Broadcast surrender or result?
-          // For simplicity in this version, just local end. Real sync would need a SURRENDER msg.
           
           return {
               ...prev,
@@ -471,6 +499,7 @@ const App: React.FC = () => {
             </h1>
             {gameMode === GameMode.OnlineHost && <span className="text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded border border-blue-700">HÔTE</span>}
             {gameMode === GameMode.OnlineGuest && <span className="text-xs bg-purple-900 text-purple-200 px-2 py-1 rounded border border-purple-700">INVITÉ</span>}
+            {gameMode === GameMode.OnlineSpectator && <span className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded border border-gray-500">SPECTATEUR</span>}
         </div>
         
         <div className="flex items-center gap-2">
@@ -487,7 +516,7 @@ const App: React.FC = () => {
             </button>
             
             {/* Surrender Button (Only visible when playing) */}
-            {gameState.status === GameStatus.Playing && gameMode !== GameMode.Simulation && (
+            {gameState.status === GameStatus.Playing && gameMode !== GameMode.Simulation && gameMode !== GameMode.OnlineSpectator && (
                 <button 
                     onClick={() => setShowSurrenderModal(true)}
                     className="p-2 bg-red-900/30 text-red-400 hover:bg-red-900/80 hover:text-white rounded-full transition-colors"

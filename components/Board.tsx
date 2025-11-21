@@ -24,6 +24,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   const isSimulationSetup = gameMode === GameMode.Simulation && status === GameStatus.Setup;
   const isAiMode = gameMode === GameMode.VsAI;
   const isOnline = gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest;
+  const isSpectator = gameMode === GameMode.OnlineSpectator;
   const isSimulationPlaying = gameMode === GameMode.Simulation && status === GameStatus.Playing;
   
   const isPlayerTwoPlayable = isSimulationSetup || 
@@ -46,7 +47,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   const bottomRowIndices = invertView ? [13, 12, 11, 10, 9, 8, 7] : [6, 5, 4, 3, 2, 1, 0];
 
   const handlePitClick = (idx: number) => {
-     if (isAnimating) return;
+     if (isAnimating || isSpectator) return;
      if (isSimulationSetup && onEditPit) {
          onEditPit(idx);
      } else {
@@ -56,6 +57,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
 
   // Labels Logic
   const getTopLabel = () => {
+      if (isSpectator) return 'JOUEUR 2'; // Spectators see generic labels
       if (invertView) {
           // Top is Player 1 (Opponent for Guest)
           if (isOnline) return 'ADVERSAIRE (J1)';
@@ -70,6 +72,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   };
 
   const getBottomLabel = () => {
+      if (isSpectator) return 'JOUEUR 1'; // Spectators see generic labels
       if (invertView) {
           // Bottom is Player 2 (Self for Guest)
           if (isOnline) return 'VOUS (J2)';
@@ -107,10 +110,6 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   // Standard: Left Store = P1, Right Store = P2
   const leftStorePlayer = invertView ? Player.Two : Player.One;
   const rightStorePlayer = invertView ? Player.One : Player.Two;
-
-  // Score styling logic (Active turn highlight)
-  const isLeftActive = currentPlayer === leftStorePlayer;
-  const isRightActive = currentPlayer === rightStorePlayer;
 
   return (
     <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-2 relative gap-2">
@@ -168,14 +167,14 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
                         
                     const isPlayable = (isSimulationSetup || 
                         (isPlayerTwoPlayable && idx >= 7) || 
-                        (isPlayerOnePlayable && idx < 7)) && isMyPit;
+                        (isPlayerOnePlayable && idx < 7)) && isMyPit && !isSpectator;
 
                     return (
                         <Pit 
                             key={idx}
                             pitIndex={idx}
                             seeds={board[idx]}
-                            isOwner={idx < 7} // Helper for visual distinction if needed
+                            isOwner={idx < 7} 
                             isPlayable={!isAnimating && !isSimulationSetup && isPlayable && validation.valid}
                             isEditable={isSimulationSetup}
                             onClick={() => handlePitClick(idx)}
@@ -248,7 +247,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
 
                     const isPlayable = (isSimulationSetup || 
                         (isPlayerTwoPlayable && idx >= 7) || 
-                        (isPlayerOnePlayable && idx < 7)) && isMyPit;
+                        (isPlayerOnePlayable && idx < 7)) && isMyPit && !isSpectator;
 
                     return (
                         <Pit 

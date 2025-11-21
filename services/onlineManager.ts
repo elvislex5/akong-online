@@ -5,8 +5,10 @@ declare const Peer: any;
 
 export class PeerManager {
   private peer: any;
-  private conn: any;
-  private onMessageCallback: ((msg: OnlineMessage) => void) | null = null;
+  // We now store multiple connections (Player 2 + Spectators)
+  private connections: any[] = [];
+  
+  private onMessageCallback: ((msg: OnlineMessage, senderId?: string) => void) | null = null;
   private onDisconnectCallback: (() => void) | null = null;
   
   public myId: string = '';
@@ -16,13 +18,13 @@ export class PeerManager {
   public init(): Promise<string> {
     return new Promise((resolve, reject) => {
         if (this.peer) {
-            this.peer.destroy();
+            this.destroy();
         }
 
         try {
             // Create a new Peer. giving undefined lets the cloud server assign an ID.
             this.peer = new Peer(undefined, {
-                debug: 2
+                debug: 1
             });
 
             this.peer.on('open', (id: string) => {
@@ -38,18 +40,14 @@ export class PeerManager {
 
             this.peer.on('error', (err: any) => {
                 console.error("PeerJS Error:", err);
-                reject(err);
+                // Don't reject if it's just a peer error after init, but handle init errors
+                if (!this.myId) reject(err);
             });
 
         } catch (e) {
             reject(e);
         }
     });
-  }
-
-  // In PeerJS, "Creating a room" is just waiting for someone to connect to myId.
-  public createRoom() {
-      // No-op for PeerJS, just waiting for connection logic setup in init()
   }
 
   // Join a room = Connect to the Host's Peer ID
@@ -61,46 +59,63 @@ export class PeerManager {
   }
 
   private setupConnection(conn: any) {
-      this.conn = conn;
+      // Add to connections list
+      this.connections.push(conn);
 
-      this.conn.on('open', () => {
-          console.log("Connection established!");
-          // If we received a connection (Host), tell the logic someone joined
-          // If we initiated (Guest), this confirms we are in.
+      conn.on('open', () => {
+          console.log("Connection established with " + conn.peer);
           
-          // We simulate the 'PLAYER_JOINED' event for the UI
+          // Notify UI that someone joined, passing their ID
           if (this.onMessageCallback) {
-             // Send a specialized internal message to UI
-             this.onMessageCallback({ type: 'PLAYER_JOINED' }); 
+             // FIX: Pass conn.peer as second argument so Host knows who to reply to
+             this.onMessageCallback({ type: 'PLAYER_JOINED', payload: { connectionId: conn.peer } }, conn.peer); 
           }
       });
 
-      this.conn.on('data', (data: OnlineMessage) => {
+      conn.on('data', (data: OnlineMessage) => {
           if (this.onMessageCallback) {
-              this.onMessageCallback(data);
+              this.onMessageCallback(data, conn.peer);
           }
       });
 
-      this.conn.on('close', () => {
-          console.log("Connection closed");
-          if (this.onDisconnectCallback) this.onDisconnectCallback();
+      conn.on('close', () => {
+          console.log("Connection closed with " + conn.peer);
+          // Remove from list
+          this.connections = this.connections.filter(c => c !== conn);
+          
+          if (this.connections.length === 0 && this.onDisconnectCallback) {
+              this.onDisconnectCallback();
+          }
       });
 
-      this.conn.on('error', (err: any) => {
+      conn.on('error', (err: any) => {
           console.error("Connection Error:", err);
       });
   }
 
-  public sendMessage(roomId: string, msg: OnlineMessage) {
-      // roomId parameter is unused in PeerJS direct connection, but kept for API compatibility
-      if (this.conn && this.conn.open) {
-          this.conn.send(msg);
-      } else {
-          console.warn("Cannot send message, connection not open");
+  // Broadcast to ALL connected peers (Player 2 + Spectators)
+  public broadcast(msg: OnlineMessage) {
+      this.connections.forEach(conn => {
+          if (conn.open) {
+              conn.send(msg);
+          }
+      });
+  }
+
+  // Send to a specific peer (used for assigning roles)
+  public sendTo(connectionId: string, msg: OnlineMessage) {
+      const conn = this.connections.find(c => c.peer === connectionId);
+      if (conn && conn.open) {
+          conn.send(msg);
       }
   }
 
-  public onMessage(cb: (msg: OnlineMessage) => void) {
+  // Legacy support for 1-to-1 calls in App.tsx (maps to broadcast)
+  public sendMessage(dummyRoomId: string, msg: OnlineMessage) {
+      this.broadcast(msg);
+  }
+
+  public onMessage(cb: (msg: OnlineMessage, senderId?: string) => void) {
       this.onMessageCallback = cb;
   }
 
@@ -109,14 +124,13 @@ export class PeerManager {
   }
 
   public destroy() {
-      if (this.conn) {
-          this.conn.close();
-      }
+      this.connections.forEach(c => c.close());
+      this.connections = [];
+      
       if (this.peer) {
           this.peer.destroy();
       }
       this.peer = null;
-      this.conn = null;
   }
 }
 
