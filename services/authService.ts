@@ -56,7 +56,12 @@ export async function getCurrentSession(): Promise<Session | null> {
 // ============================================
 export async function getCurrentUser(): Promise<User | null> {
   const { data, error } = await supabase.auth.getUser();
-  if (error) throw error;
+
+  // Auth session missing is not an error - it just means user is not logged in
+  if (error && error.message !== 'Auth session missing!') {
+    console.error('Error getting user:', error);
+  }
+
   return data.user;
 }
 

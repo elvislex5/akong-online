@@ -537,9 +537,29 @@ const App: React.FC = () => {
   };
 
 
+  // Show loading screen while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth screen if not authenticated
+  if (!isAuthenticated) {
+    return <AuthScreen onAuthSuccess={() => {
+      console.log('Authentication successful');
+    }} />;
+  }
+
+  // Show game only if authenticated
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans selection:bg-amber-500 selection:text-white overflow-x-hidden">
-      
+
       {/* Header */}
       <div className="p-4 flex justify-between items-center bg-gray-800 border-b border-gray-700 shadow-md relative z-30">
         <div className="flex items-center gap-3">
@@ -954,14 +974,6 @@ const App: React.FC = () => {
             setShowProfile(false);
           }}
         />
-      )}
-
-      {/* Authentication Screen - Show if not authenticated */}
-      {!loading && !isAuthenticated && (
-        <AuthScreen onAuthSuccess={() => {
-          // Auth success callback - profile will be loaded by useAuth hook
-          console.log('Authentication successful');
-        }} />
       )}
 
     </div>

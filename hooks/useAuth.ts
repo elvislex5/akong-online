@@ -18,12 +18,14 @@ export function useAuth() {
     const loadUser = async () => {
       try {
         const currentUser = await getCurrentAuthUser();
+        console.log('[useAuth] Current user:', currentUser);
         setAuthUser(currentUser);
         setUser(currentUser ? { id: currentUser.id, email: currentUser.email } as User : null);
       } catch (err) {
-        console.error('Error loading user:', err);
+        console.error('[useAuth] Error loading user:', err);
         setError(err instanceof Error ? err.message : 'Failed to load user');
       } finally {
+        console.log('[useAuth] Loading complete, setting loading to false');
         setLoading(false);
       }
     };
