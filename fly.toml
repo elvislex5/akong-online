@@ -1,48 +1,22 @@
-# Fly.io configuration for Akong Socket.io Server
-# This deploys ONLY the backend server (server.js)
+# fly.toml app configuration file generated for akong-online on 2025-11-21T11:05:16Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "akong-server"  # Change this to your desired app name
-primary_region = "cdg"  # Paris - change to your preferred region
+app = 'akong-online'
+primary_region = 'fra'
 
 [build]
-  # Use Dockerfile for building
-
-[env]
-  PORT = "8080"
 
 [http_service]
-  internal_port = 8080
+  internal_port = 80
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
-  processes = ["app"]
+  processes = ['app']
 
-[[services]]
-  protocol = "tcp"
-  internal_port = 8080
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-    force_https = true
-
-  [[services.ports]]
-    port = 443
-    handlers = ["http", "tls"]
-
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 1000
-    soft_limit = 1000
-
-  [[services.tcp_checks]]
-    interval = "15s"
-    timeout = "2s"
-    grace_period = "5s"
-
-# VM Resources
 [[vm]]
-  cpu_kind = "shared"
+  cpu_kind = 'shared'
   cpus = 1
   memory_mb = 256
