@@ -1,123 +1,157 @@
-
 import { OnlineMessage } from '../types';
+import { io, Socket } from 'socket.io-client';
 
-declare const Peer: any;
-
-export class PeerManager {
-  private peer: any;
-  private conn: any;
+export class SocketManager {
+  private socket: Socket | null = null;
   private onMessageCallback: ((msg: OnlineMessage) => void) | null = null;
   private onDisconnectCallback: (() => void) | null = null;
-  
+
   public myId: string = '';
+  private currentRoomId: string = '';
 
   constructor() {}
 
   public init(): Promise<string> {
     return new Promise((resolve, reject) => {
-        if (this.peer) {
-            this.peer.destroy();
-        }
+      try {
+        // Connect to Socket.io server
+        // Uses environment variable in production, localhost in development
+        const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3002';
 
-        try {
-            // Create a new Peer. giving undefined lets the cloud server assign an ID.
-            this.peer = new Peer(undefined, {
-                debug: 2
-            });
+        this.socket = io(serverUrl, {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5
+        });
 
-            this.peer.on('open', (id: string) => {
-                console.log('My Peer ID is: ' + id);
-                this.myId = id;
-                resolve(id);
-            });
+        this.socket.on('connect', () => {
+          console.log('Connected to Socket.io server:', this.socket?.id);
+          this.myId = this.socket?.id || '';
 
-            this.peer.on('connection', (conn: any) => {
-                console.log("Incoming connection form:", conn.peer);
-                this.setupConnection(conn);
-            });
+          // Set up event listeners
+          this.setupEventListeners();
 
-            this.peer.on('error', (err: any) => {
-                console.error("PeerJS Error:", err);
-                reject(err);
-            });
+          resolve(this.myId);
+        });
 
-        } catch (e) {
-            reject(e);
-        }
+        this.socket.on('connect_error', (error) => {
+          console.error('Connection error:', error);
+          reject(new Error('Impossible de se connecter au serveur. Assurez-vous que le serveur Socket.io est démarré.'));
+        });
+
+      } catch (e) {
+        reject(e);
+      }
     });
   }
 
-  // In PeerJS, "Creating a room" is just waiting for someone to connect to myId.
-  public createRoom() {
-      // No-op for PeerJS, just waiting for connection logic setup in init()
+  private setupEventListeners() {
+    if (!this.socket) return;
+
+    // Listen for game events from other players
+    this.socket.on('game_event', (data: { type: string, payload: any }) => {
+      if (this.onMessageCallback) {
+        this.onMessageCallback({ type: data.type as any, payload: data.payload });
+      }
+    });
+
+    // Listen for player joined event
+    this.socket.on('player_joined', () => {
+      console.log('A player joined the room');
+      if (this.onMessageCallback) {
+        this.onMessageCallback({ type: 'PLAYER_JOINED' });
+      }
+    });
+
+    // Listen for room creation confirmation
+    this.socket.on('room_created', (roomId: string) => {
+      console.log('Room created:', roomId);
+      this.currentRoomId = roomId;
+    });
+
+    // Listen for errors
+    this.socket.on('error', (message: string) => {
+      console.error('Server error:', message);
+    });
+
+    // Listen for disconnect
+    this.socket.on('disconnect', (reason) => {
+      console.log('Disconnected from server:', reason);
+      if (this.onDisconnectCallback) {
+        this.onDisconnectCallback();
+      }
+    });
   }
 
-  // Join a room = Connect to the Host's Peer ID
-  public joinRoom(hostId: string) {
-      if (!this.peer) return;
-      console.log("Connecting to host:", hostId);
-      const conn = this.peer.connect(hostId);
-      this.setupConnection(conn);
+  // Create a room and return the room ID
+  public createRoom(): string {
+    if (!this.socket) {
+      console.error('Socket not initialized');
+      return '';
+    }
+
+    // Generate a simple 6-character room ID
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.currentRoomId = roomId;
+
+    this.socket.emit('create_room', roomId);
+    console.log('Creating room:', roomId);
+
+    return roomId;
   }
 
-  private setupConnection(conn: any) {
-      this.conn = conn;
+  // Join an existing room
+  public joinRoom(roomId: string) {
+    if (!this.socket) {
+      console.error('Socket not initialized');
+      return;
+    }
 
-      this.conn.on('open', () => {
-          console.log("Connection established!");
-          // If we received a connection (Host), tell the logic someone joined
-          // If we initiated (Guest), this confirms we are in.
-          
-          // We simulate the 'PLAYER_JOINED' event for the UI
-          if (this.onMessageCallback) {
-             // Send a specialized internal message to UI
-             this.onMessageCallback({ type: 'PLAYER_JOINED' }); 
-          }
-      });
-
-      this.conn.on('data', (data: OnlineMessage) => {
-          if (this.onMessageCallback) {
-              this.onMessageCallback(data);
-          }
-      });
-
-      this.conn.on('close', () => {
-          console.log("Connection closed");
-          if (this.onDisconnectCallback) this.onDisconnectCallback();
-      });
-
-      this.conn.on('error', (err: any) => {
-          console.error("Connection Error:", err);
-      });
+    this.currentRoomId = roomId;
+    this.socket.emit('join_room', roomId);
+    console.log('Joining room:', roomId);
   }
 
+  // Send a message to all players in the room
   public sendMessage(roomId: string, msg: OnlineMessage) {
-      // roomId parameter is unused in PeerJS direct connection, but kept for API compatibility
-      if (this.conn && this.conn.open) {
-          this.conn.send(msg);
-      } else {
-          console.warn("Cannot send message, connection not open");
-      }
+    if (!this.socket || !this.socket.connected) {
+      console.warn('Cannot send message, socket not connected');
+      return;
+    }
+
+    this.socket.emit('game_event', {
+      roomId: roomId || this.currentRoomId,
+      type: msg.type,
+      payload: msg.payload
+    });
   }
 
+  // Register callback for incoming messages
   public onMessage(cb: (msg: OnlineMessage) => void) {
-      this.onMessageCallback = cb;
+    this.onMessageCallback = cb;
   }
 
+  // Register callback for disconnect
   public onDisconnect(cb: () => void) {
-      this.onDisconnectCallback = cb;
+    this.onDisconnectCallback = cb;
   }
 
+  // Clean up and disconnect
   public destroy() {
-      if (this.conn) {
-          this.conn.close();
-      }
-      if (this.peer) {
-          this.peer.destroy();
-      }
-      this.peer = null;
-      this.conn = null;
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    this.currentRoomId = '';
+    this.myId = '';
+  }
+
+  // Check if connected
+  public isConnected(): boolean {
+    return this.socket?.connected || false;
   }
 }
 
-export const onlineManager = new PeerManager();
+// Export singleton instance
+export const onlineManager = new SocketManager();

@@ -374,11 +374,10 @@ const App: React.FC = () => {
   const handleCreateRoom = async () => {
       setMenuStep('online_lobby');
       try {
-          const id = await onlineManager.init();
-          setRoomId(id);
-          setOnlineStatus("En attente d'un adversaire...");
-          setIsGuest(false);
-          
+          // Connect to Socket.io server first
+          await onlineManager.init();
+
+          // Set up message handlers before creating room
           onlineManager.onMessage((msg) => {
              if (msg.type === 'PLAYER_JOINED') {
                  setOnlineStatus("Adversaire connecté ! Démarrage...");
@@ -392,6 +391,12 @@ const App: React.FC = () => {
              }
           });
 
+          // Create room and get room ID
+          const roomId = onlineManager.createRoom();
+          setRoomId(roomId);
+          setOnlineStatus("En attente d'un adversaire...");
+          setIsGuest(false);
+
       } catch (e) {
           setOnlineStatus("Erreur création: " + e);
       }
@@ -400,12 +405,10 @@ const App: React.FC = () => {
   const handleJoinRoom = async () => {
       if (!joinInputId) return;
       try {
+          // Connect to Socket.io server first
           await onlineManager.init();
-          onlineManager.joinRoom(joinInputId);
-          setRoomId(joinInputId);
-          setOnlineStatus("Connexion à l'hôte...");
-          setIsGuest(true);
-          
+
+          // Set up message handlers before joining room
           onlineManager.onMessage((msg) => {
               if (msg.type === 'SYNC_STATE') {
                   setOnlineStatus("Connecté !");
@@ -423,6 +426,12 @@ const App: React.FC = () => {
                   setIsAnimating(false);
               }
           });
+
+          // Join the room
+          onlineManager.joinRoom(joinInputId.toUpperCase());
+          setRoomId(joinInputId.toUpperCase());
+          setOnlineStatus("Connexion à l'hôte...");
+          setIsGuest(true);
 
       } catch (e) {
           setOnlineStatus("Erreur connexion: " + e);

@@ -1,0 +1,35 @@
+# Don't copy these to Docker image
+node_modules
+npm-debug.log
+.git
+.gitignore
+README.md
+.env
+.env.*
+dist
+.vscode
+.idea
+
+# Frontend files (not needed for backend server)
+src
+components
+services
+public
+index.html
+index.tsx
+App.tsx
+types.ts
+vite.config.ts
+tsconfig.json
+*.tsx
+*.ts
+!server.js
+
+# Build artifacts
+dist-ssr
+*.local
+
+# Documentation
+CLAUDE.md
+DEPLOYMENT.md
+metadata.json
