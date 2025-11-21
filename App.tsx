@@ -6,10 +6,26 @@ import { GameState, GameStatus, Player, GameMode, OnlineMessage, AnimationStep }
 import { getBestMoveIterative } from './services/ai';
 import { audioService } from './services/audioService';
 import { onlineManager } from './services/onlineManager';
+import { useAuth } from './hooks/useAuth';
+import AuthScreen from './components/auth/AuthScreen';
+import ProfilePage from './components/auth/ProfilePage';
+import type { Profile } from './services/supabase';
 
 const App: React.FC = () => {
+  // Authentication
+  const { user, authUser, profile, loading, isAuthenticated } = useAuth();
+  const [showProfile, setShowProfile] = useState(false);
+  const [userProfile, setUserProfile] = useState<Profile | null>(null);
+
+  // Update profile when auth profile changes
+  useEffect(() => {
+    if (profile) {
+      setUserProfile(profile);
+    }
+  }, [profile]);
+
   const [gameState, setGameState] = useState<GameState>(createInitialState());
-  
+
   // REF CORRECTION: Keep a reference to the latest state to access it inside async callbacks/events
   const gameStateRef = useRef(gameState);
   const latestHandlersRef = useRef<{
@@ -534,8 +550,21 @@ const App: React.FC = () => {
             {gameMode === GameMode.OnlineGuest && <span className="text-xs bg-purple-900 text-purple-200 px-2 py-1 rounded border border-purple-700">INVITÉ</span>}
             {gameMode === GameMode.OnlineSpectator && <span className="text-xs bg-gray-700 text-gray-200 px-2 py-1 rounded border border-gray-500">SPECTATEUR</span>}
         </div>
-        
+
         <div className="flex items-center gap-2">
+            {/* Profile Button */}
+            {user && userProfile && (
+              <button
+                onClick={() => setShowProfile(true)}
+                className="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white rounded-full text-xs font-bold border border-amber-500 transition-all flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                {userProfile.username}
+              </button>
+            )}
+
             <button onClick={() => setShowRules(true)} className="px-3 py-1.5 bg-amber-900/50 hover:bg-amber-900 text-amber-200 rounded-full text-xs font-bold border border-amber-700 transition-colors flex items-center gap-1">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 RÈGLES
@@ -891,7 +920,7 @@ const App: React.FC = () => {
               <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-600 text-center">
                   <h3 className="text-xl font-bold mb-2 text-white">Abandonner la partie ?</h3>
                   <p className="text-gray-400 mb-6 text-sm">L'adversaire sera déclaré vainqueur.</p>
-                  
+
                   {gameMode === GameMode.LocalMultiplayer ? (
                       <div className="flex flex-col gap-2">
                           <button onClick={() => handleSurrender(Player.One)} className="w-full py-3 rounded-xl bg-blue-900/50 text-blue-200 hover:bg-blue-900 font-bold border border-blue-800">
@@ -913,6 +942,26 @@ const App: React.FC = () => {
                   )}
               </div>
           </div>
+      )}
+
+      {/* Profile Modal */}
+      {showProfile && userProfile && (
+        <ProfilePage
+          profile={userProfile}
+          onClose={() => setShowProfile(false)}
+          onProfileUpdated={(updatedProfile) => {
+            setUserProfile(updatedProfile);
+            setShowProfile(false);
+          }}
+        />
+      )}
+
+      {/* Authentication Screen - Show if not authenticated */}
+      {!loading && !isAuthenticated && (
+        <AuthScreen onAuthSuccess={() => {
+          // Auth success callback - profile will be loaded by useAuth hook
+          console.log('Authentication successful');
+        }} />
       )}
 
     </div>
