@@ -209,9 +209,16 @@ const App: React.FC = () => {
         await wait(200);
         setAnimHand({ pitIndex: null, seedCount: 0 });
         setGameState(finalState);
-        
-        if (finalState.status === GameStatus.Finished && !victorySoundPlayed) {
-            audioService.playWin();
+
+        // If game finished in online mode, broadcast the final state to ensure sync
+        if (finalState.status === GameStatus.Finished) {
+            if (!victorySoundPlayed) {
+                audioService.playWin();
+            }
+            // Broadcast final state if we're the host
+            if (gameMode === GameMode.OnlineHost) {
+                onlineManager.broadcast({ type: 'GAME_ENDED', payload: finalState });
+            }
         }
 
       } catch (error) {
@@ -410,8 +417,8 @@ const App: React.FC = () => {
           // Set up message handlers before creating room
           onlineManager.onMessage((msg) => {
              if (msg.type === 'PLAYER_JOINED') {
-                 // Assign role to the newcomer. Check both arguments and payload for ID.
-                 const id = senderId || msg.payload?.connectionId;
+                 // Assign role to the newcomer using the connectionId from the payload
+                 const id = msg.payload?.connectionId;
                  if (id) {
                     latestHandlersRef.current.assignRole(id);
                  }
@@ -419,6 +426,11 @@ const App: React.FC = () => {
              else if (msg.type === 'MOVE_INTENT') {
                  // Host receives intent, executes authoritative move
                  latestHandlersRef.current.playMove(msg.payload.pitIndex);
+             }
+             else if (msg.type === 'GAME_ENDED') {
+                 // Receive surrender or game end from guest
+                 setGameState(msg.payload);
+                 audioService.playWin();
              }
           });
 
@@ -465,6 +477,11 @@ const App: React.FC = () => {
                   setAnimHand({ pitIndex: null, seedCount: 0 });
                   setIsAnimating(false);
               }
+              else if (msg.type === 'GAME_ENDED') {
+                  // Receive final game state with winner
+                  setGameState(msg.payload);
+                  audioService.playWin();
+              }
           });
 
           // Join the room
@@ -482,17 +499,25 @@ const App: React.FC = () => {
   // --- SURRENDER ---
   const handleSurrender = (surrenderingPlayer: Player) => {
       setShowSurrenderModal(false);
-      setGameState(prev => {
-          const winner = surrenderingPlayer === Player.One ? Player.Two : Player.One;
-          const msg = surrenderingPlayer === Player.One ? "Joueur 1 a abandonné." : "Joueur 2 a abandonné.";
-          
-          return {
-              ...prev,
-              status: GameStatus.Finished,
-              winner: winner,
-              message: msg
-          };
-      });
+
+      const winner = surrenderingPlayer === Player.One ? Player.Two : Player.One;
+      const msg = surrenderingPlayer === Player.One ? "Joueur 1 a abandonné." : "Joueur 2 a abandonné.";
+
+      const newState: GameState = {
+          ...gameStateRef.current,
+          status: GameStatus.Finished,
+          winner: winner,
+          message: msg
+      };
+
+      setGameState(newState);
+
+      // Broadcast surrender to other players in online mode
+      if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
+          onlineManager.broadcast({ type: 'GAME_ENDED', payload: newState });
+      }
+
+      audioService.playWin();
   };
 
 
@@ -523,8 +548,8 @@ const App: React.FC = () => {
                 )}
             </button>
             
-            {/* Surrender Button (Only visible when playing) */}
-            {gameState.status === GameStatus.Playing && gameMode !== GameMode.Simulation && gameMode !== GameMode.OnlineSpectator && (
+            {/* Surrender Button (Only visible when playing AND a game mode is active) */}
+            {gameState.status === GameStatus.Playing && gameMode !== null && gameMode !== GameMode.Simulation && gameMode !== GameMode.OnlineSpectator && (
                 <button 
                     onClick={() => setShowSurrenderModal(true)}
                     className="p-2 bg-red-900/30 text-red-400 hover:bg-red-900/80 hover:text-white rounded-full transition-colors"

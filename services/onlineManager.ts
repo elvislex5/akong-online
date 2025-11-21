@@ -16,7 +16,7 @@ export class SocketManager {
       try {
         // Connect to Socket.io server
         // Uses environment variable in production, localhost in development
-        const serverUrl = import.meta.env.VITE_SOCKET_SERVER_URL || 'http://localhost:3002';
+        const serverUrl = (import.meta as any).env?.VITE_SOCKET_SERVER_URL || '';
 
         this.socket = io(serverUrl, {
           transports: ['websocket', 'polling'],
@@ -57,10 +57,10 @@ export class SocketManager {
     });
 
     // Listen for player joined event
-    this.socket.on('player_joined', () => {
-      console.log('A player joined the room');
+    this.socket.on('player_joined', (data: { connectionId: string }) => {
+      console.log('A player joined the room:', data.connectionId);
       if (this.onMessageCallback) {
-        this.onMessageCallback({ type: 'PLAYER_JOINED' });
+        this.onMessageCallback({ type: 'PLAYER_JOINED', payload: { connectionId: data.connectionId } });
       }
     });
 
@@ -122,6 +122,25 @@ export class SocketManager {
 
     this.socket.emit('game_event', {
       roomId: roomId || this.currentRoomId,
+      type: msg.type,
+      payload: msg.payload
+    });
+  }
+
+  // Broadcast a message to all players in the current room
+  public broadcast(msg: OnlineMessage) {
+    this.sendMessage(this.currentRoomId, msg);
+  }
+
+  // Send a message to a specific player (by socket ID)
+  public sendTo(socketId: string, msg: OnlineMessage) {
+    if (!this.socket || !this.socket.connected) {
+      console.warn('Cannot send message, socket not connected');
+      return;
+    }
+
+    this.socket.emit('direct_message', {
+      targetSocketId: socketId,
       type: msg.type,
       payload: msg.payload
     });

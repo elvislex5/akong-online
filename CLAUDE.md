@@ -35,13 +35,13 @@ GEMINI_API_KEY=your_api_key_here
 
 ### Online Multiplayer Server
 
-The optional Socket.io server for online play is in `server.js`. To run it:
+The Socket.io server for online play is in `server.js`. To run it:
 
 ```bash
-node server.js          # Runs on port 3001 by default
+node server.js          # Runs on port 3002 by default (configurable via PORT env var)
 ```
 
-Note: The server requires `express`, `socket.io`, and `cors` packages which are not in package.json. If implementing online features, install them separately.
+Note: The required packages (`express`, `socket.io`, `cors`) are now included in package.json.
 
 ## Architecture
 
@@ -120,11 +120,12 @@ Web Audio API implementation:
 
 ### Online Multiplayer (`services/onlineManager.ts`)
 
-Uses PeerJS for WebRTC peer-to-peer connection:
+Uses Socket.io client connecting to a separate Socket.io server (server.js):
 - **Host-authoritative**: Host executes moves and broadcasts results
 - **Guest sends intents**: Guest sends `MOVE_INTENT`, receives `REMOTE_MOVE` with new state + animation steps
 - **Synchronization**: Full state sync on connection via `SYNC_STATE`
 - Room IDs generated client-side (6-char random strings)
+- Configured via `VITE_SOCKET_SERVER_URL` environment variable (defaults to localhost in development)
 
 **Message types:** `SYNC_STATE`, `MOVE_INTENT`, `REMOTE_MOVE`, `RESTART`, `PLAYER_JOINED`
 
@@ -183,10 +184,11 @@ This is invaluable for debugging edge cases like solidarity feeding, capture cha
 
 ## Known Quirks
 
-- Online multiplayer expects a separate Socket.io server (server.js) but current implementation uses PeerJS client-side (check onlineManager.ts)
-- README mentions Gemini API but it's not integrated in the game logic
+- README mentions Gemini API in .env setup but it's not actively integrated in the game logic
 - The inversion logic for online guest view (`invertView` prop) affects visual rendering only, not game logic indices
 - Audio initialization requires user interaction - first click enables sound
+- Vite dev server runs on port 3000 (vite.config.ts:9), but README.md incorrectly states 3001
+- Socket.io server defaults to port 3002 (server.js:56) unless PORT env var is set
 
 ## Code Style Notes
 
