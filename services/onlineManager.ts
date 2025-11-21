@@ -24,7 +24,13 @@ export class PeerManager {
         try {
             // Create a new Peer. giving undefined lets the cloud server assign an ID.
             this.peer = new Peer(undefined, {
-                debug: 1
+                debug: 1,
+                config: {
+                    'iceServers': [
+                        { url: 'stun:stun.l.google.com:19302' },
+                        { url: 'stun:stun1.l.google.com:19302' },
+                    ]
+                }
             });
 
             this.peer.on('open', (id: string) => {
@@ -38,10 +44,25 @@ export class PeerManager {
                 this.setupConnection(conn);
             });
 
+            // ROBUSTNESS: Handle signaling server disconnection
+            this.peer.on('disconnected', () => {
+                console.warn('Peer disconnected from server. Attempting reconnect...');
+                // Workaround: Reconnect needs a small delay and check if not destroyed
+                setTimeout(() => {
+                     if (this.peer && !this.peer.destroyed) {
+                        this.peer.reconnect();
+                     }
+                }, 1000);
+            });
+
             this.peer.on('error', (err: any) => {
                 console.error("PeerJS Error:", err);
-                // Don't reject if it's just a peer error after init, but handle init errors
-                if (!this.myId) reject(err);
+                // Only reject promise if we failed during initialization
+                if (!this.myId) {
+                     reject(err);
+                }
+                // Ignore 'lost connection' errors if they happen after init, 
+                // as the 'disconnected' handler above will try to fix it.
             });
 
         } catch (e) {
@@ -65,9 +86,8 @@ export class PeerManager {
       conn.on('open', () => {
           console.log("Connection established with " + conn.peer);
           
-          // Notify UI that someone joined, passing their ID
+          // Notify UI that someone joined, passing their ID explicitly
           if (this.onMessageCallback) {
-             // FIX: Pass conn.peer as second argument so Host knows who to reply to
              this.onMessageCallback({ type: 'PLAYER_JOINED', payload: { connectionId: conn.peer } }, conn.peer); 
           }
       });
@@ -131,6 +151,7 @@ export class PeerManager {
           this.peer.destroy();
       }
       this.peer = null;
+      this.myId = '';
   }
 }
 
