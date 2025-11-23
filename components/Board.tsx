@@ -156,7 +156,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
       </div>
 
       {/* THE BOARD CONTAINER - Dark Industrial Style */}
-      <div className="relative bg-gray-800 p-2 sm:p-4 md:p-6 rounded-3xl sm:rounded-[40px] border-2 sm:border-4 border-gray-600 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] w-full select-none overflow-hidden max-w-[98vw] sm:max-w-4xl lg:max-w-5xl">
+      <div className="relative bg-gray-800 p-2 sm:p-4 md:p-6 rounded-3xl sm:rounded-[40px] border-2 sm:border-4 border-gray-600 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] w-full select-none overflow-hidden max-w-[98vw] sm:max-w-4xl lg:max-w-5xl scale-[0.75] sm:scale-100 origin-center">
           
           {/* Carbon Fiber Texture */}
           <div className="absolute inset-0 opacity-20 pointer-events-none" 
