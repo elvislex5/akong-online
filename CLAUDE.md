@@ -20,7 +20,8 @@ The game involves capturing seeds by strategic distribution around a 14-pit boar
 
 **Current Status:**
 - Backend Phase 1 (Authentication & Profiles): ✅ Complete
-- Backend Phase 2 (Robust Online Multiplayer): 🚧 Infrastructure Complete, UI Integration Pending
+- Backend Phase 2 (Robust Online Multiplayer): ✅ Complete (23 Nov 2025)
+- Backend Phase 3 (Social & Matchmaking): 📅 Next
 - Frontend Phase 1 (Landing Page): ✅ Complete
 - Frontend Phase 2 (Navigation & Routing): ✅ Complete
 - Frontend Phase 3 (Mobile Responsivity): ✅ Complete
@@ -242,7 +243,7 @@ Web Audio API implementation:
 
 ### Online Multiplayer Architecture
 
-**Phase 2 Infrastructure (✅ Complete):**
+**Phase 2 Implementation (✅ Complete - 23 Nov 2025):**
 
 **Client (`services/onlineManager.ts`):**
 - Socket.io client with JWT authentication
@@ -266,15 +267,24 @@ Web Audio API implementation:
 - Spectator management: `addSpectator()`, `removeSpectator()`, `getSpectators()`
 - Realtime subscriptions: `subscribeToRoom()`, `subscribeToSpectators()`
 
+**UI Integration (`hooks/useOnlineGame.ts`):**
+- Custom React hook encapsulating all Phase 2 logic
+- Handles room creation/joining with DB persistence
+- Automatic state saving after each move
+- Reconnection handling with toast notifications
+- Spectator mode UI (badge, disabled controls)
+- Abandon game functionality with confirmation modal
+
 **Game Flow:**
 1. Host creates room → Saved to `game_rooms` table (status: 'waiting')
 2. Guest joins → Room status updated to 'playing'
-3. Each move → Host saves `game_state` JSONB to database
+3. Each move → Host saves `game_state` JSONB to database via `useOnlineGame.saveGameStateToDB()`
 4. Disconnect → Room persists in DB
-5. Reconnect → State restored from `game_rooms.game_state`
-6. Game ends → Room status set to 'finished' or 'abandoned'
+5. Reconnect → State restored from `game_rooms.game_state` automatically
+6. Game ends → Room status set to 'finished' or 'abandoned' via `finishGameInDB()`
+7. 3rd+ player → Joins as spectator automatically
 
-**Phase 2 Status:** Infrastructure complete, awaiting UI integration in `App.tsx` (see PHASE2_IMPLEMENTATION.md)
+**Phase 2 Status:** ✅ Fully complete with UI integration (see PHASE2_IMPLEMENTATION.md for details)
 
 ## Game Modes
 
@@ -412,42 +422,57 @@ victoryConfetti(); // Fires on victory
 - **Profile stats**: Database schema includes games_played/won/lost/drawn and ELO fields, but these aren't auto-updated yet (Phase 3+)
 - **Game name**: Official name is "AKÔNG" (with circumflex) - ensure consistency across all UI
 
-## Working with Phase 2 (Robust Online Multiplayer)
+## Working with Phase 2 (Robust Online Multiplayer) ✅ Complete
 
 **Quick Reference:** See `PHASE2_IMPLEMENTATION.md` for complete documentation.
 
-### Key Files Created
+### Key Files
+- `hooks/useOnlineGame.ts` - Main Phase 2 logic (custom hook)
 - `services/roomService.ts` - Database operations for persistent rooms
 - `supabase/migrations/002_game_rooms.sql` - Database schema
 - `.env.example.server` - Server environment template
-- Updated `server.js` - JWT auth + DB persistence
-- Updated `services/onlineManager.ts` - Reconnection support
+- `server.js` - JWT auth + DB persistence
+- `services/onlineManager.ts` - Socket.io client with reconnection
 
-### Using Room Service
+### Using the Online Game Hook
+
+The Phase 2 functionality is accessed via the `useOnlineGame` custom hook:
 
 ```typescript
-import { createGameRoom, joinGameRoom, updateGameState } from './services/roomService';
+import { useOnlineGame } from './hooks/useOnlineGame';
 
-// Create a persistent room
-const room = await createGameRoom(userId, roomCode);
+// In a component (see App.tsx for full example)
+const onlineGame = useOnlineGame({
+  user,
+  profile,
+  gameMode,
+  gameStateRef,
+  latestHandlersRef,
+  onGameStateUpdate: (state) => setGameState(state),
+  onGameModeUpdate: (mode) => setGameMode(mode),
+  onGameEnded: (state) => handleGameEnd(state),
+});
 
-// Join an existing room
-await joinGameRoom(roomCode, guestId);
+// Create room
+const { roomCode } = await onlineGame.handleCreateRoom();
 
-// Save game state after each move (host only)
-await updateGameState(room.id, gameState);
+// Join room
+await onlineGame.handleJoinRoom();
 
-// Handle game completion
-await finishGame(room.id, winnerId); // or null for draw
+// Save state after each move (automatic)
+onlineGame.saveGameStateToDB(gameState);
+
+// Finish game
+await onlineGame.finishGameInDB(winnerId);
 ```
 
-### Integration Checklist (Pending)
-- [ ] Modify `App.tsx` `startGame()` to call `createGameRoom()`
-- [ ] Update room join logic to call `joinGameRoom()`
-- [ ] Add `updateGameState()` after each move in online mode
-- [ ] Implement reconnection UI with `onlineManager.onReconnect()`
-- [ ] Add spectator mode UI components
-- [ ] Implement abandon/timeout detection
+### Integration Complete ✅
+- ✅ Room creation with DB persistence (`handleCreateRoom`)
+- ✅ Room joining with DB persistence (`handleJoinRoom`)
+- ✅ Automatic state saving after each move
+- ✅ Reconnection UI with toast notifications
+- ✅ Spectator mode fully functional
+- ✅ Abandon detection with modal confirmation
 
 ## Working with Authentication
 
