@@ -1,21 +1,33 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import Board from './components/Board';
-import { createInitialState, executeMove, isValidMove, getMoveSteps, resolveGameStalemate, WINNING_SCORE } from './services/songoLogic';
-import { GameState, GameStatus, Player, GameMode, OnlineMessage, AnimationStep } from './types';
+import { createInitialState, executeMove, isValidMove, getMoveSteps, resolveGameStalemate } from './services/songoLogic';
+import { GameState, GameStatus, Player, GameMode, AnimationStep } from './types';
 import { getBestMoveIterative } from './services/ai';
 import { audioService } from './services/audioService';
 import { onlineManager } from './services/onlineManager';
 import { useAuth } from './hooks/useAuth';
+import { useOnlineGame } from './hooks/useOnlineGame';
+import { useGameAnimation } from './hooks/useGameAnimation';
 import AuthScreen from './components/auth/AuthScreen';
 import ProfilePage from './components/auth/ProfilePage';
+import { MainMenu } from './components/menus/MainMenu';
+import { RulesModal } from './components/modals/RulesModal';
+import { GameOverModal } from './components/modals/GameOverModal';
+import { SurrenderModal } from './components/modals/SurrenderModal';
+import { EditSimulationModal } from './components/modals/EditSimulationModal';
 import type { Profile } from './services/supabase';
+import toast from 'react-hot-toast';
 
 const App: React.FC = () => {
   // Authentication
   const { user, authUser, profile, loading, isAuthenticated } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(null);
+  const [playerProfiles, setPlayerProfiles] = useState<{ [key in Player]: Profile | null }>({
+    [Player.One]: null,
+    [Player.Two]: null,
+  });
 
   // Update profile when auth profile changes
   useEffect(() => {
@@ -49,12 +61,14 @@ const App: React.FC = () => {
   // AI Configuration
   const [aiPlayer, setAiPlayer] = useState<Player | null>(null);
   const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [aiStartsFirst, setAiStartsFirst] = useState(false); // Track who starts first
 
   // Simulation Settings
   const [simSpeed, setSimSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
   const [simDifficulty, setSimDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [isSimAuto, setIsSimAuto] = useState(true); 
   const [simulationInitialState, setSimulationInitialState] = useState<GameState | null>(null); 
+  const [onlineStarter, setOnlineStarter] = useState<Player>(Player.One);
 
   // Simulation Edit Modal State
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -62,17 +76,90 @@ const App: React.FC = () => {
   const [editScorePlayer, setEditScorePlayer] = useState<Player | null>(null);
   const [editValue, setEditValue] = useState(0);
 
-  // Animation State
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animHand, setAnimHand] = useState<{pitIndex: number|null, seedCount: number}>({ pitIndex: null, seedCount: 0 });
+  const animationRef = useRef<{
+    setAnimHand: (hand: { pitIndex: number | null; seedCount: number }) => void;
+    setIsAnimating: (isAnimating: boolean) => void;
+  } | null>(null);
 
-  // Online State
-  const [roomId, setRoomId] = useState<string>('');
-  const [joinInputId, setJoinInputId] = useState('');
-  const [onlineStatus, setOnlineStatus] = useState<string>('');
-  const [isGuest, setIsGuest] = useState(false);
-  // Track if a Player 2 has already joined the host
-  const [hasPlayer2, setHasPlayer2] = useState(false);
+  const handleOnlineRestart = () => {
+    const nextStarter = onlineStarter === Player.One ? Player.Two : Player.One;
+    // The host is the authority and tells everyone to restart.
+    // The `RESTART` message just tells clients to reset their local board state.
+    onlineManager.broadcast({ type: 'RESTART' }); 
+    // The host then starts a new authoritative game state with the next player starting.
+    startGame(GameMode.OnlineHost, null, nextStarter);
+    setOnlineStarter(nextStarter);
+  };
+
+  const restartGame = () => {
+      if (gameMode === GameMode.OnlineHost) {
+        // If the host clicks restart, they are the authority.
+        handleOnlineRestart();
+      } else if (gameMode === GameMode.OnlineGuest) {
+        // If the guest clicks restart, they send a request to the host.
+        onlineGame.requestRematch();
+      } else if (gameMode === GameMode.Simulation && simulationInitialState) {
+          restartSimulation();
+      } else if (gameMode !== null) {
+          startGame(gameMode, aiPlayer);
+      }
+  };
+
+  // Online Game Hook
+  const onlineGame = useOnlineGame({
+    user,
+    profile,
+    gameMode,
+    gameStateRef,
+    latestHandlersRef,
+    onGameStateUpdate: (state) => setGameState(state),
+    onGameModeUpdate: (mode) => setGameMode(mode),
+    onGameEnded: (state) => {
+      setGameState(state);
+      audioService.playWin();
+    },
+    onRestart: () => {
+      // This is for the generic 'RESTART' broadcast message
+      setGameState(createInitialState(GameStatus.Playing));
+      if (animationRef.current) {
+        animationRef.current.setAnimHand({ pitIndex: null, seedCount: 0 });
+        animationRef.current.setIsAnimating(false);
+      }
+    },
+    onRestartGame: handleOnlineRestart,
+  });
+
+  // Animation Hook
+  const animation = useGameAnimation({
+    gameMode,
+    simSpeed,
+    gameStateRef,
+    user,
+    profile,
+    onGameStateUpdate: setGameState,
+    onFinishGameInDB: onlineGame.finishGameInDB
+  });
+
+  // Update player profiles when online room changes
+  useEffect(() => {
+    if (onlineGame.room) {
+      setPlayerProfiles({
+        [Player.One]: onlineGame.room.host,
+        [Player.Two]: onlineGame.room.guest,
+      });
+    } else {
+      // Clear profiles when not in an online game
+      setPlayerProfiles({ [Player.One]: null, [Player.Two]: null });
+    }
+  }, [onlineGame.room]);
+
+  // Effect to update the ref with the latest animation methods
+  useEffect(() => {
+    animationRef.current = {
+      setAnimHand: animation.setAnimHand,
+      setIsAnimating: animation.setIsAnimating,
+    };
+  }, [animation.setAnimHand, animation.setIsAnimating]);
 
   // Initialize Audio Context
   useEffect(() => {
@@ -84,6 +171,8 @@ const App: React.FC = () => {
     return () => window.removeEventListener('click', handleUserInteraction);
   }, []);
 
+  // Reconnection is now handled by useOnlineGame hook
+
   const toggleMute = () => {
       const muted = audioService.toggleMute();
       setIsMuted(muted);
@@ -92,7 +181,7 @@ const App: React.FC = () => {
   // AI Turn Logic
   useEffect(() => {
     if (gameState.status !== GameStatus.Playing) return;
-    if (isAnimating) return; 
+    if (animation.isAnimating) return; 
 
     let timer: number;
 
@@ -148,104 +237,8 @@ const App: React.FC = () => {
     runAI();
 
     return () => clearTimeout(timer);
-  }, [gameState, gameMode, simSpeed, simDifficulty, isAnimating, aiPlayer, isSimAuto, aiDifficulty]);
+  }, [gameState, gameMode, simSpeed, simDifficulty, animation.isAnimating, aiPlayer, isSimAuto, aiDifficulty]);
 
-  
-  const playMoveAnimation = async (pitIndex: number, targetState?: GameState, explicitSteps?: AnimationStep[]) => {
-      setIsAnimating(true);
-      
-      try {
-        const startState = gameStateRef.current;
-        
-        const steps = explicitSteps || getMoveSteps(startState, pitIndex);
-        const finalState = targetState || executeMove(startState, pitIndex);
-
-        let stepDelay = 250; 
-        const totalSteps = steps.length;
-        
-        if (totalSteps > 20) stepDelay = 150;
-        if (totalSteps > 40) stepDelay = 80;
-
-        if (gameMode === GameMode.Simulation) {
-            if (simSpeed === 'fast') stepDelay = 50;
-            if (simSpeed === 'slow') stepDelay = 500;
-        }
-
-        const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-        let runningScores = { ...startState.scores };
-        let victorySoundPlayed = false;
-
-        for (const step of steps) {
-            if (step.type === 'PICKUP') {
-                setAnimHand({ pitIndex: step.pitIndex!, seedCount: step.seedsInHand || 0 });
-                setGameState(prev => ({
-                    ...prev,
-                    board: step.boardState || prev.board,
-                    message: step.description || prev.message
-                }));
-                audioService.playPickup();
-                await wait(stepDelay);
-            } 
-            else if (step.type === 'MOVE') {
-                setAnimHand(prev => ({ ...prev, pitIndex: step.pitIndex! }));
-                if (step.description) {
-                    setGameState(prev => ({...prev, message: step.description!}));
-                }
-                await wait(stepDelay * 0.8);
-            }
-            else if (step.type === 'DROP') {
-                setAnimHand({ pitIndex: step.pitIndex!, seedCount: step.seedsInHand || 0 });
-                setGameState(prev => ({
-                    ...prev,
-                    board: step.boardState || prev.board
-                }));
-                audioService.playDrop();
-                await wait(stepDelay);
-            }
-            else if (step.type === 'CAPTURE_PHASE') {
-                setGameState(prev => ({ ...prev, message: step.description! }));
-                audioService.playCapture();
-                await wait(stepDelay * 2);
-            }
-            else if (step.type === 'SCORE') {
-                const amount = step.capturedAmount || 0;
-                runningScores[gameStateRef.current.currentPlayer] += amount; 
-                audioService.playCapture(); 
-                
-                if (!victorySoundPlayed && (runningScores[Player.One] > WINNING_SCORE || runningScores[Player.Two] > WINNING_SCORE)) {
-                    audioService.playWin();
-                    victorySoundPlayed = true;
-                    setGameState(prev => ({ ...prev, message: "Victoire imminente !" }));
-                }
-                await wait(stepDelay);
-            }
-        }
-
-        await wait(200);
-        setAnimHand({ pitIndex: null, seedCount: 0 });
-        setGameState(finalState);
-
-        // If game finished in online mode, broadcast the final state to ensure sync
-        if (finalState.status === GameStatus.Finished) {
-            if (!victorySoundPlayed) {
-                audioService.playWin();
-            }
-            // Broadcast final state if we're the host
-            if (gameMode === GameMode.OnlineHost) {
-                onlineManager.broadcast({ type: 'GAME_ENDED', payload: finalState });
-            }
-        }
-
-      } catch (error) {
-          console.error("Animation error", error);
-          const finalState = executeMove(gameStateRef.current, pitIndex);
-          setGameState(finalState);
-      } finally {
-          setIsAnimating(false);
-          setAnimHand({ pitIndex: null, seedCount: 0 });
-      }
-  };
 
   const playMove = (pitIndex: number) => {
       const currentState = gameStateRef.current;
@@ -253,56 +246,49 @@ const App: React.FC = () => {
       if (!validation.valid) return;
 
       if (gameMode === GameMode.OnlineGuest) {
-          onlineManager.sendMessage(roomId, { type: 'MOVE_INTENT', payload: { pitIndex } });
-          return; 
+          onlineManager.sendMessage(onlineGame.roomId, { type: 'MOVE_INTENT', payload: { pitIndex } });
+          return;
       } 
       
       if (gameMode === GameMode.OnlineHost) {
           const nextState = executeMove(currentState, pitIndex);
           const steps = getMoveSteps(currentState, pitIndex);
+
+          // Save game state to database
+          onlineGame.saveGameStateToDB(nextState);
+
           // Broadcast to everyone (Player 2 + Spectators)
           onlineManager.broadcast({ type: 'REMOTE_MOVE', payload: { pitIndex, newState: nextState, steps } });
-          playMoveAnimation(pitIndex, nextState, steps);
+          animation.playMoveAnimation(pitIndex, nextState, steps);
           return;
       }
 
-      playMoveAnimation(pitIndex);
+      animation.playMoveAnimation(pitIndex);
   };
   
   // Host logic to assign roles
   const assignRole = (connId: string) => {
-      if (!hasPlayer2) {
-          // First person becomes Player 2
-          setHasPlayer2(true);
-          onlineManager.sendTo(connId, { type: 'ASSIGN_ROLE', payload: 'PLAYER' });
-          setOnlineStatus("Adversaire connecté !");
-          
-          // Start game for host if not started.
-          // We check gameMode because gameState.status is 'Playing' by default on init.
-          // If we are still in lobby (gameMode is null/undefined), start the game.
-          if (gameMode !== GameMode.OnlineHost) {
-              setTimeout(() => startGame(GameMode.OnlineHost), 500);
-          } else {
-              // If game already running (reconnect?), sync state
-              onlineManager.sendTo(connId, { type: 'SYNC_STATE', payload: gameStateRef.current });
-          }
-      } else {
-          // Subsequent people become Spectators
-          onlineManager.sendTo(connId, { type: 'ASSIGN_ROLE', payload: 'SPECTATOR' });
+      const role = onlineGame.assignRole(connId);
+
+      // Start game for host if not started and a player joined
+      if (role === 'PLAYER' && gameMode !== GameMode.OnlineHost) {
+          setTimeout(() => startGame(GameMode.OnlineHost), 500);
+      } else if (gameMode === GameMode.OnlineHost) {
+          // If game already running (reconnect?), sync state
           onlineManager.sendTo(connId, { type: 'SYNC_STATE', payload: gameStateRef.current });
       }
   };
 
   // Sync Ref for callbacks
   useEffect(() => {
-      latestHandlersRef.current = { playMove, playMoveAnimation, assignRole };
-  }, [playMove, playMoveAnimation, assignRole, hasPlayer2, gameMode]);
+      latestHandlersRef.current = { playMove, playMoveAnimation: animation.playMoveAnimation, assignRole };
+  }, [playMove, animation.playMoveAnimation, assignRole, onlineGame.hasPlayer2, gameMode]);
 
 
   const handlePitClick = useCallback((pitIndex: number) => {
     const currentState = gameStateRef.current;
     if (currentState.status !== GameStatus.Playing) return;
-    if (isAnimating) return;
+    if (animation.isAnimating) return;
 
     if (gameMode === GameMode.VsAI && currentState.currentPlayer === aiPlayer) return;
     if (gameMode === GameMode.Simulation && isSimAuto) return; 
@@ -312,16 +298,21 @@ const App: React.FC = () => {
     if (gameMode === GameMode.OnlineSpectator) return;
 
     playMove(pitIndex);
-  }, [gameMode, isAnimating, simSpeed, aiPlayer, isSimAuto, roomId]); 
+  }, [gameMode, animation.isAnimating, simSpeed, aiPlayer, isSimAuto, onlineGame.roomId]); 
 
-  const startGame = (mode: GameMode, aiPlayerConfig: Player | null = null) => {
-    audioService.init(); 
+  const startGame = (mode: GameMode, aiPlayerConfig: Player | null = null, startingPlayer: Player = Player.One) => {
+    audioService.init();
     setGameMode(mode);
     setAiPlayer(aiPlayerConfig);
-    
+
     const initialState = createInitialState(mode === GameMode.Simulation ? GameStatus.Setup : GameStatus.Playing);
     initialState.message = mode === GameMode.Simulation ? "Configuration" : "Nouvelle partie";
-    
+
+    // Set the starting player (for AI mode, this determines who plays first)
+    if (mode === GameMode.VsAI) {
+      initialState.currentPlayer = startingPlayer;
+    }
+
     if (mode === GameMode.OnlineHost) {
         onlineManager.broadcast({ type: 'SYNC_STATE', payload: initialState });
     }
@@ -330,11 +321,11 @@ const App: React.FC = () => {
     
     setSimSpeed('normal');
     setSimDifficulty('medium');
-    setIsSimAuto(true); 
+    setIsSimAuto(true);
     setSimulationInitialState(null);
 
-    setAnimHand({ pitIndex: null, seedCount: 0 });
-    setIsAnimating(false);
+    animation.setAnimHand({ pitIndex: null, seedCount: 0 });
+    animation.setIsAnimating(false);
   };
 
   const restartSimulation = () => {
@@ -345,39 +336,23 @@ const App: React.FC = () => {
               status: GameStatus.Playing,
               message: "Simulation relancée"
           });
-          setIsAnimating(false);
-          setAnimHand({ pitIndex: null, seedCount: 0 });
+          animation.setIsAnimating(false);
+          animation.setAnimHand({ pitIndex: null, seedCount: 0 });
       } else {
           // Fallback if no snapshot
           startGame(GameMode.Simulation);
       }
   };
 
-  const restartGame = () => {
-      if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
-          if (gameMode === GameMode.OnlineHost) {
-              onlineManager.broadcast({ type: 'RESTART' });
-              startGame(GameMode.OnlineHost);
-          }
-      } else if (gameMode === GameMode.Simulation && simulationInitialState) {
-          restartSimulation();
-      } else if (gameMode !== null) {
-          startGame(gameMode, aiPlayer);
-      }
-  };
-
   const exitToMenu = () => {
     if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest || gameMode === GameMode.OnlineSpectator) {
-        onlineManager.destroy();
+        onlineGame.cleanup();
     }
     setGameMode(null);
     setMenuStep('main');
     setGameState(createInitialState());
     setAiPlayer(null);
-    setRoomId('');
-    setOnlineStatus('');
-    setIsGuest(false);
-    setHasPlayer2(false);
+    setOnlineStarter(Player.One); // Reset starter on exit
   };
 
   // --- Edit Modal Logic (Simulation) ---
@@ -426,94 +401,19 @@ const App: React.FC = () => {
   // --- Online Logic ---
   const handleCreateRoom = async () => {
       setMenuStep('online_lobby');
-      try {
-          // Connect to Socket.io server first
-          await onlineManager.init();
 
-          // Set up message handlers before creating room
-          onlineManager.onMessage((msg) => {
-             if (msg.type === 'PLAYER_JOINED') {
-                 // Assign role to the newcomer using the connectionId from the payload
-                 const id = msg.payload?.connectionId;
-                 if (id) {
-                    latestHandlersRef.current.assignRole(id);
-                 }
-             }
-             else if (msg.type === 'MOVE_INTENT') {
-                 // Host receives intent, executes authoritative move
-                 latestHandlersRef.current.playMove(msg.payload.pitIndex);
-             }
-             else if (msg.type === 'GAME_ENDED') {
-                 // Receive surrender or game end from guest
-                 setGameState(msg.payload);
-                 audioService.playWin();
-             }
-          });
-
-          // Create room and get room ID
-          const roomId = onlineManager.createRoom();
-          setRoomId(roomId);
-          setOnlineStatus("En attente d'un adversaire...");
-          setIsGuest(false);
-
-      } catch (e) {
-          setOnlineStatus("Erreur création: " + e);
-      }
+      // Use the hook to handle room creation
+      await onlineGame.handleCreateRoom();
   };
 
   const handleJoinRoom = async () => {
-      if (!joinInputId) return;
-      try {
-          // Connect to Socket.io server first
-          await onlineManager.init();
-
-          // Set up message handlers before joining room
-          onlineManager.onMessage((msg) => {
-              if (msg.type === 'ASSIGN_ROLE') {
-                  if (msg.payload === 'PLAYER') {
-                      setIsGuest(true); // Inverts view
-                      setGameMode(GameMode.OnlineGuest);
-                      setOnlineStatus("Connecté en tant que JOUEUR 2");
-                  } else {
-                      setIsGuest(false); // Spectators see Host view (standard)
-                      setGameMode(GameMode.OnlineSpectator);
-                      setOnlineStatus("Connecté en tant que SPECTATEUR");
-                  }
-              }
-              else if (msg.type === 'SYNC_STATE') {
-                  setGameState(msg.payload);
-              }
-              else if (msg.type === 'REMOTE_MOVE') {
-                  // Received authoritative result + steps
-                  const { pitIndex, newState, steps } = msg.payload;
-                  latestHandlersRef.current.playMoveAnimation(pitIndex, newState, steps);
-              }
-              else if (msg.type === 'RESTART') {
-                  setGameState(createInitialState(GameStatus.Playing));
-                  setAnimHand({ pitIndex: null, seedCount: 0 });
-                  setIsAnimating(false);
-              }
-              else if (msg.type === 'GAME_ENDED') {
-                  // Receive final game state with winner
-                  setGameState(msg.payload);
-                  audioService.playWin();
-              }
-          });
-
-          // Join the room
-          onlineManager.joinRoom(joinInputId.toUpperCase());
-          setRoomId(joinInputId.toUpperCase());
-          setOnlineStatus("Connexion à l'hôte...");
-          setIsGuest(true);
-
-      } catch (e) {
-          setOnlineStatus("Erreur connexion: " + e);
-      }
+      // Use the hook to handle room joining
+      await onlineGame.handleJoinRoom();
   };
   
 
   // --- SURRENDER ---
-  const handleSurrender = (surrenderingPlayer: Player) => {
+  const handleSurrender = async (surrenderingPlayer: Player) => {
       setShowSurrenderModal(false);
 
       const winner = surrenderingPlayer === Player.One ? Player.Two : Player.One;
@@ -528,8 +428,11 @@ const App: React.FC = () => {
 
       setGameState(newState);
 
-      // Broadcast surrender to other players in online mode
-      if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
+      // Persist abandon in database for online games
+      if ((gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) && user?.id) {
+          await onlineGame.abandonGameInDB(user.id);
+
+          // Broadcast surrender to other players
           onlineManager.broadcast({ type: 'GAME_ENDED', payload: newState });
       }
 
@@ -610,7 +513,7 @@ const App: React.FC = () => {
                 </button>
             )}
 
-            {gameState.status !== GameStatus.Playing && gameMode !== GameMode.Simulation && (
+            {(gameState.status !== GameStatus.Playing || gameMode === GameMode.OnlineSpectator) && gameMode !== GameMode.Simulation && (
                 <button onClick={exitToMenu} className="p-2 bg-gray-700 hover:bg-red-600 hover:text-white rounded-full transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
@@ -620,132 +523,43 @@ const App: React.FC = () => {
 
       {/* MAIN CONTENT */}
       <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-64px)] pb-20">
-        
+
         {gameMode === null ? (
            /* MAIN MENU */
-           <div className="w-full max-w-md p-6 flex flex-col gap-4 animate-fade-in">
-               {menuStep === 'main' && (
-                   <>
-                    <div className="text-center mb-8">
-                        <div className="w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-700 rounded-3xl mx-auto mb-4 shadow-lg rotate-3 flex items-center justify-center">
-                            <div className="text-4xl">🌰</div>
-                        </div>
-                        <h2 className="text-gray-400 text-sm uppercase tracking-widest">Jeu de stratégie africain</h2>
-                    </div>
-                    
-                    <button onClick={() => startGame(GameMode.LocalMultiplayer)} className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl shadow-lg border border-gray-600 flex items-center gap-4 transition-all hover:scale-105 group">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold group-hover:bg-blue-500">2</div>
-                        <div className="text-left">
-                            <div className="font-bold">2 Joueurs (Local)</div>
-                            <div className="text-xs text-gray-400">Sur le même écran</div>
-                        </div>
-                    </button>
-
-                    <button onClick={() => setMenuStep('ai_select')} className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl shadow-lg border border-gray-600 flex items-center gap-4 transition-all hover:scale-105 group">
-                        <div className="w-10 h-10 rounded-full bg-amber-600 flex items-center justify-center font-bold group-hover:bg-amber-500">IA</div>
-                        <div className="text-left">
-                            <div className="font-bold">1 Joueur (vs IA)</div>
-                            <div className="text-xs text-gray-400">Défiez l'ordinateur</div>
-                        </div>
-                    </button>
-                    
-                    <button onClick={() => setMenuStep('online_menu')} className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl shadow-lg border border-gray-600 flex items-center gap-4 transition-all hover:scale-105 group">
-                        <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center font-bold group-hover:bg-green-500">🌐</div>
-                        <div className="text-left">
-                            <div className="font-bold">Jeu en ligne</div>
-                            <div className="text-xs text-gray-400">Affrontez un ami à distance</div>
-                        </div>
-                    </button>
-
-                    <button onClick={() => startGame(GameMode.Simulation)} className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl shadow-lg border border-gray-600 flex items-center gap-4 transition-all hover:scale-105 group">
-                        <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center font-bold group-hover:bg-purple-500">⚡</div>
-                        <div className="text-left">
-                            <div className="font-bold">Simulation / Labo</div>
-                            <div className="text-xs text-gray-400">Configurez le plateau</div>
-                        </div>
-                    </button>
-                   </>
-               )}
-
-               {menuStep === 'online_menu' && (
-                   <div className="flex flex-col gap-4">
-                       <h3 className="text-xl font-bold text-center mb-4">Jeu en ligne</h3>
-                       <button onClick={handleCreateRoom} className="bg-blue-600 p-4 rounded-xl font-bold hover:bg-blue-500">Créer une salle</button>
-                       <button onClick={() => setMenuStep('online_join')} className="bg-gray-700 p-4 rounded-xl font-bold hover:bg-gray-600">Rejoindre une salle</button>
-                       <button onClick={() => setMenuStep('main')} className="text-gray-500 mt-4">Retour</button>
-                   </div>
-               )}
-
-               {menuStep === 'online_lobby' && (
-                   <div className="text-center bg-gray-800 p-6 rounded-xl border border-gray-600">
-                       <h3 className="text-xl font-bold text-amber-400 mb-2">Salle créée !</h3>
-                       <p className="text-sm text-gray-400 mb-4">Partagez cet ID avec votre ami :</p>
-                       <div className="bg-black p-4 rounded font-mono text-2xl tracking-wider select-all cursor-pointer border border-gray-700 text-white mb-4">
-                           {roomId || 'Génération...'}
-                       </div>
-                       <div className="flex items-center justify-center gap-2 text-sm text-gray-400 animate-pulse">
-                           <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                           {onlineStatus}
-                       </div>
-                       <button onClick={exitToMenu} className="mt-6 text-red-400 hover:text-red-300 text-sm">Annuler</button>
-                   </div>
-               )}
-
-               {menuStep === 'online_join' && (
-                   <div className="flex flex-col gap-4">
-                       <h3 className="text-xl font-bold text-center mb-2">Rejoindre</h3>
-                       <input 
-                         type="text" 
-                         placeholder="Entrez l'ID de la salle" 
-                         value={joinInputId}
-                         onChange={(e) => setJoinInputId(e.target.value)}
-                         className="bg-gray-800 border border-gray-600 p-4 rounded-xl text-white text-center font-mono uppercase"
-                       />
-                       <button onClick={handleJoinRoom} className="bg-green-600 p-4 rounded-xl font-bold hover:bg-green-500">Rejoindre</button>
-                       <p className="text-center text-sm text-gray-400 mt-2">{onlineStatus}</p>
-                       <button onClick={() => setMenuStep('online_menu')} className="text-gray-500 mt-4">Retour</button>
-                   </div>
-               )}
-               
-               {menuStep === 'ai_select' && (
-                   <div className="flex flex-col gap-4">
-                       <h3 className="text-xl font-bold text-center mb-4">Choisissez votre camp</h3>
-                       <button onClick={() => { setAiPlayer(Player.Two); setMenuStep('ai_difficulty'); }} className="bg-blue-600 p-4 rounded-xl font-bold hover:bg-blue-500 flex justify-between items-center">
-                           <span>Je suis Joueur 1 (Bas)</span>
-                           <span className="text-xs bg-black/20 px-2 py-1 rounded">Vous commencez</span>
-                       </button>
-                       <button onClick={() => { setAiPlayer(Player.One); setMenuStep('ai_difficulty'); }} className="bg-amber-600 p-4 rounded-xl font-bold hover:bg-amber-500 flex justify-between items-center">
-                           <span>Je suis Joueur 2 (Haut)</span>
-                           <span className="text-xs bg-black/20 px-2 py-1 rounded">L'IA commence</span>
-                       </button>
-                       <button onClick={() => setMenuStep('main')} className="text-gray-500 mt-4">Retour</button>
-                   </div>
-               )}
-
-               {menuStep === 'ai_difficulty' && (
-                   <div className="flex flex-col gap-4">
-                       <h3 className="text-xl font-bold text-center mb-4">Niveau de l'IA</h3>
-                       <button onClick={() => { setAiDifficulty('easy'); startGame(GameMode.VsAI, aiPlayer); }} className="bg-green-600/20 text-green-400 border border-green-600 p-4 rounded-xl font-bold hover:bg-green-600 hover:text-white">Facile</button>
-                       <button onClick={() => { setAiDifficulty('medium'); startGame(GameMode.VsAI, aiPlayer); }} className="bg-amber-600/20 text-amber-400 border border-amber-600 p-4 rounded-xl font-bold hover:bg-amber-600 hover:text-white">Moyen</button>
-                       <button onClick={() => { setAiDifficulty('hard'); startGame(GameMode.VsAI, aiPlayer); }} className="bg-red-600/20 text-red-400 border border-red-600 p-4 rounded-xl font-bold hover:bg-red-600 hover:text-white">Difficile</button>
-                       <button onClick={() => setMenuStep('ai_select')} className="text-gray-500 mt-4">Retour</button>
-                   </div>
-               )}
-           </div>
+           <MainMenu
+             menuStep={menuStep}
+             setMenuStep={setMenuStep}
+             startGame={startGame}
+             handleCreateRoom={handleCreateRoom}
+             handleJoinRoom={handleJoinRoom}
+             exitToMenu={exitToMenu}
+             setAiPlayer={setAiPlayer}
+             setAiStartsFirst={setAiStartsFirst}
+             setAiDifficulty={setAiDifficulty}
+             aiPlayer={aiPlayer}
+             aiStartsFirst={aiStartsFirst}
+             onlineGame={{
+               roomId: onlineGame.roomId,
+               onlineStatus: onlineGame.onlineStatus,
+               joinInputId: onlineGame.joinInputId,
+               setJoinInputId: onlineGame.setJoinInputId
+             }}
+           />
         ) : (
            /* GAME BOARD */
            <div className="w-full h-full flex flex-col">
-               <Board 
-                   gameState={gameState} 
-                   onMove={handlePitClick} 
+               <Board
+                   gameState={gameState}
+                   onMove={handlePitClick}
                    gameMode={gameMode}
-                   isAnimating={isAnimating}
-                   handState={animHand}
+                   isAnimating={animation.isAnimating}
+                   handState={animation.animHand}
                    onEditPit={handleEditPit}
                    onEditScore={handleEditScore}
                    aiPlayer={aiPlayer}
+                   playerProfiles={playerProfiles}
                    isSimulationManual={!isSimAuto && gameMode === GameMode.Simulation}
-                   invertView={isGuest}
+                   invertView={onlineGame.isGuest}
                />
                
                {/* Status Bar */}
@@ -842,127 +656,38 @@ const App: React.FC = () => {
       {/* MODALS */}
       
       {/* Edit Modal (Simulation) */}
-      {editModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-              <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-600">
-                  <h3 className="text-xl font-bold mb-4 text-center">
-                      {editPitIndex !== null ? `Modifier Case ${editPitIndex}` : `Modifier Score ${editScorePlayer === Player.One ? 'J1 (Bas)' : 'J2 (Haut)'}`}
-                  </h3>
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                      <button onClick={() => setEditValue(Math.max(0, editValue - 1))} className="w-12 h-12 rounded-full bg-gray-700 text-2xl font-bold hover:bg-gray-600">-</button>
-                      <span className="text-4xl font-mono font-bold text-blue-400 w-20 text-center">{editValue}</span>
-                      <button onClick={() => setEditValue(editValue + 1)} className="w-12 h-12 rounded-full bg-gray-700 text-2xl font-bold hover:bg-gray-600">+</button>
-                  </div>
-                  <div className="flex gap-2">
-                      <button onClick={() => setEditModalOpen(false)} className="flex-1 py-3 rounded-xl bg-gray-700 font-bold text-gray-300">Annuler</button>
-                      <button onClick={confirmEdit} className="flex-1 py-3 rounded-xl bg-blue-600 font-bold text-white hover:bg-blue-500">Valider</button>
-                  </div>
-              </div>
-          </div>
-      )}
+      <EditSimulationModal
+        isOpen={editModalOpen}
+        editPitIndex={editPitIndex}
+        editScorePlayer={editScorePlayer}
+        editValue={editValue}
+        onSetEditValue={setEditValue}
+        onConfirm={confirmEdit}
+        onCancel={() => setEditModalOpen(false)}
+      />
 
       {/* Rules Modal */}
-      {showRules && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-              <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-600 relative">
-                  <div className="sticky top-0 bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
-                      <h2 className="text-2xl font-bold text-amber-500">Règles du Songo (MPEM)</h2>
-                      <button onClick={() => setShowRules(false)} className="p-2 bg-gray-700 rounded-full hover:bg-gray-600">✕</button>
-                  </div>
-                  <div className="p-6 text-gray-300 space-y-4 leading-relaxed">
-                      <section>
-                          <h3 className="text-lg font-bold text-white mb-2">But du jeu</h3>
-                          <p>Capturer plus de 35 graines (ou avoir plus de 35 points en fin de partie).</p>
-                      </section>
-                      <section>
-                          <h3 className="text-lg font-bold text-white mb-2">Distribution</h3>
-                          <p>On sème les graines une par une vers la droite (sens anti-horaire). Si on a plus de 14 graines, on fait un tour complet en sautant la case de départ.</p>
-                      </section>
-                      <section>
-                          <h3 className="text-lg font-bold text-white mb-2">La Prise</h3>
-                          <p>Si la dernière graine tombe chez l'adversaire et que la case contient alors 2, 3 ou 4 graines, on capture ces graines (ainsi que celles des cases précédentes si elles remplissent la même condition).</p>
-                      </section>
-                      <section>
-                          <h3 className="text-lg font-bold text-white mb-2">Règles Spéciales</h3>
-                          <ul className="list-disc pl-5 space-y-2">
-                              <li><strong>Auto-capture :</strong> Si un tour complet se termine avec 1 graine restante (ex: 14, 28...), elle est capturée automatiquement.</li>
-                              <li><strong>Solidarité (Le Un) :</strong> Si vous n'avez plus qu'une seule graine <em>et qu'elle est dans votre dernière case</em>, vous l'auto-capturez. L'adversaire DOIT alors jouer un coup qui vous redonne des graines (si possible).</li>
-                              <li><strong>Interdiction d'assécher :</strong> On ne peut pas capturer toutes les graines de l'adversaire d'un seul coup si cela le prive de tout mouvement au tour suivant (sauf s'il n'y a pas d'autre choix).</li>
-                          </ul>
-                      </section>
-                  </div>
-              </div>
-          </div>
-      )}
+      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
       
       {/* Game Over / Victory Modal */}
       {gameState.status === GameStatus.Finished && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in">
-              <div className="bg-gray-900 border-2 border-amber-500 p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.3)] text-center max-w-md transform scale-110">
-                  <div className="mb-4 text-6xl">
-                      {gameState.winner === 'Draw' ? '🤝' : (
-                          (gameMode === GameMode.VsAI && gameState.winner === aiPlayer) ? '🤖' : '🏆'
-                      )}
-                  </div>
-                  <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-widest">
-                      {gameState.winner === 'Draw' ? 'Match Nul' : (
-                          gameState.winner === Player.One ? 'JOUEUR 1 GAGNE' : 'JOUEUR 2 GAGNE'
-                      )}
-                  </h2>
-                  <p className="text-amber-500 font-bold mb-6 text-lg">{gameState.message}</p>
-                  
-                  <div className="flex justify-center gap-8 mb-8 font-mono text-xl">
-                      <div className="flex flex-col">
-                          <span className="text-xs text-gray-500 uppercase">Joueur 1</span>
-                          <span className="text-blue-400 font-bold">{gameState.scores[Player.One]}</span>
-                      </div>
-                      <div className="flex flex-col">
-                          <span className="text-xs text-gray-500 uppercase">Joueur 2</span>
-                          <span className="text-amber-500 font-bold">{gameState.scores[Player.Two]}</span>
-                      </div>
-                  </div>
-
-                  <div className="flex gap-3 justify-center">
-                      <button onClick={restartGame} className="px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg transform hover:-translate-y-1 transition-all">
-                          REJOUER
-                      </button>
-                      <button onClick={exitToMenu} className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold">
-                          MENU
-                      </button>
-                  </div>
-              </div>
-          </div>
+        <GameOverModal
+          gameState={gameState}
+          gameMode={gameMode}
+          aiPlayer={aiPlayer}
+          playerProfiles={playerProfiles}
+          onRestart={restartGame}
+          onExitToMenu={exitToMenu}
+        />
       )}
 
       {/* Surrender Confirmation Modal */}
-      {showSurrenderModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-              <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-sm border border-gray-600 text-center">
-                  <h3 className="text-xl font-bold mb-2 text-white">Abandonner la partie ?</h3>
-                  <p className="text-gray-400 mb-6 text-sm">L'adversaire sera déclaré vainqueur.</p>
-
-                  {gameMode === GameMode.LocalMultiplayer ? (
-                      <div className="flex flex-col gap-2">
-                          <button onClick={() => handleSurrender(Player.One)} className="w-full py-3 rounded-xl bg-blue-900/50 text-blue-200 hover:bg-blue-900 font-bold border border-blue-800">
-                              Joueur 1 abandonne
-                          </button>
-                          <button onClick={() => handleSurrender(Player.Two)} className="w-full py-3 rounded-xl bg-amber-900/50 text-amber-200 hover:bg-amber-900 font-bold border border-amber-800">
-                              Joueur 2 abandonne
-                          </button>
-                      </div>
-                  ) : (
-                      <div className="flex gap-3">
-                          <button onClick={() => setShowSurrenderModal(false)} className="flex-1 py-3 rounded-xl bg-gray-700 text-white font-bold hover:bg-gray-600">
-                              Non, continuer
-                          </button>
-                          <button onClick={() => handleSurrender(gameMode === GameMode.OnlineGuest ? Player.Two : Player.One)} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500">
-                              Oui, abandonner
-                          </button>
-                      </div>
-                  )}
-              </div>
-          </div>
-      )}
+      <SurrenderModal
+        isOpen={showSurrenderModal}
+        gameMode={gameMode}
+        onClose={() => setShowSurrenderModal(false)}
+        onSurrender={handleSurrender}
+      />
 
       {/* Profile Modal */}
       {showProfile && userProfile && (

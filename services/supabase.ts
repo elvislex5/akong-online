@@ -41,3 +41,30 @@ export interface AuthUser {
   email: string;
   profile?: Profile;
 }
+
+// Game room status
+export type RoomStatus = 'waiting' | 'playing' | 'finished' | 'abandoned';
+
+// Game room interface (matches database schema)
+export interface GameRoom {
+  id: string;
+  room_code: string;
+  host_id: string | null;
+  guest_id: string | null;
+  status: RoomStatus;
+  game_state: any | null; // JSONB - will be GameState from types.ts
+  winner_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  host: Profile | null;
+  guest: Profile | null;
+}
+
+// Game spectator interface
+export interface GameSpectator {
+  id: string;
+  room_id: string;
+  user_id: string;
+  joined_at: string;
+}

@@ -52,7 +52,7 @@ export interface AnimationStep {
 }
 
 // Online Messages
-export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE';
+export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE' | 'GUEST_PROFILE_SHARE' | 'REMATCH_REQUEST';
 
 export interface OnlineMessage {
   type: OnlineMessageType;

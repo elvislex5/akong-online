@@ -4,6 +4,7 @@ import { GameState, Player, GameStatus, GameMode } from '../types';
 import { isValidMove } from '../services/songoLogic';
 import Pit from './Pit';
 import Hand from './Hand';
+import type { Profile } from '../services/supabase';
 
 interface BoardProps {
   gameState: GameState;
@@ -14,11 +15,12 @@ interface BoardProps {
   isAnimating: boolean;
   handState: { pitIndex: number | null; seedCount: number };
   aiPlayer?: Player | null;
+  playerProfiles?: { [key in Player]: Profile | null };
   isSimulationManual?: boolean;
   invertView?: boolean; // New prop to rotate board for Player 2 perspective
 }
 
-const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, onEditScore, isAnimating, handState, aiPlayer, isSimulationManual, invertView = false }) => {
+const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, onEditScore, isAnimating, handState, aiPlayer, playerProfiles, isSimulationManual, invertView = false }) => {
   const { board, currentPlayer, scores, status } = gameState;
   
   const isSimulationSetup = gameMode === GameMode.Simulation && status === GameStatus.Setup;
@@ -57,7 +59,14 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
 
   // Labels Logic
   const getTopLabel = () => {
-      if (isSpectator) return 'JOUEUR 2'; // Spectators see generic labels
+      const topPlayer = invertView ? Player.One : Player.Two;
+      const profile = playerProfiles?.[topPlayer];
+      if (profile) {
+        return profile.display_name || profile.username;
+      }
+      
+      // Fallback for non-online modes or if profiles are not loaded
+      if (isSpectator) return 'JOUEUR 2';
       if (invertView) {
           // Top is Player 1 (Opponent for Guest)
           if (isOnline) return 'ADVERSAIRE (J1)';
@@ -72,18 +81,25 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   };
 
   const getBottomLabel = () => {
-      if (isSpectator) return 'JOUEUR 1'; // Spectators see generic labels
-      if (invertView) {
-          // Bottom is Player 2 (Self for Guest)
-          if (isOnline) return 'VOUS (J2)';
-          return 'JOUEUR 2';
-      } else {
-          // Bottom is Player 1
-          if (isAiMode && aiPlayer === Player.One) return 'ORDINATEUR';
-          if (gameMode === GameMode.Simulation) return 'IA (BAS)';
-          if (isOnline) return gameMode === GameMode.OnlineHost ? 'VOUS (J1)' : 'ADVERSAIRE (J1)';
-          return isAiMode ? 'VOUS' : 'JOUEUR 1';
-      }
+    const bottomPlayer = invertView ? Player.Two : Player.One;
+    const profile = playerProfiles?.[bottomPlayer];
+    if (profile) {
+      return profile.display_name || profile.username;
+    }
+
+    // Fallback for non-online modes or if profiles are not loaded
+    if (isSpectator) return 'JOUEUR 1';
+    if (invertView) {
+        // Bottom is Player 2 (Self for Guest)
+        if (isOnline) return 'VOUS (J2)';
+        return 'JOUEUR 2';
+    } else {
+        // Bottom is Player 1
+        if (isAiMode && aiPlayer === Player.One) return 'ORDINATEUR';
+        if (gameMode === GameMode.Simulation) return 'IA (BAS)';
+        if (isOnline) return gameMode === GameMode.OnlineHost ? 'VOUS (J1)' : 'ADVERSAIRE (J1)';
+        return isAiMode ? 'VOUS' : 'JOUEUR 1';
+    }
   };
 
   const handleScoreClick = (player: Player) => {
@@ -92,7 +108,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
       }
   };
 
-  const storeBaseClasses = "w-24 sm:w-36 h-full flex items-center justify-center relative overflow-hidden transition-all duration-200";
+  const storeBaseClasses = "w-16 sm:w-24 md:w-36 h-full flex items-center justify-center relative overflow-hidden transition-all duration-200";
   const storeEditClasses = isSimulationSetup ? "cursor-pointer hover:ring-2 hover:ring-blue-500 hover:brightness-110" : "";
 
   const EditIcon = () => (
@@ -112,27 +128,27 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
   const rightStorePlayer = invertView ? Player.One : Player.Two;
 
   return (
-    <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-2 relative gap-2">
-      
-      <Hand 
-        isActive={isAnimating} 
-        pitIndex={handState.pitIndex} 
-        seedCount={handState.seedCount} 
+    <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-1 sm:p-2 md:p-4 relative gap-1 sm:gap-2" role="region" aria-label="Plateau de jeu Akông">
+
+      <Hand
+        isActive={isAnimating}
+        pitIndex={handState.pitIndex}
+        seedCount={handState.seedCount}
       />
 
       {/* TOP PLAYER NAMEPLATE (HUD Style) */}
       <div className={`
-          w-full max-w-xl flex justify-center items-center py-2 px-6 rounded-t-xl border-b-4 
+          w-full max-w-xl flex justify-center items-center py-1.5 sm:py-2 px-4 sm:px-6 rounded-t-xl border-b-2 sm:border-b-4
           shadow-[0_0_15px_rgba(0,0,0,0.5)] transform transition-all duration-300
-          ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing 
-            ? 'bg-gray-800 border-amber-500 scale-105 z-20' 
+          ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
+            ? 'bg-gray-800 border-amber-500 scale-105 z-20'
             : 'bg-gray-900/80 border-gray-700 opacity-80'
           }
       `}>
          <span className={`
-            text-xl sm:text-2xl font-black uppercase tracking-widest drop-shadow-lg
-            ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing 
-                ? 'text-amber-500 animate-pulse' 
+            text-base sm:text-xl md:text-2xl font-black uppercase tracking-wider sm:tracking-widest drop-shadow-lg
+            ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
+                ? 'text-amber-500 animate-pulse'
                 : 'text-gray-500'}
          `}>
             {getTopLabel()}
@@ -140,7 +156,7 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
       </div>
 
       {/* THE BOARD CONTAINER - Dark Industrial Style */}
-      <div className="relative bg-gray-800 p-3 sm:p-6 rounded-[40px] border-4 border-gray-600 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] w-full select-none overflow-hidden max-w-5xl">
+      <div className="relative bg-gray-800 p-2 sm:p-4 md:p-6 rounded-3xl sm:rounded-[40px] border-2 sm:border-4 border-gray-600 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_30px_rgba(0,0,0,0.5)] w-full select-none overflow-hidden max-w-[98vw] sm:max-w-4xl lg:max-w-5xl">
           
           {/* Carbon Fiber Texture */}
           <div className="absolute inset-0 opacity-20 pointer-events-none" 
@@ -185,26 +201,28 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
           </div>
 
           {/* --- CENTRAL STRUCTURE (Stores & Grille) --- */}
-          <div className="flex items-center justify-between relative z-10 w-full my-4 h-24 sm:h-28 gap-2 px-2">
+          <div className="flex items-center justify-between relative z-10 w-full my-2 sm:my-3 md:my-4 h-20 sm:h-24 md:h-28 gap-1 sm:gap-2 px-1 sm:px-2">
               
               {/* LEFT STORE */}
-              <div 
+              <div
                   onClick={() => handleScoreClick(leftStorePlayer)}
+                  role="status"
+                  aria-label={`Score ${leftStorePlayer === Player.One ? 'Joueur 1' : 'Joueur 2'}: ${scores[leftStorePlayer]} graines`}
                   className={`${storeBaseClasses} ${storeEditClasses} rounded-l-full rounded-r-xl bg-[#d7e3e8] shadow-[inset_2px_2px_5px_rgba(0,0,0,0.4)] border-r-4 border-gray-400`}
               >
                    {isSimulationSetup && <EditIcon />}
-                   <div className="absolute inset-0 flex flex-wrap content-center justify-center gap-0.5 p-4 pl-2 opacity-90 pointer-events-none">
+                   <div className="absolute inset-0 flex flex-wrap content-center justify-center gap-0.5 p-2 sm:p-4 pl-1 sm:pl-2 opacity-90 pointer-events-none">
                       {Array.from({length: Math.min(scores[leftStorePlayer], 35)}).map((_, i) => (
-                          <div key={i} className="w-2.5 h-2.5 rounded-full bg-stone-800 shadow-sm"/>
+                          <div key={i} className="w-1.5 sm:w-2 md:w-2.5 h-1.5 sm:h-2 md:h-2.5 rounded-full bg-stone-800 shadow-sm"/>
                       ))}
                    </div>
-                   <span className={`text-4xl sm:text-5xl font-mono font-bold drop-shadow-md z-10 pointer-events-none ${leftStorePlayer === Player.One ? 'text-blue-600' : 'text-amber-600'}`}>
+                   <span className={`text-2xl sm:text-4xl md:text-5xl font-mono font-bold drop-shadow-md z-10 pointer-events-none ${leftStorePlayer === Player.One ? 'text-blue-600' : 'text-amber-600'}`}>
                        {scores[leftStorePlayer]}
                    </span>
               </div>
 
               {/* CENTER GRILLE */}
-              <div className="flex-1 h-16 sm:h-20 bg-gray-700 rounded-lg border-y-2 border-gray-500 relative shadow-inner flex items-center justify-center mx-2">
+              <div className="flex-1 h-12 sm:h-16 md:h-20 bg-gray-700 rounded-lg border-y-2 border-gray-500 relative shadow-inner flex items-center justify-center mx-1 sm:mx-2">
                   <div className="absolute inset-1 rounded bg-gray-800 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] opacity-80"
                        style={{
                            backgroundImage: 'radial-gradient(circle, #4b5563 1.5px, transparent 1.5px)',
@@ -212,22 +230,24 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
                        }}
                   ></div>
                   <div className="relative z-10 text-gray-500 font-black tracking-[0.5em] opacity-30 text-xs sm:text-sm hidden md:block">
-                       AKONG ONLINE
+                       AKÔNG ONLINE
                    </div>
               </div>
 
               {/* RIGHT STORE */}
-              <div 
+              <div
                   onClick={() => handleScoreClick(rightStorePlayer)}
+                  role="status"
+                  aria-label={`Score ${rightStorePlayer === Player.One ? 'Joueur 1' : 'Joueur 2'}: ${scores[rightStorePlayer]} graines`}
                   className={`${storeBaseClasses} ${storeEditClasses} rounded-r-full rounded-l-xl bg-[#d7e3e8] shadow-[inset_-2px_2px_5px_rgba(0,0,0,0.4)] border-l-4 border-gray-400`}
               >
                   {isSimulationSetup && <EditIcon />}
-                  <div className="absolute inset-0 flex flex-wrap content-center justify-center gap-0.5 p-4 pr-2 opacity-90 pointer-events-none">
+                  <div className="absolute inset-0 flex flex-wrap content-center justify-center gap-0.5 p-2 sm:p-4 pr-1 sm:pr-2 opacity-90 pointer-events-none">
                       {Array.from({length: Math.min(scores[rightStorePlayer], 35)}).map((_, i) => (
-                          <div key={i} className="w-2.5 h-2.5 rounded-full bg-stone-800 shadow-sm"/>
+                          <div key={i} className="w-1.5 sm:w-2 md:w-2.5 h-1.5 sm:h-2 md:h-2.5 rounded-full bg-stone-800 shadow-sm"/>
                       ))}
                   </div>
-                  <span className={`text-4xl sm:text-5xl font-mono font-bold drop-shadow-md z-10 pointer-events-none ${rightStorePlayer === Player.One ? 'text-blue-600' : 'text-amber-600'}`}>
+                  <span className={`text-2xl sm:text-4xl md:text-5xl font-mono font-bold drop-shadow-md z-10 pointer-events-none ${rightStorePlayer === Player.One ? 'text-blue-600' : 'text-amber-600'}`}>
                       {scores[rightStorePlayer]}
                   </span>
               </div>
@@ -267,17 +287,17 @@ const Board: React.FC<BoardProps> = ({ gameState, onMove, gameMode, onEditPit, o
 
       {/* BOTTOM PLAYER NAMEPLATE (HUD Style) */}
       <div className={`
-          w-full max-w-xl flex justify-center items-center py-2 px-6 rounded-b-xl border-t-4 
+          w-full max-w-xl flex justify-center items-center py-1.5 sm:py-2 px-4 sm:px-6 rounded-b-xl border-t-2 sm:border-t-4
           shadow-[0_0_15px_rgba(0,0,0,0.5)] transform transition-all duration-300
-          ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing 
-            ? 'bg-gray-800 border-blue-500 scale-105 z-20' 
+          ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
+            ? 'bg-gray-800 border-blue-500 scale-105 z-20'
             : 'bg-gray-900/80 border-gray-700 opacity-80'
           }
       `}>
          <span className={`
-            text-xl sm:text-2xl font-black uppercase tracking-widest drop-shadow-lg
-            ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing 
-                ? 'text-blue-500 animate-pulse' 
+            text-base sm:text-xl md:text-2xl font-black uppercase tracking-wider sm:tracking-widest drop-shadow-lg
+            ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
+                ? 'text-blue-500 animate-pulse'
                 : 'text-gray-500'}
          `}>
             {getBottomLabel()}
