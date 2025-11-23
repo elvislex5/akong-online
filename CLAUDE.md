@@ -4,15 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Akong** is a web-based implementation of the traditional African strategy board game **Songo** (MPEM variant). This is a React + TypeScript application built with Vite, featuring:
+**Akông** is a web-based implementation of the traditional African strategy board game **Songo** (MPEM variant). This is a React + TypeScript application built with Vite, featuring:
 
+- **Authentication system** via Supabase (Phase 1: ✅ Complete)
+- **Landing Page & Navigation** with React Router (Frontend Phase 1-2: ✅ Complete)
 - Local multiplayer (2 players on same device)
 - AI opponent with multiple difficulty levels
 - Online multiplayer via Socket.io
 - Simulation/Laboratory mode for testing game positions
 - Rich animations and audio feedback
+- User profiles with stats tracking
+- Mobile-responsive design
 
 The game involves capturing seeds by strategic distribution around a 14-pit board, with complex rules including solidarity (feeding), capture mechanics, and stalemate resolution.
+
+**Current Status:**
+- Backend Phase 1 (Authentication & Profiles): ✅ Complete
+- Backend Phase 2 (Robust Online Multiplayer): 🚧 Infrastructure Complete, UI Integration Pending
+- Frontend Phase 1 (Landing Page): ✅ Complete
+- Frontend Phase 2 (Navigation & Routing): ✅ Complete
+- Frontend Phase 3 (Mobile Responsivity): ✅ Complete
+- Frontend Phase 4 (Animations): ✅ Complete
+- Frontend Phase 5-7: 📅 Planned
+- See ROADMAP.md, FRONTEND_ROADMAP.md, and PHASE2_IMPLEMENTATION.md for details.
 
 ## Development Commands
 
@@ -20,30 +34,115 @@ The game involves capturing seeds by strategic distribution around a 14-pit boar
 
 ```bash
 npm install              # Install dependencies
-npm run dev             # Start development server (default: http://localhost:3000)
+npm run dev             # Start development server (http://localhost:3000)
 npm run build           # Build for production
 npm run preview         # Preview production build
 ```
 
 ### Environment Setup
 
-Create a `.env.local` file in the root directory and add your Gemini API key (referenced in README but not actively used in current code):
+Create a `.env.local` file in the root directory (copy from `.env.example`):
 
-```
+```bash
+# Required for authentication (Phase 1)
+VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Required for online multiplayer
+VITE_SOCKET_SERVER_URL=http://localhost:3002  # or your Fly.io URL in production
+
+# Optional (not currently used)
 GEMINI_API_KEY=your_api_key_here
 ```
 
+**Supabase Setup:**
+1. Create a Supabase project at https://supabase.com
+2. Run the SQL migrations in order:
+   - `supabase/migrations/001_initial_schema.sql` - User profiles and auth
+   - `supabase/migrations/002_game_rooms.sql` - Game rooms and spectators (Phase 2)
+3. Get your URL and anon key from Project Settings → API
+4. Row Level Security (RLS) policies are already configured in the migrations
+
 ### Online Multiplayer Server
 
-The Socket.io server for online play is in `server.js`. To run it:
+The Socket.io server for online play is in `server.js`.
+
+**Server Environment Setup:**
+Create a `.env` file in the root directory (copy from `.env.example.server`):
 
 ```bash
-node server.js          # Runs on port 3002 by default (configurable via PORT env var)
+PORT=3002
+
+# Required for Phase 2 (persistent rooms, reconnection, spectator mode)
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key-here  # NOT the anon key!
 ```
 
-Note: The required packages (`express`, `socket.io`, `cors`) are now included in package.json.
+**Important:** The service role key should NEVER be exposed to clients. Only use it on the server.
+
+**Run the server:**
+```bash
+node server.js          # Runs on port 3002 by default
+```
+
+**Expected output:**
+```
+╔════════════════════════════════════════╗
+║   Akông Socket.io Server               ║
+║   Port: 3002                           ║
+║   Database: Connected ✓                ║
+╚════════════════════════════════════════╝
+```
+
+**Phase 2 Features (requires Supabase connection):**
+- ✅ JWT authentication validation
+- ✅ Persistent game rooms in database
+- ✅ Automatic reconnection with state restoration
+- ✅ Spectator mode support
+- ✅ Heartbeat/keep-alive
+
+Note: The server will run without Supabase credentials, but Phase 2 features will be disabled.
+
+### Deployment
+
+The application is designed for a split deployment:
+- **Frontend**: Vercel (or similar static host)
+- **Backend**: Fly.io (or any Node.js host)
+- **Database/Auth**: Supabase (managed PostgreSQL + Auth)
+
+See DEPLOYMENT.md for complete deployment instructions including:
+- Fly.io setup with `fly.toml` configuration
+- Vercel environment variable configuration
+- CORS and production considerations
 
 ## Architecture
+
+### Authentication System (Phase 1 - Complete)
+
+**Supabase Integration:**
+- `services/supabase.ts`: Supabase client initialization and TypeScript types
+- `services/authService.ts`: Authentication operations (signUp, signIn, signOut, profile management)
+- `hooks/useAuth.ts`: React hook for auth state management with automatic session refresh
+- `components/auth/AuthScreen.tsx`: Login/Register UI
+- `components/auth/ProfilePage.tsx`: User profile modal with stats (rendered from AppRouter.tsx)
+
+**Authentication Flow:**
+1. App loads → `useAuth` hook checks for existing session
+2. No session → Shows `AuthScreen` (login/register)
+3. User signs up/in → Supabase Auth returns JWT token
+4. Profile automatically created via database trigger (`handle_new_user()`)
+5. Session persisted in localStorage, auto-refreshed by Supabase
+6. All game modes now require authentication
+
+**Database Schema (Supabase):**
+- `profiles` table: Extends `auth.users` with username, display_name, avatar, stats (games played/won/lost/drawn), ELO rating
+- `game_rooms` table (Phase 2): Persistent online game rooms with status tracking (waiting/playing/finished/abandoned)
+- `game_spectators` table (Phase 2): Users watching games in progress
+- Row Level Security (RLS) enabled on all tables
+- Automatic profile creation trigger on user signup
+
+**Protected Routes:**
+The game is only accessible after authentication. The `useAuth` hook manages loading states to prevent flashing between auth/game screens.
 
 ### Core Game Logic (`services/songoLogic.ts`)
 
@@ -94,10 +193,33 @@ Uses React hooks with a critical **ref pattern** to avoid stale closures:
 ### Component Structure
 
 ```
-App.tsx                 # Main orchestrator: menus, game modes, state management
-├── Board.tsx           # Visual board layout, score displays, pit rendering
-│   ├── Pit.tsx         # Individual pit with seeds, click handlers, hover effects
-│   └── Hand.tsx        # Animated floating hand showing seeds during moves
+index.tsx                        # Entry point, renders AppRouter
+AppRouter.tsx                    # Main router: routes, auth protection, layout management
+├── App.tsx                      # Game orchestrator: menus, game modes, state management
+├── hooks/
+│   └── useAuth.ts               # Authentication state hook
+├── pages/
+│   ├── LandingPage.tsx          # Home page: Hero, Features, How to Play, CTA
+│   └── RulesPage.tsx            # Game rules explanation page
+├── components/
+│   ├── layout/
+│   │   ├── Navbar.tsx           # Top navigation with burger menu (responsive)
+│   │   ├── Footer.tsx           # Footer with branding and links
+│   │   └── Layout.tsx           # Page wrapper (Navbar + content + Footer)
+│   ├── auth/
+│   │   ├── AuthScreen.tsx       # Login/Register forms
+│   │   └── ProfilePage.tsx      # User profile with stats
+│   ├── Board.tsx                # Visual board layout, score displays, pit rendering
+│   ├── Pit.tsx                  # Individual pit with seeds, click handlers, hover effects
+│   └── Hand.tsx                 # Animated floating hand showing seeds during moves
+├── services/
+│   ├── supabase.ts              # Supabase client + types (Profile, GameRoom, GameSpectator)
+│   ├── authService.ts           # Auth operations
+│   ├── roomService.ts           # Game room persistence (Phase 2)
+│   ├── songoLogic.ts            # Core game logic
+│   ├── ai.ts                    # Minimax AI
+│   ├── audioService.ts          # Sound effects
+│   └── onlineManager.ts         # Socket.io client with reconnection
 ```
 
 ### Animation System
@@ -118,16 +240,41 @@ Web Audio API implementation:
 - Lazy initialization on first user interaction (browser requirement)
 - Mute toggle persists across moves
 
-### Online Multiplayer (`services/onlineManager.ts`)
+### Online Multiplayer Architecture
 
-Uses Socket.io client connecting to a separate Socket.io server (server.js):
-- **Host-authoritative**: Host executes moves and broadcasts results
-- **Guest sends intents**: Guest sends `MOVE_INTENT`, receives `REMOTE_MOVE` with new state + animation steps
-- **Synchronization**: Full state sync on connection via `SYNC_STATE`
-- Room IDs generated client-side (6-char random strings)
-- Configured via `VITE_SOCKET_SERVER_URL` environment variable (defaults to localhost in development)
+**Phase 2 Infrastructure (✅ Complete):**
 
-**Message types:** `SYNC_STATE`, `MOVE_INTENT`, `REMOTE_MOVE`, `RESTART`, `PLAYER_JOINED`
+**Client (`services/onlineManager.ts`):**
+- Socket.io client with JWT authentication
+- Automatic reconnection with state restoration
+- Heartbeat/keep-alive every 30 seconds
+- Methods: `init(userId)`, `createRoom(userId)`, `joinRoom(roomCode, userId)`, `spectateRoom()`, `leaveSpectating()`
+- Configured via `VITE_SOCKET_SERVER_URL` environment variable
+
+**Server (`server.js`):**
+- Express + Socket.io backend with Supabase integration
+- JWT token validation on connection (`socket.handshake.auth.token`)
+- Persistent game state saved to database after each move
+- Reconnection support with state restoration from DB
+- Events: `create_room`, `join_room`, `spectate_room`, `game_event`, `reconnect_to_room`, `heartbeat`
+- Socket-to-user mapping for reconnection handling
+
+**Game Room Service (`services/roomService.ts`):**
+- Database operations for persistent rooms
+- Functions: `createGameRoom()`, `joinGameRoom()`, `getRoomByCode()`, `getActiveRooms()`
+- State persistence: `updateGameState()`, `finishGame()`, `abandonGame()`
+- Spectator management: `addSpectator()`, `removeSpectator()`, `getSpectators()`
+- Realtime subscriptions: `subscribeToRoom()`, `subscribeToSpectators()`
+
+**Game Flow:**
+1. Host creates room → Saved to `game_rooms` table (status: 'waiting')
+2. Guest joins → Room status updated to 'playing'
+3. Each move → Host saves `game_state` JSONB to database
+4. Disconnect → Room persists in DB
+5. Reconnect → State restored from `game_rooms.game_state`
+6. Game ends → Room status set to 'finished' or 'abandoned'
+
+**Phase 2 Status:** Infrastructure complete, awaiting UI integration in `App.tsx` (see PHASE2_IMPLEMENTATION.md)
 
 ## Game Modes
 
@@ -182,13 +329,169 @@ To test specific game scenarios, use **Simulation Mode**:
 
 This is invaluable for debugging edge cases like solidarity feeding, capture chains, or endgame stalemates.
 
-## Known Quirks
+## Frontend Architecture & Routing
 
-- README mentions Gemini API in .env setup but it's not actively integrated in the game logic
-- The inversion logic for online guest view (`invertView` prop) affects visual rendering only, not game logic indices
-- Audio initialization requires user interaction - first click enables sound
-- Vite dev server runs on port 3000 (vite.config.ts:9), but README.md incorrectly states 3001
-- Socket.io server defaults to port 3002 (server.js:56) unless PORT env var is set
+### React Router Setup
+
+**Routes:**
+- `/` - Landing Page (public)
+- `/rules` - Rules Page (public)
+- `/game` - Game Page (protected, requires authentication)
+- `*` - Catch-all redirects to `/`
+
+**Layout System:**
+- `Layout.tsx` wraps pages with `Navbar` + content + `Footer`
+- Game page (`App.tsx`) doesn't use Layout (fullscreen experience)
+- `AppRouter.tsx` manages authentication checks and route protection
+
+**Navigation:**
+- `Navbar.tsx` includes:
+  - Logo with "AKÔNG" branding
+  - Desktop nav links (Accueil, Jouer, Règles)
+  - Mobile burger menu (responsive)
+  - Profile button (when authenticated)
+  - Active route highlighting
+
+**Pages:**
+- `LandingPage.tsx`: Hero section, Features grid, How to Play steps, Final CTA
+- `RulesPage.tsx`: Comprehensive game rules with icons and sections
+
+### Responsive Design
+
+**Breakpoints (Tailwind):**
+- Mobile: < 640px (base styles)
+- sm: 640px+ (small tablets)
+- md: 768px+ (tablets)
+- lg: 1024px+ (desktop)
+- xl: 1280px+ (large desktop)
+
+**Mobile Optimizations:**
+- Board: `max-w-[98vw]` prevents overflow on small screens
+- Pits: Increased from 72px to 80px width for better touch targets (44px+ recommended)
+- Navbar: Burger menu auto-collapses on mobile
+- All text uses responsive sizing (text-base sm:text-lg, etc.)
+- Modals: `max-h-[90vh]` with `overflow-y-auto` for proper scrolling
+
+### Animations & Feedback
+
+**Libraries Used:**
+- **Framer Motion**: Page transitions and animations
+- **React Hot Toast**: Elegant notification system
+- **Canvas Confetti**: Victory celebrations
+
+**Implemented Effects:**
+- **Page Transitions**: Smooth fade + slide animations between routes using AnimatePresence
+- **Toast Notifications**: Global ToastProvider with styled notifications (success, error, loading)
+- **Victory Confetti**: Explosive celebration effect when a player wins (triggered in `App.tsx`)
+
+**Files:**
+- `components/ToastProvider.tsx`: Toast notification wrapper with custom styling (wraps entire app in index.tsx)
+- `utils/confetti.ts`: Confetti utility functions (victoryConfetti, simpleConfetti, etc.)
+- `AppRouter.tsx`: Animated routes with Framer Motion, manages profile modal state
+- `index.tsx`: App entry point wrapped with ToastProvider for global notifications
+
+**Usage Examples:**
+```typescript
+// Toast notifications
+import toast from 'react-hot-toast';
+toast.success('Partie créée !');
+toast.error('Erreur de connexion');
+toast.loading('Connexion en cours...');
+
+// Confetti
+import { victoryConfetti } from './utils/confetti';
+victoryConfetti(); // Fires on victory
+```
+
+## Known Quirks & Inconsistencies
+
+- **Gemini API**: Mentioned in .env.example and vite.config.ts but not actively used in game logic
+- **Online guest view**: The `invertView` prop affects visual rendering only, not game logic indices
+- **Audio initialization**: Requires user interaction (browser requirement) - first click enables sound
+- **Phase 2 integration**: Infrastructure complete but not yet integrated into `App.tsx`. Online games currently work without persistence/reconnection.
+- **Profile stats**: Database schema includes games_played/won/lost/drawn and ELO fields, but these aren't auto-updated yet (Phase 3+)
+- **Game name**: Official name is "AKÔNG" (with circumflex) - ensure consistency across all UI
+
+## Working with Phase 2 (Robust Online Multiplayer)
+
+**Quick Reference:** See `PHASE2_IMPLEMENTATION.md` for complete documentation.
+
+### Key Files Created
+- `services/roomService.ts` - Database operations for persistent rooms
+- `supabase/migrations/002_game_rooms.sql` - Database schema
+- `.env.example.server` - Server environment template
+- Updated `server.js` - JWT auth + DB persistence
+- Updated `services/onlineManager.ts` - Reconnection support
+
+### Using Room Service
+
+```typescript
+import { createGameRoom, joinGameRoom, updateGameState } from './services/roomService';
+
+// Create a persistent room
+const room = await createGameRoom(userId, roomCode);
+
+// Join an existing room
+await joinGameRoom(roomCode, guestId);
+
+// Save game state after each move (host only)
+await updateGameState(room.id, gameState);
+
+// Handle game completion
+await finishGame(room.id, winnerId); // or null for draw
+```
+
+### Integration Checklist (Pending)
+- [ ] Modify `App.tsx` `startGame()` to call `createGameRoom()`
+- [ ] Update room join logic to call `joinGameRoom()`
+- [ ] Add `updateGameState()` after each move in online mode
+- [ ] Implement reconnection UI with `onlineManager.onReconnect()`
+- [ ] Add spectator mode UI components
+- [ ] Implement abandon/timeout detection
+
+## Working with Authentication
+
+### Adding New Profile Fields
+1. Update the `Profile` interface in `services/supabase.ts`
+2. Add the column to the `profiles` table via Supabase SQL editor or migration
+3. Update RLS policies if needed
+4. Modify `ProfilePage.tsx` to display/edit the new field
+
+### Protecting New Features
+Use the `useAuth` hook in components that need authentication:
+```typescript
+const { user, profile, loading, isAuthenticated } = useAuth();
+
+if (loading) return <div>Loading...</div>;
+if (!isAuthenticated) return <div>Please log in</div>;
+```
+
+### Accessing User Data in Game Logic
+The `user` and `profile` objects from `useAuth` are available in `App.tsx`. Pass them down to components as props or use the hook directly in child components.
+
+## Development Roadmap
+
+This project follows a phased development approach with two parallel tracks:
+
+### Backend Roadmap (ROADMAP.md)
+- **Phase 1** ✅: Authentication & User Profiles (COMPLETE)
+- **Phase 2** 🚧: Robust online multiplayer (persistent rooms, reconnection, spectator mode)
+- **Phase 3** 📅: Social features (lobby, invitations, chat)
+- **Phase 4** 📅: Gamification (ELO, leaderboards, ranked matchmaking, achievements)
+- **Phase 5** 📅: Advanced features (tournaments, friends system, replays)
+
+### Frontend Roadmap (FRONTEND_ROADMAP.md)
+- **Phase 1** ✅: Landing Page (COMPLETE)
+- **Phase 2** ✅: Navigation & Routing (COMPLETE)
+- **Phase 3** ✅: Mobile Responsivity (COMPLETE)
+- **Phase 4** ✅: Animations & Micro-interactions (COMPLETE)
+- **Phase 5** 📅: Accessibility (a11y)
+- **Phase 6** 📅: Performance Optimization
+- **Phase 7** 📅: PWA (Progressive Web App)
+
+**Progress:** 4/7 frontend phases complete (57%)
+
+When implementing new features, refer to ROADMAP.md for database schemas and FRONTEND_ROADMAP.md for UI/UX details.
 
 ## Code Style Notes
 
@@ -196,3 +499,4 @@ This is invaluable for debugging edge cases like solidarity feeding, capture cha
 - Tailwind CSS for all styling (dark theme: gray-900 background, amber accents)
 - Heavy use of TypeScript enums for type safety (Player, GameStatus, GameMode)
 - Functional components with hooks throughout (no class components)
+- Console logs use `[ServiceName]` prefix for debugging (e.g., `[useAuth]`, `[onlineManager]`)

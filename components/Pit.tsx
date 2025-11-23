@@ -17,9 +17,9 @@ const Pit: React.FC<PitProps> = ({ seeds, onClick, isOwner, isPlayable, pitIndex
     // Show up to 30 seeds visually. Beyond that, the count badge handles it.
     const maxVisuals = Math.min(seeds, 30); 
     
-    // Dynamic sizing based on congestion
+    // Dynamic sizing based on congestion, with mobile responsiveness
     const isCongested = seeds > 12;
-    const sizeClass = isCongested ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5';
+    const sizeClass = isCongested ? 'w-2 sm:w-2.5 h-2 sm:h-2.5' : 'w-3 sm:w-3.5 h-3 sm:h-3.5';
     
     // Grid calculation to distribute seeds evenly across the rectangular area
     // The pit is roughly 4:3 aspect ratio. 
@@ -92,21 +92,21 @@ const Pit: React.FC<PitProps> = ({ seeds, onClick, isOwner, isPlayable, pitIndex
     <div className="flex flex-col items-center group relative px-1" id={`pit-${pitIndex}`}>
       
       {/* Count Badge */}
-      <div 
+      <div
         className={`
-            absolute ${isOwner ? '-bottom-3' : '-top-3'}
-            min-w-[1.8rem] h-[1.8rem]
+            absolute ${isOwner ? '-bottom-2 sm:-bottom-3' : '-top-2 sm:-top-3'}
+            min-w-[1.5rem] sm:min-w-[1.8rem] h-[1.5rem] sm:h-[1.8rem]
             flex items-center justify-center
-            px-1.5
-            rounded-full 
-            font-bold text-sm font-mono 
-            z-20 
-            shadow-md border-2 border-gray-400
+            px-1 sm:px-1.5
+            rounded-full
+            font-bold text-xs sm:text-sm font-mono
+            z-20
+            shadow-md border border-gray-400 sm:border-2
             pointer-events-none
             transition-transform duration-200
-            ${isEditable 
-                ? 'bg-blue-600 text-white scale-110 border-white' 
-                : 'bg-black text-white' 
+            ${isEditable
+                ? 'bg-blue-600 text-white scale-110 border-white'
+                : 'bg-black text-white'
             }
         `}
       >
@@ -117,25 +117,30 @@ const Pit: React.FC<PitProps> = ({ seeds, onClick, isOwner, isPlayable, pitIndex
       <button
         onClick={handleClick}
         disabled={!isPlayable && !isEditable}
+        aria-label={`Case ${pitIndex + 1}, ${seeds} graine${seeds > 1 ? 's' : ''}${isPlayable ? ', jouable' : ''}`}
+        aria-disabled={!isPlayable && !isEditable}
         className={`
-          relative 
-          w-20 h-14 sm:w-24 sm:h-16 md:w-28 md:h-20
+          relative
+          w-[5rem] h-[3.5rem] sm:w-24 sm:h-16 md:w-28 md:h-20
           rounded-lg
           transition-all duration-200 ease-in-out
           overflow-hidden
-          
+
           /* Background: Specific Light Blue-Grey */
           bg-[#d7e3e8]
-          
+
           /* Inner Shadow for depth */
           shadow-[inset_0px_5px_10px_rgba(0,0,0,0.25),inset_0px_-2px_4px_rgba(255,255,255,0.7)]
-          
+
           /* Borders */
           border-t border-white/60
           border-b border-gray-400
 
-          ${isPlayable 
-            ? 'ring-2 ring-amber-400 cursor-pointer brightness-105' 
+          /* Focus Indicator */
+          focus:outline-none focus:ring-4 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-gray-900
+
+          ${isPlayable
+            ? 'ring-2 ring-amber-400 cursor-pointer brightness-105'
             : ''
           }
           ${isEditable

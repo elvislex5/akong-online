@@ -77,7 +77,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       <div className="w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <h1 className="text-6xl font-bold text-amber-500 mb-2">AKONG</h1>
+          <h1 className="text-6xl font-bold text-amber-500 mb-2">AKÔNG</h1>
           <p className="text-gray-400 text-lg">Le Jeu du Songo</p>
         </div>
 
@@ -250,7 +250,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>© 2025 Akong - Jeu traditionnel africain de stratégie</p>
+          <p>© 2025 Akông - Jeu traditionnel africain de stratégie</p>
         </div>
       </div>
     </div>

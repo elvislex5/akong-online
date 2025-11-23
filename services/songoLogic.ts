@@ -489,10 +489,10 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
   // This applies if we were in explicit solidarity mode OR if we just played while opponent was empty.
   const opponent = currentPlayer === Player.One ? Player.Two : Player.One;
   const opponentIndices = getPlayerIndices(opponent);
-  const opponentSeeds = opponentIndices.reduce((sum, idx) => sum + board[idx], 0);
-  
+  const opponentSeedsBeforeMove = opponentIndices.reduce((sum, idx) => sum + currentState.board[idx], 0);
+
   // If opponent was starving (0 seeds), did we feed them?
-  if (state.isSolidarityMode || (opponentSeeds === 0 && currentState.board[pitIndex] > 0)) { // Check strictly against 0 implies we need to see if now > 0
+  if (state.isSolidarityMode || (opponentSeedsBeforeMove === 0 && currentState.board[pitIndex] > 0)) {
       const fed = opponentIndices.some((idx: number) => board[idx] > 0);
      
      if (fed) {
@@ -501,13 +501,8 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
         state.message = "Solidarité respectée. La partie continue.";
      } else {
         // Opponent is still empty.
-        // Did we have a choice? Check if any valid move *could* have fed.
-        // If executeMove is called, we assume validMoves was checked.
-        // If we are here and fed is false, it means either:
-        // A) We didn't have any move that could feed. (Game Over)
-        // B) We played a bad move (but isValidMove should have prevented this if a good move existed).
-        
-        // So if opponent is still empty, it's Game Over.
+        // This implies no feeding move was possible, as it would have been enforced by isValidMove.
+        // The game ends, and the current player captures all remaining seeds.
         const myIndices = getPlayerIndices(currentPlayer);
         let remaining = 0;
         myIndices.forEach((idx: number) => {
@@ -516,8 +511,20 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
         });
         scores[currentPlayer] += remaining;
         state.message = "Impossible de nourrir l'adversaire. Fin de partie.";
-        return checkWinCondition(state, true); 
+        return checkWinCondition(state, true); // Force end
      }
+  }
+
+  // --- Final Check: Does the NEXT player have any moves? ---
+  const nextPlayer = currentPlayer === Player.One ? Player.Two : Player.One;
+  const nextPlayerIndices = getPlayerIndices(nextPlayer);
+  const nextPlayerHasMoves = nextPlayerIndices.some(idx => isValidMove({ ...state, currentPlayer: nextPlayer }, idx).valid);
+
+  if (!nextPlayerHasMoves) {
+      // If the next player has no valid moves, it's a stalemate (or end-game condition).
+      // This can happen if they have seeds, but all are forbidden to play (e.g., last pit with 1).
+      // Or, more commonly, if they have no seeds and feeding isn't possible.
+      return resolveGameStalemate(state);
   }
 
   state.currentPlayer = currentPlayer === Player.One ? Player.Two : Player.One;

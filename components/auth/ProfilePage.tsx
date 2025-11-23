@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { signOut, updateUsername, updateProfile } from '../../services/authService';
 import type { Profile } from '../../services/supabase';
 
@@ -16,6 +16,18 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, onClose, onProfileUp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Keyboard navigation: Close modal on Esc key
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isEditing) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscKey);
+    return () => document.removeEventListener('keydown', handleEscKey);
+  }, [onClose, isEditing]);
 
   const handleSave = async () => {
     setError('');
@@ -81,18 +93,30 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ profile, onClose, onProfileUp
     : 0;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        // Close modal when clicking backdrop (not when editing)
+        if (e.target === e.currentTarget && !isEditing) {
+          onClose();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="profile-title"
+    >
       <div className="bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-gray-700">
         {/* Header */}
         <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-6 rounded-t-lg">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">Profil</h2>
+              <h2 id="profile-title" className="text-3xl font-bold text-gray-900">Profil</h2>
               <p className="text-gray-800 mt-1">@{profile.username}</p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-900 hover:text-gray-700 text-2xl font-bold"
+              aria-label="Fermer le profil"
+              className="text-gray-900 hover:text-gray-700 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-gray-900 rounded"
             >
               ×
             </button>
