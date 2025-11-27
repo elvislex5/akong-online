@@ -22,11 +22,51 @@ export class AudioService {
     }
   }
 
+  // Background Music
+  private musicAudio: HTMLAudioElement | null = null;
+
+  public playBackgroundMusic(url: string) {
+    if (this.musicAudio) {
+      if (this.musicAudio.src.includes(url)) {
+        if (this.musicAudio.paused && !this.isMuted) {
+          this.musicAudio.play().catch(e => console.error("Music play failed:", e));
+        }
+        return;
+      }
+      this.musicAudio.pause();
+      this.musicAudio = null;
+    }
+
+    this.musicAudio = new Audio(url);
+    this.musicAudio.loop = true;
+    this.musicAudio.volume = 0.2; // Lower volume for background music
+
+    if (!this.isMuted) {
+      this.musicAudio.play().catch(e => console.error("Music play failed:", e));
+    }
+  }
+
+  public stopBackgroundMusic() {
+    if (this.musicAudio) {
+      this.musicAudio.pause();
+      this.musicAudio.currentTime = 0;
+    }
+  }
+
   public toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.ctx && this.masterGain) {
       this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.3, this.ctx.currentTime, 0.1);
     }
+
+    if (this.musicAudio) {
+      if (this.isMuted) {
+        this.musicAudio.pause();
+      } else {
+        this.musicAudio.play().catch(e => console.error("Music resume failed:", e));
+      }
+    }
+
     return this.isMuted;
   }
 
@@ -37,7 +77,7 @@ export class AudioService {
   // Sound: "Pluck" / "Swish" when picking up seeds
   public playPickup() {
     if (this.isMuted || !this.ctx || !this.masterGain) return;
-    
+
     const t = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
@@ -45,7 +85,7 @@ export class AudioService {
     // Slide up pitch slightly
     osc.frequency.setValueAtTime(300, t);
     osc.frequency.exponentialRampToValueAtTime(600, t + 0.15);
-    
+
     // Soft envelope
     gain.gain.setValueAtTime(0, t);
     gain.gain.linearRampToValueAtTime(0.5, t + 0.05);
@@ -53,7 +93,7 @@ export class AudioService {
 
     osc.connect(gain);
     gain.connect(this.masterGain);
-    
+
     osc.start(t);
     osc.stop(t + 0.2);
   }
@@ -92,7 +132,7 @@ export class AudioService {
     freqs.forEach((f, i) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      
+
       osc.type = 'sine';
       osc.frequency.value = f;
 
@@ -102,7 +142,7 @@ export class AudioService {
 
       osc.connect(gain);
       gain.connect(this.masterGain);
-      
+
       osc.start(t);
       osc.stop(t + 0.6);
     });
@@ -115,29 +155,29 @@ export class AudioService {
 
     // Arpeggio up
     const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-    
+
     notes.forEach((f, i) => {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'square';
-        // Lowpass filter to make square wave less harsh
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 2000;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      // Lowpass filter to make square wave less harsh
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 2000;
 
-        osc.frequency.value = f;
-        
-        const startTime = t + (i * 0.1);
-        gain.gain.setValueAtTime(0, startTime);
-        gain.gain.linearRampToValueAtTime(0.1, startTime + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+      osc.frequency.value = f;
 
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(this.masterGain);
-        
-        osc.start(startTime);
-        osc.stop(startTime + 0.5);
+      const startTime = t + (i * 0.1);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.1, startTime + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.4);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.5);
     });
   }
 }

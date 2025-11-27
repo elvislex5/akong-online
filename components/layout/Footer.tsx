@@ -5,21 +5,21 @@ const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-gray-900 border-t border-gray-800 mt-auto">
+    <footer className="glass-navbar border-t border-gold/30 mt-auto relative z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-black text-white">A</span>
+              <div className="w-10 h-10 glass-glow-gold rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-2xl font-black text-gold shimmer-gold">A</span>
               </div>
-              <span className="text-xl font-black text-white tracking-tight">
+              <span className="text-xl font-black neon-text-gold text-glow-gold-sm shimmer-gold">
                 AKÔNG
               </span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-white-60 text-sm leading-relaxed">
               Le jeu de stratégie africain millénaire, maintenant en ligne.
               Capturez les graines et dominez le plateau !
             </p>
@@ -27,14 +27,14 @@ const Footer: React.FC = () => {
 
           {/* Links Section */}
           <div className="space-y-4">
-            <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+            <h3 className="text-white font-bold text-sm uppercase tracking-wider text-glow-gold-sm">
               Navigation
             </h3>
             <ul className="space-y-2">
               <li>
                 <Link
                   to="/"
-                  className="text-gray-400 hover:text-amber-500 transition-colors text-sm"
+                  className="text-white-60 hover:text-gold transition-colors text-sm glass-button inline-block px-3 py-1 rounded-lg hover:glass-glow-gold"
                 >
                   Accueil
                 </Link>
@@ -42,17 +42,9 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/game"
-                  className="text-gray-400 hover:text-amber-500 transition-colors text-sm"
+                  className="text-white-60 hover:text-gold transition-colors text-sm glass-button inline-block px-3 py-1 rounded-lg hover:glass-glow-gold"
                 >
                   Jouer
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/rules"
-                  className="text-gray-400 hover:text-amber-500 transition-colors text-sm"
-                >
-                  Règles du jeu
                 </Link>
               </li>
             </ul>
@@ -60,10 +52,10 @@ const Footer: React.FC = () => {
 
           {/* Info Section */}
           <div className="space-y-4">
-            <h3 className="text-white font-bold text-sm uppercase tracking-wider">
+            <h3 className="text-white font-bold text-sm uppercase tracking-wider text-glow-gold-sm">
               À propos
             </h3>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-white-60 text-sm leading-relaxed">
               Akông est une adaptation moderne du jeu traditionnel Songo (variante MPEM).
               Développé avec passion pour préserver et partager ce patrimoine culturel.
             </p>
@@ -71,13 +63,13 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-8 pt-8 border-t border-gray-800">
+        <div className="mt-8 pt-8 border-t border-gold/20">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <p className="text-gray-500 text-sm">
+            <p className="text-white-40 text-sm">
               © {currentYear} Akông. Tous droits réservés.
             </p>
             <div className="flex items-center space-x-4">
-              <span className="text-gray-500 text-xs">
+              <span className="text-white-40 text-xs glass px-3 py-1 rounded-full">
                 ETAO
               </span>
             </div>

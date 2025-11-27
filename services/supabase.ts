@@ -32,6 +32,7 @@ export interface Profile {
   games_drawn: number;
   elo_rating: number;
   peak_elo: number;
+  selected_board_skin: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -67,4 +68,54 @@ export interface GameSpectator {
   room_id: string;
   user_id: string;
   joined_at: string;
+}
+
+// User presence status (Phase 3)
+export type PresenceStatus = 'online' | 'in_game' | 'offline';
+
+// User presence interface (Phase 3)
+export interface UserPresence {
+  user_id: string;
+  status: PresenceStatus;
+  current_room_id: string | null;
+  last_seen: string;
+  updated_at: string;
+}
+
+// Invitation status (Phase 3)
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+
+// Game invitation interface (Phase 3)
+export interface GameInvitation {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  room_id: string | null;
+  status: InvitationStatus;
+  created_at: string;
+  expires_at: string;
+  responded_at: string | null;
+}
+
+// Online user with presence (for lobby display)
+export interface OnlineUser {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status: PresenceStatus;
+  current_room_id: string | null;
+  last_seen: string;
+}
+
+// Pending invitation with sender details
+export interface PendingInvitation {
+  id: string;
+  from_user_id: string;
+  from_username: string;
+  from_display_name: string | null;
+  from_avatar_url: string | null;
+  room_id: string | null;
+  created_at: string;
+  expires_at: string;
 }

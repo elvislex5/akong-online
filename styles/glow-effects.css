@@ -1,0 +1,759 @@
+/**
+ * AKÔNG - Glow & Neon Effects
+ * Cyberpunk-inspired lighting effects
+ */
+
+/* ========================================
+   TEXT GLOW EFFECTS
+   ======================================== */
+
+.text-glow-gold-sm {
+    text-shadow: var(--glow-gold-sm);
+}
+
+.text-glow-gold {
+    text-shadow: var(--glow-gold-md);
+}
+
+.text-glow-gold-lg {
+    text-shadow: var(--glow-gold-lg);
+}
+
+.text-glow-gold-xl {
+    text-shadow: var(--glow-gold-xl);
+}
+
+.text-glow-amber-sm {
+    text-shadow: var(--glow-amber-sm);
+}
+
+.text-glow-amber {
+    text-shadow: var(--glow-amber-md);
+}
+
+.text-glow-amber-lg {
+    text-shadow: var(--glow-amber-lg);
+}
+
+.text-glow-emerald-sm {
+    text-shadow: var(--glow-emerald-sm);
+}
+
+.text-glow-emerald {
+    text-shadow: var(--glow-emerald-md);
+}
+
+.text-glow-emerald-lg {
+    text-shadow: var(--glow-emerald-lg);
+}
+
+.text-glow-cyan-sm {
+    text-shadow: var(--glow-cyan-sm);
+}
+
+.text-glow-cyan {
+    text-shadow: var(--glow-cyan-md);
+}
+
+.text-glow-cyan-lg {
+    text-shadow: var(--glow-cyan-lg);
+}
+
+/* ========================================
+   BOX GLOW EFFECTS
+   ======================================== */
+
+.glow-gold-sm {
+    box-shadow: var(--glow-gold-sm);
+}
+
+.glow-gold {
+    box-shadow: var(--glow-gold-md);
+}
+
+.glow-gold-lg {
+    box-shadow: var(--glow-gold-lg);
+}
+
+.glow-gold-xl {
+    box-shadow: var(--glow-gold-xl);
+}
+
+.glow-amber-sm {
+    box-shadow: var(--glow-amber-sm);
+}
+
+.glow-amber {
+    box-shadow: var(--glow-amber-md);
+}
+
+.glow-amber-lg {
+    box-shadow: var(--glow-amber-lg);
+}
+
+.glow-emerald-sm {
+    box-shadow: var(--glow-emerald-sm);
+}
+
+.glow-emerald {
+    box-shadow: var(--glow-emerald-md);
+}
+
+.glow-emerald-lg {
+    box-shadow: var(--glow-emerald-lg);
+}
+
+.glow-cyan-sm {
+    box-shadow: var(--glow-cyan-sm);
+}
+
+.glow-cyan {
+    box-shadow: var(--glow-cyan-md);
+}
+
+.glow-cyan-lg {
+    box-shadow: var(--glow-cyan-lg);
+}
+
+/* ========================================
+   NEON BORDERS
+   ======================================== */
+
+.neon-border-gold {
+    border: 2px solid var(--color-gold);
+    box-shadow: var(--glow-gold-md), inset var(--glow-gold-sm);
+}
+
+.neon-border-amber {
+    border: 2px solid var(--color-amber);
+    box-shadow: var(--glow-amber-md), inset var(--glow-amber-sm);
+}
+
+.neon-border-emerald {
+    border: 2px solid var(--color-emerald);
+    box-shadow: var(--glow-emerald-md), inset var(--glow-emerald-sm);
+}
+
+.neon-border-cyan {
+    border: 2px solid var(--color-cyan);
+    box-shadow: var(--glow-cyan-md), inset var(--glow-cyan-sm);
+}
+
+/* ========================================
+   PULSING GLOW ANIMATIONS
+   ======================================== */
+
+@keyframes glow-pulse-gold {
+
+    0%,
+    100% {
+        box-shadow: var(--glow-gold-md);
+    }
+
+    50% {
+        box-shadow: var(--glow-gold-lg);
+    }
+}
+
+@keyframes glow-pulse-amber {
+
+    0%,
+    100% {
+        box-shadow: var(--glow-amber-md);
+    }
+
+    50% {
+        box-shadow: var(--glow-amber-lg);
+    }
+}
+
+@keyframes glow-pulse-emerald {
+
+    0%,
+    100% {
+        box-shadow: var(--glow-emerald-md);
+    }
+
+    50% {
+        box-shadow: var(--glow-emerald-lg);
+    }
+}
+
+@keyframes text-glow-pulse-gold {
+
+    0%,
+    100% {
+        text-shadow: var(--glow-gold-md);
+    }
+
+    50% {
+        text-shadow: var(--glow-gold-lg);
+    }
+}
+
+.glow-pulse-gold {
+    animation: glow-pulse-gold 2s ease-in-out infinite;
+}
+
+.glow-pulse-amber {
+    animation: glow-pulse-amber 2s ease-in-out infinite;
+}
+
+.glow-pulse-emerald {
+    animation: glow-pulse-emerald 2s ease-in-out infinite;
+}
+
+.text-glow-pulse-gold {
+    animation: text-glow-pulse-gold 2s ease-in-out infinite;
+}
+
+/* ========================================
+   NEON BUTTONS
+   ======================================== */
+
+.neon-button {
+    position: relative;
+    padding: var(--space-3) var(--space-8);
+    background: transparent;
+    border: 2px solid var(--color-gold);
+    color: var(--color-gold);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-lg);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    overflow: hidden;
+    transition: var(--transition-all);
+    box-shadow: var(--glow-gold-sm);
+}
+
+.neon-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+    transition: left var(--duration-medium) var(--ease-out);
+}
+
+.neon-button:hover {
+    background: rgba(255, 215, 0, 0.1);
+    box-shadow: var(--glow-gold-lg);
+    transform: translateY(-2px);
+}
+
+.neon-button:hover::before {
+    left: 100%;
+}
+
+.neon-button:active {
+    transform: translateY(0);
+    box-shadow: var(--glow-gold-md);
+}
+
+.neon-button-amber {
+    border-color: var(--color-amber);
+    color: var(--color-amber);
+    box-shadow: var(--glow-amber-sm);
+}
+
+.neon-button-amber::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 140, 0, 0.3), transparent);
+}
+
+.neon-button-amber:hover {
+    background: rgba(255, 140, 0, 0.1);
+    box-shadow: var(--glow-amber-lg);
+}
+
+.neon-button-emerald {
+    border-color: var(--color-emerald);
+    color: var(--color-emerald);
+    box-shadow: var(--glow-emerald-sm);
+}
+
+.neon-button-emerald::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 127, 0.3), transparent);
+}
+
+.neon-button-emerald:hover {
+    background: rgba(0, 255, 127, 0.1);
+    box-shadow: var(--glow-emerald-lg);
+}
+
+/* ========================================
+   NEON CARDS
+   ======================================== */
+
+.neon-card {
+    background: var(--color-dark);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-3d-md), var(--glow-gold-sm);
+    transition: var(--transition-all);
+    position: relative;
+    overflow: hidden;
+}
+
+.neon-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity var(--duration-medium) var(--ease-out);
+}
+
+.neon-card:hover {
+    border-color: var(--color-gold-light);
+    box-shadow: var(--shadow-3d-lg), var(--glow-gold-md);
+    transform: translateY(-4px);
+}
+
+.neon-card:hover::before {
+    opacity: 1;
+}
+
+/* ========================================
+   NEON LINES & DIVIDERS
+   ======================================== */
+
+.neon-line-gold {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    box-shadow: var(--glow-gold-sm);
+}
+
+.neon-line-amber {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-amber), transparent);
+    box-shadow: var(--glow-amber-sm);
+}
+
+/* ========================================
+   NEON TEXT EFFECTS
+   ======================================== */
+
+.neon-text-gold {
+    color: var(--color-gold);
+    text-shadow: var(--glow-gold-md);
+    font-weight: var(--font-bold);
+}
+
+.neon-text-amber {
+    color: var(--color-amber);
+    text-shadow: var(--glow-amber-md);
+    font-weight: var(--font-bold);
+}
+
+.neon-text-emerald {
+    color: var(--color-emerald);
+    text-shadow: var(--glow-emerald-md);
+    font-weight: var(--font-bold);
+}
+
+/* ========================================
+   SHIMMER EFFECT
+   ======================================== */
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.shimmer-gold {
+    background: linear-gradient(90deg,
+            var(--color-gold-dark) 0%,
+            var(--color-gold) 50%,
+            var(--color-gold-dark) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+}
+
+/* ========================================
+   GLOW HOVER EFFECTS
+   ======================================== */
+
+.hover-glow-gold {
+    transition: var(--transition-shadow);
+}
+
+.hover-glow-gold:hover {
+    box-shadow: var(--glow-gold-lg);
+}
+
+.hover-glow-amber {
+    transition: var(--transition-shadow);
+}
+
+.hover-glow-amber:hover {
+    box-shadow: var(--glow-amber-lg);
+}
+
+.hover-glow-emerald {
+    transition: var(--transition-shadow);
+}
+
+.neon-button {
+    position: relative;
+    padding: var(--space-3) var(--space-8);
+    background: transparent;
+    border: 2px solid var(--color-gold);
+    color: var(--color-gold);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-lg);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    overflow: hidden;
+    transition: var(--transition-all);
+    box-shadow: var(--glow-gold-sm);
+}
+
+.neon-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+    transition: left var(--duration-medium) var(--ease-out);
+}
+
+.neon-button:hover {
+    background: rgba(255, 215, 0, 0.1);
+    box-shadow: var(--glow-gold-lg);
+    transform: translateY(-2px);
+}
+
+.neon-button:hover::before {
+    left: 100%;
+}
+
+.neon-button:active {
+    transform: translateY(0);
+    box-shadow: var(--glow-gold-md);
+}
+
+.neon-button-amber {
+    border-color: var(--color-amber);
+    color: var(--color-amber);
+    box-shadow: var(--glow-amber-sm);
+}
+
+.neon-button-amber::before {
+    background: linear-gradient(90deg, transparent, rgba(255, 140, 0, 0.3), transparent);
+}
+
+.neon-button-amber:hover {
+    background: rgba(255, 140, 0, 0.1);
+    box-shadow: var(--glow-amber-lg);
+}
+
+.neon-button-emerald {
+    border-color: var(--color-emerald);
+    color: var(--color-emerald);
+    box-shadow: var(--glow-emerald-sm);
+}
+
+.neon-button-emerald::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 127, 0.3), transparent);
+}
+
+.neon-button-emerald:hover {
+    background: rgba(0, 255, 127, 0.1);
+    box-shadow: var(--glow-emerald-lg);
+}
+
+/* ========================================
+   NEON CARDS
+   ======================================== */
+
+.neon-card {
+    background: var(--color-dark);
+    border: 1px solid var(--color-gold);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-3d-md), var(--glow-gold-sm);
+    transition: var(--transition-all);
+    position: relative;
+    overflow: hidden;
+}
+
+.neon-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity var(--duration-medium) var(--ease-out);
+}
+
+.neon-card:hover {
+    border-color: var(--color-gold-light);
+    box-shadow: var(--shadow-3d-lg), var(--glow-gold-md);
+    transform: translateY(-4px);
+}
+
+.neon-card:hover::before {
+    opacity: 1;
+}
+
+/* ========================================
+   NEON LINES & DIVIDERS
+   ======================================== */
+
+.neon-line-gold {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+    box-shadow: var(--glow-gold-sm);
+}
+
+.neon-line-amber {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--color-amber), transparent);
+    box-shadow: var(--glow-amber-sm);
+}
+
+/* ========================================
+   NEON TEXT EFFECTS
+   ======================================== */
+
+.neon-text-gold {
+    color: var(--color-gold);
+    text-shadow: var(--glow-gold-md);
+    font-weight: var(--font-bold);
+}
+
+.neon-text-amber {
+    color: var(--color-amber);
+    text-shadow: var(--glow-amber-md);
+    font-weight: var(--font-bold);
+}
+
+.neon-text-emerald {
+    color: var(--color-emerald);
+    text-shadow: var(--glow-emerald-md);
+    font-weight: var(--font-bold);
+}
+
+/* ========================================
+   SHIMMER EFFECT
+   ======================================== */
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+.shimmer-gold {
+    background: linear-gradient(90deg,
+            var(--color-gold-dark) 0%,
+            var(--color-gold) 50%,
+            var(--color-gold-dark) 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+}
+
+/* ========================================
+   GLOW HOVER EFFECTS
+   ======================================== */
+
+.hover-glow-gold {
+    transition: var(--transition-shadow);
+}
+
+.hover-glow-gold:hover {
+    box-shadow: var(--glow-gold-lg);
+}
+
+.hover-glow-amber {
+    transition: var(--transition-shadow);
+}
+
+.hover-glow-amber:hover {
+    box-shadow: var(--glow-amber-lg);
+}
+
+.hover-glow-emerald {
+    transition: var(--transition-shadow);
+}
+
+.hover-glow-emerald:hover {
+    box-shadow: var(--glow-emerald-lg);
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    /* Reduce glow intensity on mobile for performance */
+    .glow-gold-lg,
+    .glow-amber-lg,
+    .glow-emerald-lg,
+    .glow-cyan-lg {
+        box-shadow: var(--glow-gold-md);
+    }
+
+    .text-glow-gold-lg,
+    .text-glow-amber-lg,
+    .text-glow-emerald-lg,
+    .text-glow-cyan-lg {
+        text-shadow: var(--glow-gold-md);
+    }
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .glow-pulse-gold,
+    .glow-pulse-amber,
+    .glow-pulse-emerald,
+    .text-glow-pulse-gold,
+    .shimmer-gold {
+        animation: none;
+    }
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 640px) {
+
+    .text-glow-gold,
+    .text-glow-amber,
+    .text-glow-emerald {
+        text-shadow: 0 0 5px currentColor;
+    }
+
+    .glow-gold-md,
+    .glow-amber-md,
+    .glow-emerald-md {
+        box-shadow: 0 0 10px currentColor;
+    }
+}
+
+/* ============================================
+   NEON CARD VARIANTS
+   ============================================ */
+
+.neon-card-blue {
+    background: rgba(37, 99, 235, 0.1);
+    border: 2px solid #3B82F6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    transition: all 0.3s ease;
+}
+
+.neon-card-blue:hover {
+    background: rgba(37, 99, 235, 0.2);
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+.neon-card-amber {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid #F59E0B;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    transition: all 0.3s ease;
+}
+
+.neon-card-amber:hover {
+    background: rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
+    transform: translateY(-2px);
+}
+
+.neon-card-emerald {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid #10B981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    transition: all 0.3s ease;
+}
+
+.neon-card-emerald:hover {
+    background: rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+    transform: translateY(-2px);
+}
+
+.neon-card-red {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid #EF4444;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    transition: all 0.3s ease;
+}
+
+.neon-card-red:hover {
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
+    transform: translateY(-2px);
+}
+
+/* Glass Input Styling */
+.glass-input {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    outline: none;
+}
+
+.glass-input:focus {
+    border-color: rgba(255, 215, 0, 0.5);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .neon-text-gold,
+    .neon-text-amber,
+    .neon-text-emerald,
+    .neon-button,
+    .neon-button-amber,
+    .neon-button-emerald,
+    .neon-card,
+    .neon-card-blue,
+    .neon-card-amber,
+    .neon-card-emerald,
+    .neon-card-red {
+        animation: none !important;
+        transition-duration: 0.01ms !important;
+    }
+}

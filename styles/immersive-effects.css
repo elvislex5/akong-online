@@ -1,0 +1,360 @@
+/**
+ * AKÔNG - Immersive Effects & Animations
+ * Unified futuristic design system
+ */
+
+/* ========================================
+   MOBILE LANDSCAPE OPTIMIZATION
+   ======================================== */
+
+/* Optimisation pour mobile en mode paysage (landscape) */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Réduire encore plus les espacements en mode paysage mobile */
+  .board-3d {
+    max-height: 85vh !important;
+  }
+
+  /* Réduire la taille des nameplates en paysage */
+  .glass-panel-gold {
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+  }
+}
+
+/* ========================================
+   GLOBAL ANIMATIONS
+   ======================================== */
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.4);
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 10s ease infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 20s linear infinite;
+}
+
+/* ========================================
+   IMMERSIVE BACKGROUNDS
+   ======================================== */
+
+.immersive-bg-primary {
+  background: linear-gradient(135deg,
+    rgba(31, 41, 55, 0.95) 0%,
+    rgba(17, 24, 39, 0.98) 50%,
+    rgba(31, 41, 55, 0.95) 100%
+  );
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+.immersive-bg-secondary {
+  background: radial-gradient(circle at center,
+    rgba(255, 215, 0, 0.05) 0%,
+    transparent 70%
+  );
+}
+
+.immersive-bg-game {
+  background:
+    linear-gradient(135deg, rgba(180, 83, 9, 0.1) 0%, transparent 50%),
+    linear-gradient(225deg, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
+}
+
+/* ========================================
+   GLASSY EFFECTS - ENHANCED
+   ======================================== */
+
+.glass-immersive {
+  background: rgba(31, 41, 55, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-immersive-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-immersive-hover:hover {
+  background: rgba(31, 41, 55, 0.85);
+  border-color: rgba(255, 215, 0, 0.5);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 30px rgba(255, 215, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   3D TRANSFORMS & DEPTH
+   ======================================== */
+
+.transform-3d {
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card-3d {
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+  transition: transform 0.3s ease;
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(-5deg) translateZ(10px);
+}
+
+/* ========================================
+   NEON EFFECTS - ENHANCED
+   ======================================== */
+
+.neon-gold {
+  color: #FFD700;
+  text-shadow:
+    0 0 10px rgba(255, 215, 0, 0.8),
+    0 0 20px rgba(255, 215, 0, 0.6),
+    0 0 30px rgba(255, 215, 0, 0.4),
+    0 0 40px rgba(255, 215, 0, 0.2);
+}
+
+.neon-amber {
+  color: #FF8C00;
+  text-shadow:
+    0 0 10px rgba(255, 140, 0, 0.8),
+    0 0 20px rgba(255, 140, 0, 0.6),
+    0 0 30px rgba(255, 140, 0, 0.4);
+}
+
+.neon-blue {
+  color: #00BFFF;
+  text-shadow:
+    0 0 10px rgba(0, 191, 255, 0.8),
+    0 0 20px rgba(0, 191, 255, 0.6),
+    0 0 30px rgba(0, 191, 255, 0.4);
+}
+
+.neon-border-gold {
+  border: 2px solid #FFD700;
+  box-shadow:
+    0 0 10px rgba(255, 215, 0, 0.5),
+    inset 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.neon-border-gold:hover {
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.8),
+    inset 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+/* ========================================
+   BUTTON EFFECTS - IMMERSIVE
+   ======================================== */
+
+.btn-immersive {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg,
+    rgba(255, 215, 0, 0.9) 0%,
+    rgba(255, 140, 0, 0.9) 100%
+  );
+  background-size: 200% 200%;
+  box-shadow:
+    0 4px 15px rgba(255, 215, 0, 0.4),
+    inset 0 -2px 10px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.btn-immersive::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.btn-immersive:hover::before {
+  left: 100%;
+}
+
+.btn-immersive:hover {
+  background-position: 100% 50%;
+  box-shadow:
+    0 8px 25px rgba(255, 215, 0, 0.6),
+    inset 0 -2px 10px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.btn-immersive:active {
+  transform: translateY(0);
+  box-shadow:
+    0 2px 10px rgba(255, 215, 0, 0.4),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* ========================================
+   PARTICLE OVERLAY
+   ======================================== */
+
+.particle-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255, 215, 0, 0.1), transparent),
+    radial-gradient(1px 1px at 60% 70%, rgba(255, 140, 0, 0.1), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(255, 255, 255, 0.1), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(0, 191, 255, 0.1), transparent);
+  background-size: 200% 200%, 180% 180%, 150% 150%, 220% 220%;
+  background-position: 0% 0%, 100% 100%, 50% 50%, 80% 20%;
+  animation: particle-drift 30s ease infinite;
+}
+
+@keyframes particle-drift {
+  0%, 100% {
+    background-position: 0% 0%, 100% 100%, 50% 50%, 80% 20%;
+  }
+  25% {
+    background-position: 40% 30%, 80% 90%, 60% 40%, 70% 30%;
+  }
+  50% {
+    background-position: 80% 60%, 60% 70%, 70% 60%, 60% 40%;
+  }
+  75% {
+    background-position: 60% 90%, 40% 50%, 40% 70%, 50% 50%;
+  }
+}
+
+/* ========================================
+   SCROLL EFFECTS
+   ======================================== */
+
+.scroll-fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.scroll-fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ========================================
+   RESPONSIVE HELPERS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .glass-immersive {
+    backdrop-filter: blur(15px) saturate(150%);
+    -webkit-backdrop-filter: blur(15px) saturate(150%);
+  }
+
+  .neon-gold,
+  .neon-amber,
+  .neon-blue {
+    text-shadow:
+      0 0 5px currentColor,
+      0 0 10px currentColor;
+  }
+}
+
+/* ========================================
+   DARK MODE SUPPORT
+   ======================================== */
+
+@media (prefers-color-scheme: dark) {
+  .glass-immersive {
+    background: rgba(17, 24, 39, 0.8);
+  }
+}

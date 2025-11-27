@@ -60,6 +60,74 @@ async function verifyToken(token) {
 }
 
 /**
+ * Set user online in database
+ * @param {string} userId - User ID
+ */
+async function setUserOnline(userId) {
+  if (!supabase) return;
+
+  try {
+    const { error } = await supabase.rpc('set_user_online', {
+      p_user_id: userId
+    });
+
+    if (error) {
+      console.error('[Presence] Error setting user online:', error);
+    } else {
+      console.log('[Presence] User set to online:', userId);
+    }
+  } catch (err) {
+    console.error('[Presence] Error:', err);
+  }
+}
+
+/**
+ * Set user offline in database
+ * @param {string} userId - User ID
+ */
+async function setUserOffline(userId) {
+  if (!supabase) return;
+
+  try {
+    const { error } = await supabase.rpc('set_user_offline', {
+      p_user_id: userId
+    });
+
+    if (error) {
+      console.error('[Presence] Error setting user offline:', error);
+    } else {
+      console.log('[Presence] User set to offline:', userId);
+    }
+  } catch (err) {
+    console.error('[Presence] Error:', err);
+  }
+}
+
+/**
+ * Set user in game
+ * @param {string} userId - User ID
+ * @param {string} roomId - Room ID
+ */
+async function setUserInGame(userId, roomId) {
+  if (!supabase) return;
+
+  try {
+    const { error } = await supabase.rpc('set_user_in_game', {
+      p_user_id: userId,
+      p_room_id: roomId
+    });
+
+    if (error) {
+      console.error('[Presence] Error setting user in game:', error);
+    } else {
+      console.log('[Presence] User set to in_game:', userId);
+    }
+  } catch (err) {
+    console.error('[Presence] Error:', err);
+  }
+}
+
+/**
  * Update game state in database
  * @param {string} roomId - Room UUID
  * @param {object} gameState - Game state object
@@ -127,6 +195,10 @@ io.on('connection', (socket) => {
         socketUserMap.set(socket.id, { userId: user.id, roomId: null });
         userSocketMap.set(user.id, socket.id);
         console.log('[Auth] User authenticated:', user.id);
+
+        // Set user online in database (Phase 3)
+        setUserOnline(user.id);
+
         socket.emit('authenticated', { userId: user.id });
       } else {
         console.log('[Auth] Authentication failed for socket:', socket.id);
@@ -138,7 +210,7 @@ io.on('connection', (socket) => {
   // CREATE ROOM
   // ============================================
   socket.on('create_room', async (data) => {
-    const { roomCode, userId } = data;
+    const { roomCode, userId, roomId } = data;
     console.log('[Room] Create room request:', roomCode, 'by user:', userId);
 
     // Join socket.io room
@@ -150,6 +222,11 @@ io.on('connection', (socket) => {
       userData.roomId = roomCode;
     } else {
       socketUserMap.set(socket.id, { userId, roomId: roomCode });
+    }
+
+    // Set user in_game status (Phase 3)
+    if (roomId) {
+      await setUserInGame(userId, roomId);
     }
 
     socket.emit('room_created', roomCode);
@@ -179,6 +256,12 @@ io.on('connection', (socket) => {
       userData.roomId = roomCode;
     } else {
       socketUserMap.set(socket.id, { userId, roomId: roomCode });
+    }
+
+    // Set user in_game status (Phase 3)
+    const dbRoom = await getRoomByCode(roomCode);
+    if (dbRoom) {
+      await setUserInGame(userId, dbRoom.id);
     }
 
     // Notify everyone in the room
@@ -306,19 +389,102 @@ io.on('connection', (socket) => {
   // ============================================
   // HEARTBEAT (Keep-alive)
   // ============================================
-  socket.on('heartbeat', () => {
+  socket.on('heartbeat', async () => {
     socket.emit('heartbeat_ack');
+
+    // Update last_seen in database (Phase 3)
+    const userData = socketUserMap.get(socket.id);
+    if (userData && userData.userId && supabase) {
+      await supabase
+        .from('user_presence')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('user_id', userData.userId);
+    }
+  });
+
+  // ============================================
+  // PHASE 3: INVITATION EVENTS
+  // ============================================
+
+  // Send invitation to another user
+  socket.on('send_invitation', async (data) => {
+    const { invitationId, toUserId, fromUserId } = data;
+    console.log('[Invitation] Send:', fromUserId, '→', toUserId);
+
+    // Get target user's socket
+    const targetSocketId = userSocketMap.get(toUserId);
+
+    if (targetSocketId) {
+      // Send invitation notification to target user
+      io.to(targetSocketId).emit('invitation_received', {
+        invitationId,
+        fromUserId
+      });
+      console.log('[Invitation] Sent to socket:', targetSocketId);
+    } else {
+      console.log('[Invitation] Target user not connected, will see on login');
+    }
+
+    // Acknowledge to sender
+    socket.emit('invitation_sent', { invitationId });
+  });
+
+  // Accept invitation
+  socket.on('accept_invitation', async (data) => {
+    const { invitationId, fromUserId, toUserId } = data;
+    console.log('[Invitation] Accepted:', invitationId);
+
+    // Notify sender that invitation was accepted
+    const senderSocketId = userSocketMap.get(fromUserId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('invitation_accepted', {
+        invitationId,
+        byUserId: toUserId
+      });
+    }
+  });
+
+  // Decline invitation
+  socket.on('decline_invitation', async (data) => {
+    const { invitationId, fromUserId, toUserId } = data;
+    console.log('[Invitation] Declined:', invitationId);
+
+    // Notify sender that invitation was declined
+    const senderSocketId = userSocketMap.get(fromUserId);
+    if (senderSocketId) {
+      io.to(senderSocketId).emit('invitation_declined', {
+        invitationId,
+        byUserId: toUserId
+      });
+    }
+  });
+
+  // Cancel invitation
+  socket.on('cancel_invitation', async (data) => {
+    const { invitationId, toUserId } = data;
+    console.log('[Invitation] Cancelled:', invitationId);
+
+    // Notify receiver that invitation was cancelled
+    const receiverSocketId = userSocketMap.get(toUserId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit('invitation_cancelled', {
+        invitationId
+      });
+    }
   });
 
   // ============================================
   // DISCONNECT
   // ============================================
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('[Socket] User disconnected:', socket.id);
 
     const userData = socketUserMap.get(socket.id);
     if (userData) {
       const { userId, roomId } = userData;
+
+      // Set user offline in database (Phase 3)
+      await setUserOffline(userId);
 
       // Notify room of disconnection
       if (roomId) {
@@ -345,6 +511,34 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// ============================================
+// PERIODIC CLEANUP (Phase 3)
+// ============================================
+
+/**
+ * Cleanup expired invitations and stale presence
+ * Runs every 60 seconds
+ */
+if (supabase) {
+  setInterval(async () => {
+    try {
+      // Cleanup expired invitations
+      const { data: expiredCount } = await supabase.rpc('cleanup_expired_invitations');
+      if (expiredCount > 0) {
+        console.log(`[Cleanup] Expired ${expiredCount} invitations`);
+      }
+
+      // Cleanup stale presence (users offline > 5 minutes)
+      const { data: staleCount } = await supabase.rpc('cleanup_stale_presence');
+      if (staleCount > 0) {
+        console.log(`[Cleanup] Set ${staleCount} users to offline (stale presence)`);
+      }
+    } catch (err) {
+      console.error('[Cleanup] Error:', err);
+    }
+  }, 60000); // Run every 60 seconds
+}
 
 // ============================================
 // START SERVER

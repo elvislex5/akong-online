@@ -82,8 +82,10 @@ export function useOnlineGame({
     }
 
     try {
-      // Connect to Socket.io server first (with authentication)
-      await onlineManager.init(user.id);
+      // Connect to Socket.io server first (with authentication) - only if not already connected
+      if (!onlineManager.isConnected()) {
+        await onlineManager.init(user.id);
+      }
 
       // Set up message handlers before creating room
       onlineManager.onMessage((msg: OnlineMessage) => {
@@ -153,8 +155,10 @@ export function useOnlineGame({
     const roomCode = joinInputId.toUpperCase();
 
     try {
-      // Connect to Socket.io server first (with authentication)
-      await onlineManager.init(user.id);
+      // Connect to Socket.io server first (with authentication) - only if not already connected
+      if (!onlineManager.isConnected()) {
+        await onlineManager.init(user.id);
+      }
 
       // Set up message handlers before joining room
       onlineManager.onMessage((msg: OnlineMessage) => {

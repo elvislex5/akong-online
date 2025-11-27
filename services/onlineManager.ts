@@ -8,6 +8,11 @@ export class SocketManager {
   private onMessageCallback: ((msg: OnlineMessage) => void) | null = null;
   private onDisconnectCallback: (() => void) | null = null;
   private onReconnectCallback: ((gameState: GameState | null) => void) | null = null;
+  // Phase 3: Invitation callbacks
+  private onInvitationReceivedCallback: ((data: { invitationId: string, fromUserId: string }) => void) | null = null;
+  private onInvitationAcceptedCallback: ((data: { invitationId: string, byUserId: string }) => void) | null = null;
+  private onInvitationDeclinedCallback: ((data: { invitationId: string, byUserId: string }) => void) | null = null;
+  private onInvitationCancelledCallback: ((data: { invitationId: string }) => void) | null = null;
 
   public myId: string = '';
   private currentRoomId: string = '';
@@ -164,6 +169,39 @@ export class SocketManager {
     // Heartbeat acknowledgement
     this.socket.on('heartbeat_ack', () => {
       // Silent, just to keep connection alive
+    });
+
+    // Phase 3: Invitation events
+    this.socket.on('invitation_received', (data: { invitationId: string, fromUserId: string }) => {
+      console.log('[onlineManager] Invitation received:', data);
+      if (this.onInvitationReceivedCallback) {
+        this.onInvitationReceivedCallback(data);
+      }
+    });
+
+    this.socket.on('invitation_accepted', (data: { invitationId: string, byUserId: string }) => {
+      console.log('[onlineManager] Invitation accepted:', data);
+      if (this.onInvitationAcceptedCallback) {
+        this.onInvitationAcceptedCallback(data);
+      }
+    });
+
+    this.socket.on('invitation_declined', (data: { invitationId: string, byUserId: string }) => {
+      console.log('[onlineManager] Invitation declined:', data);
+      if (this.onInvitationDeclinedCallback) {
+        this.onInvitationDeclinedCallback(data);
+      }
+    });
+
+    this.socket.on('invitation_cancelled', (data: { invitationId: string }) => {
+      console.log('[onlineManager] Invitation cancelled:', data);
+      if (this.onInvitationCancelledCallback) {
+        this.onInvitationCancelledCallback(data);
+      }
+    });
+
+    this.socket.on('invitation_sent', (data: { invitationId: string }) => {
+      console.log('[onlineManager] Invitation sent confirmation:', data);
     });
   }
 
@@ -335,6 +373,105 @@ export class SocketManager {
    */
   public onReconnect(cb: (gameState: GameState | null) => void) {
     this.onReconnectCallback = cb;
+  }
+
+  // ============================================
+  // PHASE 3: INVITATION METHODS
+  // ============================================
+
+  /**
+   * Send an invitation to another user
+   * @param invitationId - Invitation ID from database
+   * @param toUserId - Target user ID
+   * @param fromUserId - Sender user ID
+   */
+  public sendInvitation(invitationId: string, toUserId: string, fromUserId: string) {
+    if (!this.socket || !this.socket.connected) {
+      console.warn('[onlineManager] Cannot send invitation, socket not connected');
+      return;
+    }
+
+    this.socket.emit('send_invitation', { invitationId, toUserId, fromUserId });
+    console.log('[onlineManager] Sending invitation:', invitationId);
+  }
+
+  /**
+   * Accept an invitation
+   * @param invitationId - Invitation ID
+   * @param fromUserId - Sender user ID
+   * @param toUserId - Receiver user ID
+   */
+  public acceptInvitation(invitationId: string, fromUserId: string, toUserId: string) {
+    if (!this.socket || !this.socket.connected) {
+      console.warn('[onlineManager] Cannot accept invitation, socket not connected');
+      return;
+    }
+
+    this.socket.emit('accept_invitation', { invitationId, fromUserId, toUserId });
+    console.log('[onlineManager] Accepting invitation:', invitationId);
+  }
+
+  /**
+   * Decline an invitation
+   * @param invitationId - Invitation ID
+   * @param fromUserId - Sender user ID
+   * @param toUserId - Receiver user ID
+   */
+  public declineInvitation(invitationId: string, fromUserId: string, toUserId: string) {
+    if (!this.socket || !this.socket.connected) {
+      console.warn('[onlineManager] Cannot decline invitation, socket not connected');
+      return;
+    }
+
+    this.socket.emit('decline_invitation', { invitationId, fromUserId, toUserId });
+    console.log('[onlineManager] Declining invitation:', invitationId);
+  }
+
+  /**
+   * Cancel an invitation (sender cancels)
+   * @param invitationId - Invitation ID
+   * @param toUserId - Target user ID
+   */
+  public cancelInvitation(invitationId: string, toUserId: string) {
+    if (!this.socket || !this.socket.connected) {
+      console.warn('[onlineManager] Cannot cancel invitation, socket not connected');
+      return;
+    }
+
+    this.socket.emit('cancel_invitation', { invitationId, toUserId });
+    console.log('[onlineManager] Cancelling invitation:', invitationId);
+  }
+
+  /**
+   * Register callback for invitation received
+   * @param cb - Callback function
+   */
+  public onInvitationReceived(cb: (data: { invitationId: string, fromUserId: string }) => void) {
+    this.onInvitationReceivedCallback = cb;
+  }
+
+  /**
+   * Register callback for invitation accepted
+   * @param cb - Callback function
+   */
+  public onInvitationAccepted(cb: (data: { invitationId: string, byUserId: string }) => void) {
+    this.onInvitationAcceptedCallback = cb;
+  }
+
+  /**
+   * Register callback for invitation declined
+   * @param cb - Callback function
+   */
+  public onInvitationDeclined(cb: (data: { invitationId: string, byUserId: string }) => void) {
+    this.onInvitationDeclinedCallback = cb;
+  }
+
+  /**
+   * Register callback for invitation cancelled
+   * @param cb - Callback function
+   */
+  public onInvitationCancelled(cb: (data: { invitationId: string }) => void) {
+    this.onInvitationCancelledCallback = cb;
   }
 
   /**

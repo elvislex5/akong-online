@@ -1,14 +1,32 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './hooks/useAuth';
-import Layout from './components/layout/Layout';
-import LandingPage from './pages/LandingPage';
-import RulesPage from './pages/RulesPage';
-import App from './App'; // The game page
-import AuthScreen from './components/auth/AuthScreen';
-import ProfilePage from './components/auth/ProfilePage';
+import { usePresence } from './hooks/usePresence';
+import UnifiedNavbar from './components/layout/UnifiedNavbar';
 import type { Profile } from './services/supabase';
+
+// Lazy load heavy components for better performance
+const LandingPageRevolutionary = lazy(() => import('./pages/LandingPageRevolutionary'));
+const RulesPageImmersive = lazy(() => import('./pages/RulesPageImmersive'));
+const LobbyComingSoon = lazy(() => import('./pages/LobbyComingSoon'));
+const App = lazy(() => import('./App')); // The game page
+const AuthScreen = lazy(() => import('./components/auth/AuthScreen'));
+const ProfilePage = lazy(() => import('./components/auth/ProfilePage'));
+const InvitationSystem = lazy(() => import('./components/InvitationSystem'));
+const MusicPlayer = lazy(() => import('./components/effects/MusicPlayer'));
+const CustomCursor = lazy(() => import('./components/effects/CustomCursor'));
+const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
+
+// Loading component
+const PageLoader: React.FC = () => (
+  <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+    <div className="text-center space-y-4">
+      <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p className="text-gray-400">Chargement...</p>
+    </div>
+  </div>
+);
 
 // Page transition variants
 const pageVariants = {
@@ -32,7 +50,7 @@ const pageVariants = {
       ease: 'easeIn',
     },
   },
-};
+} as const;
 
 // Animated page wrapper
 const AnimatedPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -51,40 +69,60 @@ const AnimatedPage: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 // Routes component (needs to be inside Router for useLocation)
 const AnimatedRoutes: React.FC<{
   isAuthenticated: boolean;
-  onShowProfile: () => void;
-}> = ({ isAuthenticated, onShowProfile }) => {
+  userProfile: Profile | null;
+  setUserProfile: (profile: Profile) => void;
+}> = ({ isAuthenticated, userProfile, setUserProfile }) => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Landing Page with Layout */}
+        {/* Landing Page - Revolutionary Version */}
         <Route
           path="/"
           element={
-            <Layout
-              isAuthenticated={isAuthenticated}
-              onShowProfile={onShowProfile}
-            >
-              <AnimatedPage>
-                <LandingPage />
-              </AnimatedPage>
-            </Layout>
+            <AnimatedPage>
+              <LandingPageRevolutionary />
+            </AnimatedPage>
           }
         />
 
-        {/* Rules Page with Layout */}
+        {/* Rules Page - Immersive Version */}
         <Route
           path="/rules"
           element={
-            <Layout
-              isAuthenticated={isAuthenticated}
-              onShowProfile={onShowProfile}
-            >
+            <AnimatedPage>
+              <RulesPageImmersive />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Lobby Page - Coming Soon */}
+        <Route
+          path="/lobby"
+          element={
+            <AnimatedPage>
+              <LobbyComingSoon />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Profile Page - Full Page Version */}
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated && userProfile ? (
               <AnimatedPage>
-                <RulesPage />
+                <ProfilePage
+                  profile={userProfile}
+                  onClose={() => navigate(-1)}
+                  onProfileUpdated={(updatedProfile) => setUserProfile(updatedProfile)}
+                />
               </AnimatedPage>
-            </Layout>
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
 
@@ -115,8 +153,10 @@ const AnimatedRoutes: React.FC<{
 
 const AppRouter: React.FC = () => {
   const { user, authUser, profile, loading, isAuthenticated } = useAuth();
-  const [showProfile, setShowProfile] = useState(false);
   const [userProfile, setUserProfile] = useState<Profile | null>(profile);
+
+  // Initialize presence and socket connection for authenticated users (Phase 3)
+  usePresence(user?.id || null, isAuthenticated);
 
   // Update profile when auth profile changes
   React.useEffect(() => {
@@ -139,23 +179,42 @@ const AppRouter: React.FC = () => {
 
   return (
     <BrowserRouter>
-      {/* Animated Routes */}
-      <AnimatedRoutes
-        isAuthenticated={isAuthenticated}
-        onShowProfile={() => setShowProfile(true)}
-      />
+      <Suspense fallback={<PageLoader />}>
+        {/* Global Fixed Background - Akong Pattern */}
+        <div className="fixed inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: 'url(/akong.png)',
+              filter: 'brightness(0.3) blur(2px)',
+            }}
+          />
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90" />
+        </div>
 
-      {/* Profile Modal (shown when user clicks profile button) */}
-      {showProfile && userProfile && (
-        <ProfilePage
-          profile={userProfile}
-          onClose={() => setShowProfile(false)}
-          onProfileUpdated={(updatedProfile) => {
-            setUserProfile(updatedProfile);
-            setShowProfile(false);
-          }}
+        {/* Global Effects */}
+        <CustomCursor />
+        <MusicPlayer autoplay={false} />
+
+        {/* Unified Navbar - Always Visible */}
+        <UnifiedNavbar
+          isAuthenticated={isAuthenticated}
         />
-      )}
+
+        {/* Animated Routes */}
+        <AnimatedRoutes
+          isAuthenticated={isAuthenticated}
+          userProfile={userProfile}
+          setUserProfile={setUserProfile}
+        />
+
+        {/* Global Invitation System (Phase 3) */}
+        {isAuthenticated && <InvitationSystem />}
+
+        {/* PWA Install Prompt */}
+        <PWAInstallPrompt />
+      </Suspense>
     </BrowserRouter>
   );
 };

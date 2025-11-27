@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GameState, GameMode, Player } from '../../types';
 import type { Profile } from '../../services/supabase';
+import confetti from 'canvas-confetti';
 
 interface GameOverModalProps {
   gameState: GameState;
   gameMode: GameMode | null;
   aiPlayer: Player | null;
   playerProfiles: { [key in Player]: Profile | null };
+  currentUserId?: string; // ID de l'utilisateur connecté
   onRestart: () => void;
   onExitToMenu: () => void;
 }
@@ -16,62 +19,219 @@ export function GameOverModal({
   gameMode,
   aiPlayer,
   playerProfiles,
+  currentUserId,
   onRestart,
   onExitToMenu
 }: GameOverModalProps) {
+  // Déterminer quel joueur est l'utilisateur connecté
+  const currentUserPlayer = React.useMemo(() => {
+    if (!currentUserId) return null;
+    if (playerProfiles[Player.One]?.id === currentUserId) return Player.One;
+    if (playerProfiles[Player.Two]?.id === currentUserId) return Player.Two;
+    return null;
+  }, [currentUserId, playerProfiles]);
+
+  // Déterminer si l'utilisateur a gagné
+  const userWon = currentUserPlayer !== null && gameState.winner === currentUserPlayer;
+  const userLost = currentUserPlayer !== null && gameState.winner !== 'Draw' && gameState.winner !== null && gameState.winner !== currentUserPlayer;
+
+  // Trigger confetti on mount for victories (only if user won)
+  useEffect(() => {
+    if (gameState.winner !== 'Draw' && gameState.winner !== null && (currentUserPlayer === null || userWon)) {
+      // Golden confetti explosion
+      const duration = 3000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+      function randomInRange(min: number, max: number) {
+        return Math.random() * (max - min) + min;
+      }
+
+      const interval: any = setInterval(function () {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+          colors: ['#FFD700', '#FFA500', '#FF8C00']
+        });
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+          colors: ['#FFD700', '#FFA500', '#FF8C00']
+        });
+      }, 250);
+
+      return () => clearInterval(interval);
+    }
+  }, [gameState.winner, currentUserPlayer, userWon]);
+
+  // Obtenir les noms des joueurs
+  const playerOneName = playerProfiles[Player.One]?.display_name || playerProfiles[Player.One]?.username || 'Joueur 1';
+  const playerTwoName = playerProfiles[Player.Two]?.display_name || playerProfiles[Player.Two]?.username || 'Joueur 2';
+
+  // Obtenir le nom de l'utilisateur et de l'adversaire
+  const userName = currentUserPlayer !== null ? (currentUserPlayer === Player.One ? playerOneName : playerTwoName) : null;
+  const opponentName = currentUserPlayer !== null ? (currentUserPlayer === Player.One ? playerTwoName : playerOneName) : null;
+  const userScore = currentUserPlayer !== null ? gameState.scores[currentUserPlayer] : null;
+  const opponentScore = currentUserPlayer !== null ? gameState.scores[currentUserPlayer === Player.One ? Player.Two : Player.One] : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-gray-900 border-2 border-amber-500 p-4 sm:p-6 md:p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.3)] text-center max-w-md max-h-[90vh] overflow-y-auto transform scale-100 sm:scale-110">
-        <div className="mb-4 text-4xl sm:text-6xl">
-          {gameState.winner === 'Draw' ? '🤝' : (
-            (gameMode === GameMode.VsAI && gameState.winner === aiPlayer) ? '🤖' : '🏆'
-          )}
-        </div>
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2 uppercase tracking-wider sm:tracking-widest">
-          {gameState.winner === 'Draw' ? 'Match Nul' : (
-            gameState.winner !== null && gameState.winner !== 'Draw' && playerProfiles[gameState.winner]
-              ? (playerProfiles[gameState.winner]?.display_name || playerProfiles[gameState.winner]?.username) + ' GAGNE'
-              : (gameState.winner === Player.One ? 'JOUEUR 1 GAGNE' : 'JOUEUR 2 GAGNE')
-          )}
-        </h2>
-        {(() => {
-            const playerOneName = playerProfiles[Player.One]?.display_name || playerProfiles[Player.One]?.username || 'Joueur 1';
-            const playerTwoName = playerProfiles[Player.Two]?.display_name || playerProfiles[Player.Two]?.username || 'Joueur 2';
-            return (
-                <p className="text-amber-500 font-bold mb-4 sm:mb-6 text-base sm:text-lg">
-                    Score Final: {playerOneName} {gameState.scores[Player.One]} - {playerTwoName} {gameState.scores[Player.Two]}
-                </p>
-            );
-        })()}
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className={`bg-gradient-to-br ${
+            userLost
+              ? 'from-gray-900/95 to-red-950/95 border-red-500/30'
+              : 'from-gray-900/95 to-black/95 border-amber-500/30'
+          } backdrop-blur-xl border-2 rounded-3xl shadow-2xl text-center max-w-md w-full max-h-[85vh] overflow-hidden relative flex flex-col`}
+        >
+          {/* Subtle glow effect */}
+          <div className={`absolute inset-0 ${
+            userLost
+              ? 'bg-gradient-to-br from-red-500/10 to-gray-900/10'
+              : 'bg-gradient-to-br from-amber-500/5 to-orange-500/5'
+          } pointer-events-none rounded-3xl`}></div>
 
-        <div className="flex justify-center gap-4 sm:gap-8 mb-6 sm:mb-8 font-mono text-lg sm:text-xl">
-          {(() => {
-            const playerOneName = playerProfiles[Player.One]?.display_name || playerProfiles[Player.One]?.username || 'Joueur 1';
-            const playerTwoName = playerProfiles[Player.Two]?.display_name || playerProfiles[Player.Two]?.username || 'Joueur 2';
-            return (
-              <>
-                <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 uppercase">{playerOneName}</span>
-                  <span className="text-blue-400 font-bold">{gameState.scores[Player.One]}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 uppercase">{playerTwoName}</span>
-                  <span className="text-amber-500 font-bold">{gameState.scores[Player.Two]}</span>
-                </div>
-              </>
-            );
-          })()}
-        </div>
+          {/* Content - Scrollable */}
+          <div className="relative z-10 p-6 overflow-y-auto flex-1">
+            {/* Trophy/Icon with animation */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring', damping: 10, stiffness: 200 }}
+              className="mb-4 text-6xl sm:text-7xl"
+            >
+              {gameState.winner === 'Draw' ? '=' : (
+                userLost ? '✕' : '✓'
+              )}
+            </motion.div>
 
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
-          <button onClick={onRestart} className="px-4 sm:px-6 py-2 sm:py-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold shadow-lg transform hover:-translate-y-1 transition-all text-sm sm:text-base">
-            REJOUER
-          </button>
-          <button onClick={onExitToMenu} className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl font-bold text-sm sm:text-base">
-            MENU
-          </button>
-        </div>
-      </div>
-    </div>
+            {/* Title with gradient */}
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className={`text-2xl sm:text-3xl font-black text-transparent bg-clip-text ${
+                userLost
+                  ? 'bg-gradient-to-r from-red-400 to-red-600'
+                  : 'bg-gradient-to-r from-amber-400 to-orange-500'
+              } mb-3 uppercase tracking-wider`}
+            >
+              {gameState.winner === 'Draw' ? 'Match Nul' : (
+                userWon ? 'VICTOIRE !' : (
+                  userLost ? 'DÉFAITE' : (
+                    gameState.winner !== null && gameState.winner !== 'Draw' && playerProfiles[gameState.winner]
+                      ? (playerProfiles[gameState.winner]?.display_name || playerProfiles[gameState.winner]?.username) + ' GAGNE'
+                      : (gameState.winner === Player.One ? 'JOUEUR 1 GAGNE' : 'JOUEUR 2 GAGNE')
+                  )
+                )
+              )}
+            </motion.h2>
+
+            {/* Personalized message for user */}
+            {(userWon || userLost) && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                className={`text-sm sm:text-base mb-6 ${
+                  userLost ? 'text-red-300' : 'text-amber-300'
+                }`}
+              >
+                {userWon ? (
+                  <>Félicitations <span className="font-bold">{userName}</span> !</>
+                ) : (
+                  <>Dommage <span className="font-bold">{userName}</span>... La prochaine fois sera la bonne !</>
+                )}
+              </motion.p>
+            )}
+
+            {/* Detailed scores with glassmorphism */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex justify-center gap-4 mb-6 font-mono text-lg"
+            >
+              <div className={`bg-white/5 border ${
+                currentUserPlayer === Player.One
+                  ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
+                  : 'border-amber-500/20'
+              } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
+                <span className={`text-xs uppercase block mb-1 ${
+                  currentUserPlayer === Player.One ? 'text-amber-300' : 'text-gray-400'
+                }`}>
+                  {playerOneName} {currentUserPlayer === Player.One && '(Vous)'}
+                </span>
+                <span className={`font-bold text-xl ${
+                  gameState.winner === Player.One
+                    ? (userWon ? 'text-amber-400' : 'text-amber-500')
+                    : (userLost && currentUserPlayer === Player.One ? 'text-red-400' : 'text-blue-400')
+                }`}>
+                  {gameState.scores[Player.One]}
+                </span>
+              </div>
+              <div className={`bg-white/5 border ${
+                currentUserPlayer === Player.Two
+                  ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
+                  : 'border-amber-500/20'
+              } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
+                <span className={`text-xs uppercase block mb-1 ${
+                  currentUserPlayer === Player.Two ? 'text-amber-300' : 'text-gray-400'
+                }`}>
+                  {playerTwoName} {currentUserPlayer === Player.Two && '(Vous)'}
+                </span>
+                <span className={`font-bold text-xl ${
+                  gameState.winner === Player.Two
+                    ? (userWon ? 'text-amber-400' : 'text-amber-500')
+                    : (userLost && currentUserPlayer === Player.Two ? 'text-red-400' : 'text-orange-400')
+                }`}>
+                  {gameState.scores[Player.Two]}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Action buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-3 justify-center"
+            >
+              <button
+                onClick={onRestart}
+                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-amber-500/50 text-sm"
+              >
+                REJOUER
+              </button>
+              <button
+                onClick={onExitToMenu}
+                className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300 text-sm"
+              >
+                MENU
+              </button>
+            </motion.div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }

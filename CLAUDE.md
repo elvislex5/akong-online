@@ -61,12 +61,16 @@ GEMINI_API_KEY=your_api_key_here
 2. Run the SQL migrations in order:
    - `supabase/migrations/001_initial_schema.sql` - User profiles and auth
    - `supabase/migrations/002_game_rooms.sql` - Game rooms and spectators (Phase 2)
+   - `supabase/migrations/003_fix_room_join_policy.sql` - Room joining policy fix
+   - `supabase/migrations/003_social_features.sql` - Social features (Phase 3)
 3. Get your URL and anon key from Project Settings → API
 4. Row Level Security (RLS) policies are already configured in the migrations
 
 ### Online Multiplayer Server
 
 The Socket.io server for online play is in `server.js`.
+
+**Important:** For online multiplayer to work, you need to run BOTH the frontend dev server (`npm run dev`) AND the backend server (`node server.js`) simultaneously in separate terminals.
 
 **Server Environment Setup:**
 Create a `.env` file in the root directory (copy from `.env.example.server`):
@@ -418,7 +422,6 @@ victoryConfetti(); // Fires on victory
 - **Gemini API**: Mentioned in .env.example and vite.config.ts but not actively used in game logic
 - **Online guest view**: The `invertView` prop affects visual rendering only, not game logic indices
 - **Audio initialization**: Requires user interaction (browser requirement) - first click enables sound
-- **Phase 2 integration**: Infrastructure complete but not yet integrated into `App.tsx`. Online games currently work without persistence/reconnection.
 - **Profile stats**: Database schema includes games_played/won/lost/drawn and ELO fields, but these aren't auto-updated yet (Phase 3+)
 - **Game name**: Official name is "AKÔNG" (with circumflex) - ensure consistency across all UI
 
@@ -500,7 +503,7 @@ This project follows a phased development approach with two parallel tracks:
 
 ### Backend Roadmap (ROADMAP.md)
 - **Phase 1** ✅: Authentication & User Profiles (COMPLETE)
-- **Phase 2** 🚧: Robust online multiplayer (persistent rooms, reconnection, spectator mode)
+- **Phase 2** ✅: Robust online multiplayer (persistent rooms, reconnection, spectator mode) (COMPLETE)
 - **Phase 3** 📅: Social features (lobby, invitations, chat)
 - **Phase 4** 📅: Gamification (ELO, leaderboards, ranked matchmaking, achievements)
 - **Phase 5** 📅: Advanced features (tournaments, friends system, replays)
