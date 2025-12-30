@@ -135,8 +135,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             </button>
           </div>
 
-          {/* Google Sign-In Button */}
-          <div className="mt-6">
+          {/* Google Sign-In Button - DÉSACTIVÉ TEMPORAIREMENT */}
+          {/* TODO: Réactiver quand Google OAuth sera configuré */}
+          {/* <div className="mt-6">
             <button
               type="button"
               onClick={handleGoogleSignIn}
@@ -153,7 +154,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             </button>
           </div>
 
-          {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/10"></div>
@@ -163,7 +163,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 OU
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
