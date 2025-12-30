@@ -33,7 +33,7 @@ const Board: React.FC<BoardProps> = ({
   playerProfiles,
   isSimulationManual,
   invertView = false,
-  boardSkinUrl = '/akong.png'
+  boardSkinUrl = '/boards/classic.png'
 }) => {
   const { board, currentPlayer, scores, status } = gameState;
 

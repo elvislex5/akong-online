@@ -122,7 +122,7 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
   playerProfiles,
   isSimulationManual,
   invertView = false,
-  boardSkinUrl = '/akong.png'
+  boardSkinUrl = '/boards/classic.png'
 }) => {
   const { board, currentPlayer, scores, status } = gameState;
 

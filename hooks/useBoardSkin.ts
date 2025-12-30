@@ -6,14 +6,14 @@ import { getUserSelectedSkin, type BoardSkin } from '../services/boardSkinServic
  * Returns the currently selected board skin image URL
  */
 export function useBoardSkin(userId: string | null) {
-  const [boardSkinUrl, setBoardSkinUrl] = useState<string>('/akong.png'); // Default
+  const [boardSkinUrl, setBoardSkinUrl] = useState<string>('/boards/classic.png'); // Default: Classic Wood
   const [selectedSkin, setSelectedSkin] = useState<BoardSkin | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) {
       // Not logged in, use default
-      setBoardSkinUrl('/akong.png');
+      setBoardSkinUrl('/boards/classic.png');
       setLoading(false);
       return;
     }
@@ -26,11 +26,11 @@ export function useBoardSkin(userId: string | null) {
           setBoardSkinUrl(skin.image_url);
         } else {
           // No skin selected, use default
-          setBoardSkinUrl('/akong.png');
+          setBoardSkinUrl('/boards/classic.png');
         }
       } catch (error) {
         console.error('[useBoardSkin] Error fetching selected skin:', error);
-        setBoardSkinUrl('/akong.png'); // Fallback to default
+        setBoardSkinUrl('/boards/classic.png'); // Fallback to default
       } finally {
         setLoading(false);
       }
