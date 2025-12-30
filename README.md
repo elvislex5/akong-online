@@ -8,7 +8,7 @@ Un jeu de stratégie africain traditionnel (variante Songo MPEM) avec distributi
 
 - 🎮 **2 Joueurs (Local)** - Sur le même écran
 - 🤖 **vs IA** - Affrontez l'ordinateur (3 niveaux de difficulté)
-- 🌐 **Multijoueur en ligne** - Jouez avec un ami à distance via Socket.io
+- 🌐 **Multijoueur en ligne** - Jouez avec un ami à distance
 - ⚡ **Simulation/Labo** - Configurez et testez des positions personnalisées
 
 ## Développement Local
