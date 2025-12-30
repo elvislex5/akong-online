@@ -1,15 +1,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { GameMode, Player, AIDifficulty } from '../../types';
+import type { GameRoom } from '../../services/supabase';
+import { Smile, Meh, Frown, Flame, Crown, ArrowLeft, Users, Gamepad2, Globe, Cpu, AlertTriangle } from 'lucide-react';
+import { Lobby } from '../online/Lobby';
 
-type MenuStep = 'main' | 'ai_difficulty' | 'ai_select' | 'online_menu' | 'online_lobby' | 'online_join';
+type MenuStep = 'main' | 'ai_difficulty' | 'ai_select' | 'online_menu' | 'online_lobby' | 'online_join' | 'room_waiting';
 
 interface MainMenuProps {
   menuStep: MenuStep;
   setMenuStep: (step: MenuStep) => void;
   startGame: (mode: GameMode, aiPlayer?: Player | null, startingPlayer?: Player) => void;
   handleCreateRoom: () => void;
-  handleJoinRoom: () => void;
+  handleJoinRoom: (roomId?: string) => void;
   exitToMenu: () => void;
   setAiPlayer: (player: Player | null) => void;
   setAiStartsFirst: (starts: boolean) => void;
@@ -17,10 +20,12 @@ interface MainMenuProps {
   aiPlayer: Player | null;
   aiStartsFirst: boolean;
   onlineGame: {
-    roomId: string;
+    roomId: string; // Used for display
+    room: GameRoom | null;
     onlineStatus: string;
     joinInputId: string;
     setJoinInputId: (value: string) => void;
+    isGuest: boolean;
   };
 }
 
@@ -68,8 +73,8 @@ export function MainMenuRevolutionary({
               className="group relative glass-blue border-glow-blue rounded-2xl p-6 transition-all duration-300 overflow-hidden focus-visible-ring"
             >
               <div className="hover-overlay-blue" />
-              <div className="relative">
-                <img src="/multiplayer-icon.png" alt="" className="w-16 h-16 mx-auto mb-4 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
+              <div className="relative flex flex-col items-center">
+                <Users className="w-16 h-16 mb-4 text-blue-400 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" />
                 <h3 className="font-bold text-white text-xl mb-2">2 Joueurs Local</h3>
                 <p className="text-blue-200 text-sm">Jouez sur le même écran</p>
               </div>
@@ -83,9 +88,9 @@ export function MainMenuRevolutionary({
               className="group relative glass-gold border-glow-gold rounded-2xl p-6 transition-all duration-300 overflow-hidden focus-visible-ring"
             >
               <div className="hover-overlay-gold" />
-              <div className="relative">
-                <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center bg-amber-500/20 rounded-full" aria-hidden="true">
-                  <span className="text-amber-400 text-4xl font-black">IA</span>
+              <div className="relative flex flex-col items-center">
+                <div className="w-16 h-16 mb-4 flex items-center justify-center bg-amber-500/20 rounded-full">
+                  <Cpu className="w-10 h-10 text-amber-400" />
                 </div>
                 <h3 className="font-bold text-white text-xl mb-2">Contre l'IA</h3>
                 <p className="text-amber-200 text-sm">Défiez l'ordinateur</p>
@@ -100,8 +105,8 @@ export function MainMenuRevolutionary({
               className="group relative glass-emerald border-glow-emerald rounded-2xl p-6 transition-all duration-300 overflow-hidden focus-visible-ring"
             >
               <div className="hover-overlay-emerald" />
-              <div className="relative">
-                <img src="/online-icon.png" alt="" className="w-16 h-16 mx-auto mb-4 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
+              <div className="relative flex flex-col items-center">
+                <Globe className="w-16 h-16 mb-4 text-emerald-400 drop-shadow-lg group-hover:scale-110 transition-transform duration-300" />
                 <h3 className="font-bold text-white text-xl mb-2">Jeu en ligne</h3>
                 <p className="text-emerald-200 text-sm">Affrontez vos amis</p>
               </div>
@@ -115,11 +120,9 @@ export function MainMenuRevolutionary({
               className="group relative glass-purple border-glow-purple rounded-2xl p-6 transition-all duration-300 overflow-hidden focus-visible-ring"
             >
               <div className="hover-overlay-purple" />
-              <div className="relative">
-                <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center bg-purple-500/20 rounded-full" aria-hidden="true">
-                  <svg className="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                  </svg>
+              <div className="relative flex flex-col items-center">
+                <div className="w-16 h-16 mb-4 flex items-center justify-center bg-purple-500/20 rounded-full">
+                  <Gamepad2 className="w-10 h-10 text-purple-400" />
                 </div>
                 <h3 className="font-bold text-white text-xl mb-2">Simulation / Labo</h3>
                 <p className="text-purple-200 text-sm">Configurez le plateau</p>
@@ -139,28 +142,59 @@ export function MainMenuRevolutionary({
             Jeu en ligne
           </h3>
           <button
-            onClick={handleCreateRoom}
-            className="btn-emerald text-lg py-5 focus-visible-ring"
+            onClick={() => setMenuStep('online_lobby')}
+            className="group relative glass-gold border-glow-gold rounded-xl p-5 transition-all duration-300 overflow-hidden focus-visible-ring flex items-center justify-center gap-3"
           >
-            Créer une salle
+            <div className="hover-overlay-gold" />
+            <Users className="w-6 h-6 text-white" />
+            <span className="font-bold text-white text-lg">Liste des joueurs</span>
           </button>
-          <button
-            onClick={() => setMenuStep('online_join')}
-            className="px-8 py-5 bg-white/10 backdrop-blur-md border-2 border-white/20 hover:bg-white/20 hover:border-white/40 rounded-xl font-bold text-lg text-white transition-all duration-300 focus-visible-ring"
-          >
-            Rejoindre une salle
-          </button>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleCreateRoom}
+              className="bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/50 rounded-xl p-4 font-bold text-white transition-all focus-visible-ring"
+            >
+              Créer Privé
+            </button>
+            <button
+              onClick={() => setMenuStep('online_join')}
+              className="bg-cyan-600/20 hover:bg-cyan-600/40 border border-cyan-500/50 rounded-xl p-4 font-bold text-white transition-all focus-visible-ring"
+            >
+              Rejoindre ID
+            </button>
+          </div>
+
           <button
             onClick={() => setMenuStep('main')}
-            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2"
+            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2 flex items-center justify-center gap-2"
             aria-label="Retour au menu principal"
           >
-            ← Retour
+            <ArrowLeft className="w-4 h-4" /> Retour
           </button>
         </motion.div>
       )}
 
       {menuStep === 'online_lobby' && (
+        <div className="h-[500px] w-full">
+          <Lobby
+            onJoinRoom={(roomId) => {
+              onlineGame.setJoinInputId(roomId);
+              // Pass roomId directly to avoid race condition
+              handleJoinRoom(roomId);
+            }}
+            onClose={() => setMenuStep('online_menu')}
+          />
+          <button
+            onClick={() => setMenuStep('online_menu')}
+            className="w-full mt-4 text-gray-400 hover:text-white transition-colors"
+          >
+            Retour
+          </button>
+        </div>
+      )}
+
+      {menuStep === 'room_waiting' && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -169,16 +203,32 @@ export function MainMenuRevolutionary({
           aria-live="polite"
         >
           <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500 mb-2">
-            Salle créée !
+            {onlineGame.isGuest ? 'En attente...' : 'Salle créée !'}
           </h3>
-          <p className="text-gray-400 mb-6">Partagez cet ID avec votre ami :</p>
-          <div className="bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border-2 border-emerald-500 p-4 rounded-xl font-mono text-3xl font-bold tracking-wider select-all cursor-pointer text-emerald-400 mb-6 hover:scale-105 transition-transform" tabIndex={0} aria-label={`ID de la salle : ${onlineGame.roomId || 'Génération en cours'}`}>
-            {onlineGame.roomId || 'Génération...'}
-          </div>
-          <div className="flex items-center justify-center gap-2 text-gray-400 animate-pulse" aria-live="polite">
+          {!onlineGame.isGuest && (
+            <>
+              <p className="text-gray-400 mb-6">Partagez cet ID avec votre ami :</p>
+              <div className="bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 border-2 border-emerald-500 p-4 rounded-xl font-mono text-3xl font-bold tracking-wider select-all cursor-pointer text-emerald-400 mb-6 hover:scale-105 transition-transform" tabIndex={0} aria-label={`ID de la salle : ${onlineGame.roomId || 'Génération en cours'}`}>
+                {onlineGame.roomId || 'Génération...'}
+              </div>
+            </>
+          )}
+          <div className="flex items-center justify-center gap-2 text-gray-400 animate-pulse mb-6" aria-live="polite">
             <span className="w-3 h-3 bg-emerald-500 rounded-full shadow-lg shadow-emerald-500/50" aria-hidden="true"></span>
             {onlineGame.onlineStatus}
           </div>
+
+          {/* Lobby for invites */}
+          {onlineGame.room && (
+            <div className="bg-white/5 rounded-2xl border border-white/10 p-4 mb-2 max-h-[300px] overflow-hidden flex flex-col">
+              <Lobby
+                onJoinRoom={() => { }}
+                onClose={() => { }}
+                existingRoomId={onlineGame.room!.id}
+                existingRoomCode={onlineGame.room!.room_code}
+              />
+            </div>
+          )}
           <button
             onClick={exitToMenu}
             className="mt-6 text-amber-400 hover:text-amber-300 font-semibold transition-colors focus-visible-ring rounded-lg p-2"
@@ -207,7 +257,7 @@ export function MainMenuRevolutionary({
             className="bg-white/10 backdrop-blur-md border-2 border-white/20 focus:border-emerald-500 focus:outline-none p-5 rounded-xl text-white text-center font-mono uppercase text-xl transition-all placeholder-gray-500 focus-visible-ring"
           />
           <button
-            onClick={handleJoinRoom}
+            onClick={() => handleJoinRoom()}
             className="btn-emerald text-lg py-5 focus-visible-ring"
           >
             Rejoindre
@@ -215,10 +265,10 @@ export function MainMenuRevolutionary({
           <p className="text-center text-gray-400 mt-2" aria-live="polite">{onlineGame.onlineStatus}</p>
           <button
             onClick={() => setMenuStep('online_menu')}
-            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2"
+            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2 flex items-center justify-center gap-2"
             aria-label="Retour au menu en ligne"
           >
-            ← Retour
+            <ArrowLeft className="w-4 h-4" /> Retour
           </button>
         </motion.div>
       )}
@@ -256,10 +306,10 @@ export function MainMenuRevolutionary({
           </button>
           <button
             onClick={() => setMenuStep('main')}
-            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2"
+            className="text-gray-400 hover:text-amber-400 mt-4 transition-colors focus-visible-ring rounded-lg p-2 flex items-center justify-center gap-2"
             aria-label="Retour au menu principal"
           >
-            ← Retour
+            <ArrowLeft className="w-4 h-4" /> Retour
           </button>
         </motion.div>
       )}
@@ -268,94 +318,116 @@ export function MainMenuRevolutionary({
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col gap-3 max-h-[80vh] overflow-y-auto"
+          className="flex flex-col gap-4"
         >
-          <h3 className="text-3xl font-black text-center mb-4 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
-            Niveau de l'IA
-          </h3>
+          <div className="text-center mb-2">
+            <h3 className="title-section text-gradient-gold mb-1">
+              Niveau de l'IA
+            </h3>
+            <p className="text-gray-400 text-sm">Choisissez la force de votre adversaire</p>
+          </div>
 
-          {/* Facile */}
-          <button
-            onClick={() => {
-              setAiDifficulty('easy');
-              startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
-            }}
-            className="px-6 py-4 bg-gradient-to-r from-emerald-600/40 to-emerald-500/20 backdrop-blur-xl border-2 border-emerald-500/50 hover:border-emerald-500 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all focus-visible-ring"
-          >
-            <div className="flex items-center justify-between">
-              <span>😊 Facile</span>
-              <span className="text-xs bg-white/10 px-2 py-1 rounded-full">Débutant</span>
-            </div>
-          </button>
-
-          {/* Moyen */}
-          <button
-            onClick={() => {
-              setAiDifficulty('medium');
-              startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
-            }}
-            className="px-6 py-4 bg-gradient-to-r from-blue-600/40 to-blue-500/20 backdrop-blur-xl border-2 border-blue-500/50 hover:border-blue-500 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all focus-visible-ring"
-          >
-            <div className="flex items-center justify-between">
-              <span>😐 Moyen</span>
-              <span className="text-xs bg-white/10 px-2 py-1 rounded-full">Intermédiaire</span>
-            </div>
-          </button>
-
-          {/* Difficile */}
-          <button
-            onClick={() => {
-              setAiDifficulty('hard');
-              startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
-            }}
-            className="px-6 py-4 bg-gradient-to-r from-amber-600/40 to-orange-500/20 backdrop-blur-xl border-2 border-amber-500/50 hover:border-amber-500 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all focus-visible-ring"
-          >
-            <div className="flex items-center justify-between">
-              <span>😤 Difficile</span>
-              <span className="text-xs bg-white/10 px-2 py-1 rounded-full">Avancé</span>
-            </div>
-          </button>
-
-          {/* Expert */}
-          <button
-            onClick={() => {
-              setAiDifficulty('expert');
-              startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
-            }}
-            className="px-6 py-4 bg-gradient-to-r from-red-600/40 to-red-500/20 backdrop-blur-xl border-2 border-red-500/50 hover:border-red-500 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all focus-visible-ring"
-          >
-            <div className="flex flex-col items-start gap-1">
-              <div className="flex items-center justify-between w-full">
-                <span>🔥 Expert</span>
-                <span className="text-xs bg-white/10 px-2 py-1 rounded-full">Très fort</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-visible p-1">
+            {/* Facile */}
+            <button
+              onClick={() => {
+                setAiDifficulty('easy');
+                startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
+              }}
+              className="group relative flex flex-col items-center justify-center p-4 bg-emerald-900/20 hover:bg-emerald-900/40 border border-emerald-500/30 hover:border-emerald-500/80 rounded-xl transition-all duration-200 focus-visible-ring"
+            >
+              <div className="p-3 bg-emerald-500/10 rounded-full mb-2 group-hover:bg-emerald-500/20 transition-colors">
+                <Smile className="w-6 h-6 text-emerald-400" />
               </div>
-              <p className="text-xs text-red-200 opacity-80">Réfléchit 5-8 secondes par coup (profondeur 25)</p>
-            </div>
-          </button>
-
-          {/* Légende */}
-          <button
-            onClick={() => {
-              setAiDifficulty('legend');
-              startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
-            }}
-            className="px-6 py-4 bg-gradient-to-r from-purple-600/40 to-pink-600/20 backdrop-blur-xl border-2 border-purple-500/50 hover:border-purple-400 rounded-xl font-bold text-lg text-white hover:scale-105 transition-all shadow-lg shadow-purple-500/30 focus-visible-ring"
-          >
-            <div className="flex flex-col items-start gap-1">
-              <div className="flex items-center justify-between w-full">
-                <span>👑 Légende</span>
-                <span className="text-xs bg-white/10 px-2 py-1 rounded-full animate-pulse">Quasi-imbattable</span>
+              <div className="text-center">
+                <span className="block font-bold text-white mb-1">Facile</span>
+                <span className="text-xs text-emerald-200/70">Idéal pour débuter</span>
               </div>
-              <p className="text-xs text-purple-200 opacity-80">⚠️ Réfléchit 10-15 secondes par coup (profondeur 35)</p>
-            </div>
-          </button>
+            </button>
+
+            {/* Moyen */}
+            <button
+              onClick={() => {
+                setAiDifficulty('medium');
+                startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
+              }}
+              className="group relative flex flex-col items-center justify-center p-4 bg-blue-900/20 hover:bg-blue-900/40 border border-blue-500/30 hover:border-blue-500/80 rounded-xl transition-all duration-200 focus-visible-ring"
+            >
+              <div className="p-3 bg-blue-500/10 rounded-full mb-2 group-hover:bg-blue-500/20 transition-colors">
+                <Meh className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="text-center">
+                <span className="block font-bold text-white mb-1">Moyen</span>
+                <span className="text-xs text-blue-200/70">Challenge équilibré</span>
+              </div>
+            </button>
+
+            {/* Difficile */}
+            <button
+              onClick={() => {
+                setAiDifficulty('hard');
+                startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
+              }}
+              className="group relative flex flex-col items-center justify-center p-4 bg-amber-900/20 hover:bg-amber-900/40 border border-amber-500/30 hover:border-amber-500/80 rounded-xl transition-all duration-200 focus-visible-ring"
+            >
+              <div className="p-3 bg-amber-500/10 rounded-full mb-2 group-hover:bg-amber-500/20 transition-colors">
+                <Frown className="w-6 h-6 text-amber-400" />
+              </div>
+              <div className="text-center">
+                <span className="block font-bold text-white mb-1">Difficile</span>
+                <span className="text-xs text-amber-200/70">Pour les habitués</span>
+              </div>
+            </button>
+
+            {/* Expert */}
+            <button
+              onClick={() => {
+                setAiDifficulty('expert');
+                startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
+              }}
+              className="group relative flex flex-col items-center justify-center p-4 bg-red-900/20 hover:bg-red-900/40 border border-red-500/30 hover:border-red-500/80 rounded-xl transition-all duration-200 focus-visible-ring"
+            >
+              <div className="p-3 bg-red-500/10 rounded-full mb-2 group-hover:bg-red-500/20 transition-colors">
+                <Flame className="w-6 h-6 text-red-400" />
+              </div>
+              <div className="text-center">
+                <span className="block font-bold text-white mb-1">Expert</span>
+                <span className="text-xs text-red-200/70">Réflexion approfondie</span>
+              </div>
+            </button>
+
+            {/* Légende */}
+            <button
+              onClick={() => {
+                setAiDifficulty('legend');
+                startGame(GameMode.VsAI, aiPlayer, aiStartsFirst ? Player.Two : Player.One);
+              }}
+              className="sm:col-span-2 group relative flex flex-row items-center justify-center gap-4 p-4 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-500/30 hover:border-purple-500/80 rounded-xl transition-all duration-200 focus-visible-ring"
+            >
+              <div className="p-3 bg-purple-500/10 rounded-full group-hover:bg-purple-500/20 transition-colors">
+                <Crown className="w-8 h-8 text-purple-400" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white text-lg">Légende</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 uppercase tracking-wide">
+                    Ultime
+                  </span>
+                </div>
+                <p className="text-xs text-purple-200/70 mt-0.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  IA lente mais redoutable (35+ coups)
+                </p>
+              </div>
+            </button>
+          </div>
 
           <button
             onClick={() => setMenuStep('ai_select')}
-            className="text-gray-400 hover:text-amber-400 mt-2 transition-colors focus-visible-ring rounded-lg p-2"
+            className="text-gray-400 hover:text-amber-400 mt-2 transition-colors focus-visible-ring rounded-lg p-2 flex items-center justify-center gap-2 mx-auto"
             aria-label="Retour à la sélection du joueur"
           >
-            ← Retour
+            <ArrowLeft className="w-4 h-4" /> Retour
           </button>
         </motion.div>
       )}

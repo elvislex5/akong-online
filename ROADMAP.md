@@ -90,9 +90,9 @@ CREATE INDEX profiles_username_idx ON profiles(username);
 - [x] Protéger les routes/modes de jeu
 
 #### 1.4 Refactorisation du Serveur Socket.io
-- [ ] Ajouter validation des tokens JWT Supabase (Reporté à Phase 2)
-- [ ] Associer socket.id aux user_id authentifiés (Reporté à Phase 2)
-- [ ] Persister l'état de présence (qui est en ligne) (Reporté à Phase 2)
+- [x] Ajouter validation des tokens JWT Supabase
+- [x] Associer socket.id aux user_id authentifiés
+- [x] Persister l'état de présence (qui est en ligne)
 
 #### 1.5 UI/UX de Base
 - [x] Écran de connexion/inscription
@@ -174,11 +174,16 @@ CREATE INDEX game_rooms_host_idx ON game_rooms(host_id);
 
 ---
 
-### **Phase 3 : Social & Matchmaking** 👥
+### **Phase 3 : Social & Matchmaking** 👥 **EN COURS**
 
 **Objectif** : Créer l'aspect social et le matchmaking de base
 
+**Statut** : 🚧 En cours de développement (Backend prêt, UI à intégrer)
+
 #### 3.1 Schéma DB - Social
+- [x] Base de données (Tables `user_presence`, `game_invitations`)
+- [x] Indexes et RLS
+- [x] Services backend (`presenceService.ts`, `invitationService.ts`)
 
 ```sql
 -- Table de présence (qui est en ligne)
@@ -207,12 +212,13 @@ CREATE INDEX invitations_to_user_idx ON game_invitations(to_user_id, status);
 - [ ] Page lobby : liste des joueurs en ligne
 - [ ] Filtrer par statut (disponible, en partie)
 - [ ] Envoyer une invitation à un joueur
-- [ ] Recevoir et accepter/refuser les invitations
+- [ ] Recevoir et accepter/refuser les invitations (UI)
 
 #### 3.3 Invitations Directes
+- [x] Service d'invitation (Backend)
+- [x] Composant système d'invitation (`InvitationSystem.tsx`) (Non intégré)
 - [ ] Rechercher un joueur par pseudo
-- [ ] Envoyer invitation par pseudo
-- [ ] Notifications en temps réel des invitations
+- [ ] Notifications en temps réel des invitations (UI)
 - [ ] Expiration automatique des invitations (5min)
 
 #### 3.4 Chat en Jeu
@@ -466,10 +472,12 @@ akong-online/
 │   ├── ai.ts                    # Existant
 │   ├── songoLogic.ts            # Existant
 │   ├── audioService.ts          # Existant
-│   ├── onlineManager.ts         # Existant - À refactoriser
-│   ├── supabase.ts              # NOUVEAU - Client Supabase
-│   ├── authService.ts           # NOUVEAU - Gestion auth
-│   ├── profileService.ts        # NOUVEAU - Gestion profils
+│   ├── onlineManager.ts         # Existant - Refactorisé Phase 2
+│   ├── supabase.ts              # Existant - Phase 1
+│   ├── authService.ts           # Existant - Phase 1
+│   ├── profileService.ts        # Existant - Phase 1
+│   ├── invitationService.ts     # Existant - Phase 3 Backend
+│   ├── presenceService.ts       # Existant - Phase 3 Backend
 │   ├── matchmakingService.ts    # NOUVEAU - Matchmaking
 │   ├── eloService.ts            # NOUVEAU - Calcul ELO
 │   └── achievementService.ts    # NOUVEAU - Achievements
@@ -477,10 +485,10 @@ akong-online/
 │   ├── Board.tsx                # Existant
 │   ├── Pit.tsx                  # Existant
 │   ├── Hand.tsx                 # Existant
-│   ├── auth/
-│   │   ├── LoginForm.tsx        # NOUVEAU
-│   │   ├── RegisterForm.tsx     # NOUVEAU
-│   │   └── ProfilePage.tsx      # NOUVEAU
+│   ├── auth/                    # Existant - Phase 1
+│   │   ├── AuthScreen.tsx       # Existant
+│   │   └── ProfilePage.tsx      # Existant
+│   ├── InvitationSystem.tsx     # Existant - Phase 3 (Non intégré)
 │   ├── lobby/
 │   │   ├── Lobby.tsx            # NOUVEAU - Lobby principal
 │   │   ├── PlayerList.tsx       # NOUVEAU
@@ -498,16 +506,15 @@ akong-online/
 │       ├── TournamentBracket.tsx # NOUVEAU
 │       └── TournamentCard.tsx   # NOUVEAU
 ├── hooks/
-│   ├── useAuth.ts               # NOUVEAU - Auth state
-│   ├── useProfile.ts            # NOUVEAU - Profile state
-│   ├── usePresence.ts           # NOUVEAU - Online presence
-│   └── useRealtime.ts           # NOUVEAU - Supabase realtime
-├── types.ts                     # Existant - À étendre
-├── App.tsx                      # Existant - Refactoriser
-├── server.js                    # Existant - Étendre
+│   ├── useAuth.ts               # Existant
+│   ├── useProfile.ts            # NOUVEAU
+│   ├── usePresence.ts           # NOUVEAU
+│   └── useRealtime.ts           # NOUVEAU
+├── types.ts                     
+├── App.tsx                      
+├── server.js                    
 └── supabase/
-    ├── migrations/              # NOUVEAU - Migrations SQL
-    └── seed.sql                 # NOUVEAU - Données de test
+    └── migrations/              # Existant
 ```
 
 ### Flux d'Authentification
@@ -591,11 +598,6 @@ akong-online/
 - Archiver/supprimer les parties >30 jours
 - Limiter l'historique de chat à 50 messages/room
 
-**Estimation** :
-- 1 profil ≈ 2KB
-- 1 partie ≈ 10KB (avec historique)
-- Capacité : ~25,000 profils + 25,000 parties
-
 ### Bande Passante Supabase (2GB/mois)
 - Utiliser Socket.io pour le temps réel (bypass Supabase)
 - Requêtes DB optimisées (SELECT uniquement les colonnes nécessaires)
@@ -612,16 +614,16 @@ akong-online/
 ## 🧪 Plan de Tests
 
 ### Tests Phase 1
-- [ ] Inscription/connexion fonctionne
-- [ ] Profil créé automatiquement
-- [ ] Session persiste après refresh
-- [ ] Déconnexion fonctionne
+- [x] Inscription/connexion fonctionne
+- [x] Profil créé automatiquement
+- [x] Session persiste après refresh
+- [x] Déconnexion fonctionne
 
 ### Tests Phase 2
-- [ ] Création de room persiste en DB
-- [ ] Reconnexion restaure l'état
-- [ ] Spectateur reçoit les updates
-- [ ] Abandon est géré correctement
+- [x] Création de room persiste en DB
+- [x] Reconnexion restaure l'état
+- [x] Spectateur reçoit les updates
+- [x] Abandon est géré correctement
 
 ### Tests Phase 3
 - [ ] Lobby affiche les joueurs en ligne
@@ -645,13 +647,11 @@ akong-online/
 
 ## 📅 Timeline Estimée
 
-- **Phase 1** : 2-3 jours
-- **Phase 2** : 2-3 jours
-- **Phase 3** : 3-4 jours
+- **Phase 1** : Terminé
+- **Phase 2** : Terminé
+- **Phase 3** : ~3-4 jours restants
 - **Phase 4** : 3-4 jours
 - **Phase 5** : 4-5 jours
-
-**Total** : ~14-19 jours de développement
 
 ---
 
@@ -678,33 +678,3 @@ PORT=3002
 - **Vercel Analytics** : Trafic frontend
 - **Logs** : `flyctl logs` pour debug
 
-### Alertes
-
-- Configurer Supabase alerts (email) si :
-  - DB > 400MB (80% de la limite)
-  - Bandwidth > 1.6GB/mois (80%)
-
----
-
-## 📚 Ressources
-
-- [Supabase Docs](https://supabase.com/docs)
-- [Socket.io Docs](https://socket.io/docs/v4/)
-- [ELO Rating System](https://en.wikipedia.org/wiki/Elo_rating_system)
-- [Tournament Bracket Algorithms](https://en.wikipedia.org/wiki/Bracket_(tournament))
-
----
-
-## ✅ Checklist de Démarrage (Phase 1)
-
-Avant de commencer :
-- [ ] Créer un compte Supabase
-- [ ] Créer un nouveau projet Supabase
-- [ ] Noter les credentials (URL, anon key, service key)
-- [ ] Installer les dépendances : `npm install @supabase/supabase-js`
-- [ ] Créer `.env.local` avec les variables
-- [ ] Faire un commit avant les changements : `git commit -am "Pre-Phase 1 checkpoint"`
-
----
-
-**Prêt à démarrer la Phase 1 !** 🚀

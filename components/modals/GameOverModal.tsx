@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
 import { useAnnouncer } from '../../hooks/useAnnouncer';
+import { CheckCircle, XCircle, Scale } from 'lucide-react';
 
 interface GameOverModalProps {
   gameState: GameState;
@@ -147,10 +148,16 @@ export function GameOverModal({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: 'spring', damping: 10, stiffness: 200 }}
-              className="mb-4 text-6xl sm:text-7xl"
+              className="mb-4 flex justify-center"
             >
-              {gameState.winner === 'Draw' ? '=' : (
-                userLost ? '✕' : '✓'
+              {gameState.winner === 'Draw' ? (
+                <Scale className="w-20 h-20 text-blue-400" />
+              ) : (
+                userLost ? (
+                  <XCircle className="w-20 h-20 text-red-500" />
+                ) : (
+                  <CheckCircle className="w-20 h-20 text-emerald-500" />
+                )
               )}
             </motion.div>
 

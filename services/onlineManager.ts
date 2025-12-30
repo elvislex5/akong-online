@@ -19,7 +19,7 @@ export class SocketManager {
   private currentUserId: string | null = null;
   private heartbeatInterval: number | null = null;
 
-  constructor() {}
+  constructor() { }
 
   /**
    * Initialize socket connection with optional authentication
@@ -88,6 +88,8 @@ export class SocketManager {
       }
     });
   }
+
+
 
   private setupEventListeners() {
     if (!this.socket) return;

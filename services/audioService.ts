@@ -22,49 +22,13 @@ export class AudioService {
     }
   }
 
-  // Background Music
-  private musicAudio: HTMLAudioElement | null = null;
-
-  public playBackgroundMusic(url: string) {
-    if (this.musicAudio) {
-      if (this.musicAudio.src.includes(url)) {
-        if (this.musicAudio.paused && !this.isMuted) {
-          this.musicAudio.play().catch(e => console.error("Music play failed:", e));
-        }
-        return;
-      }
-      this.musicAudio.pause();
-      this.musicAudio = null;
-    }
-
-    this.musicAudio = new Audio(url);
-    this.musicAudio.loop = true;
-    this.musicAudio.volume = 0.2; // Lower volume for background music
-
-    if (!this.isMuted) {
-      this.musicAudio.play().catch(e => console.error("Music play failed:", e));
-    }
-  }
-
-  public stopBackgroundMusic() {
-    if (this.musicAudio) {
-      this.musicAudio.pause();
-      this.musicAudio.currentTime = 0;
-    }
-  }
+  // Background Music - Disabled for now
+  // Can be re-enabled later by adding music files to /public/sounds/
 
   public toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.ctx && this.masterGain) {
       this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.3, this.ctx.currentTime, 0.1);
-    }
-
-    if (this.musicAudio) {
-      if (this.isMuted) {
-        this.musicAudio.pause();
-      } else {
-        this.musicAudio.play().catch(e => console.error("Music resume failed:", e));
-      }
     }
 
     return this.isMuted;

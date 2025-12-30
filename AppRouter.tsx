@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
+import { GameProvider, useGameContext } from './contexts/GameContext';
 import UnifiedNavbar from './components/layout/UnifiedNavbar';
 import { SkipLink } from './components/accessibility/SkipLink';
 import type { Profile } from './services/supabase';
@@ -15,7 +16,6 @@ const App = lazy(() => import('./App')); // The game page
 const AuthScreen = lazy(() => import('./components/auth/AuthScreen'));
 const ProfilePage = lazy(() => import('./components/auth/ProfilePage'));
 const InvitationSystem = lazy(() => import('./components/InvitationSystem'));
-const MusicPlayer = lazy(() => import('./components/effects/MusicPlayer'));
 const CustomCursor = lazy(() => import('./components/effects/CustomCursor'));
 const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
 
@@ -155,6 +155,58 @@ const AnimatedRoutes: React.FC<{
   );
 };
 
+// Wrapper component to access GameContext inside Router
+const AppRouterContent: React.FC<{
+  isAuthenticated: boolean;
+  userProfile: Profile | null;
+  setUserProfile: (profile: Profile) => void;
+}> = ({ isAuthenticated, userProfile, setUserProfile }) => {
+  const { isGameInProgress } = useGameContext();
+
+  return (
+    <>
+      <SkipLink />
+      <Suspense fallback={<PageLoader />}>
+        {/* Global Fixed Background - Akong Pattern */}
+        <div className="fixed inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: 'url(/akong.png)',
+              filter: 'brightness(0.3) blur(2px)',
+            }}
+          />
+          {/* Dark overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90" />
+        </div>
+
+        {/* Global Effects */}
+        <CustomCursor />
+
+        {/* Unified Navbar - Hidden during active game */}
+        {!isGameInProgress && (
+          <UnifiedNavbar
+            isAuthenticated={isAuthenticated}
+          />
+        )}
+
+        {/* Animated Routes */}
+        <AnimatedRoutes
+          isAuthenticated={isAuthenticated}
+          userProfile={userProfile}
+          setUserProfile={setUserProfile}
+        />
+
+        {/* Global Invitation System (Phase 3) */}
+        {isAuthenticated && <InvitationSystem />}
+
+        {/* PWA Install Prompt */}
+        <PWAInstallPrompt />
+      </Suspense>
+    </>
+  );
+};
+
 const AppRouter: React.FC = () => {
   const { user, authUser, profile, loading, isAuthenticated } = useAuth();
   const [userProfile, setUserProfile] = useState<Profile | null>(profile);
@@ -183,43 +235,13 @@ const AppRouter: React.FC = () => {
 
   return (
     <BrowserRouter>
-      <SkipLink />
-      <Suspense fallback={<PageLoader />}>
-        {/* Global Fixed Background - Akong Pattern */}
-        <div className="fixed inset-0 z-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/akong.png)',
-              filter: 'brightness(0.3) blur(2px)',
-            }}
-          />
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90" />
-        </div>
-
-        {/* Global Effects */}
-        <CustomCursor />
-        <MusicPlayer autoplay={false} />
-
-        {/* Unified Navbar - Always Visible */}
-        <UnifiedNavbar
-          isAuthenticated={isAuthenticated}
-        />
-
-        {/* Animated Routes */}
-        <AnimatedRoutes
+      <GameProvider>
+        <AppRouterContent
           isAuthenticated={isAuthenticated}
           userProfile={userProfile}
           setUserProfile={setUserProfile}
         />
-
-        {/* Global Invitation System (Phase 3) */}
-        {isAuthenticated && <InvitationSystem />}
-
-        {/* PWA Install Prompt */}
-        <PWAInstallPrompt />
-      </Suspense>
+      </GameProvider>
     </BrowserRouter>
   );
 };

@@ -187,9 +187,13 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
     if (score === 0 && !isSimulationSetup) return null;
 
     // Position des greniers sur l'image (calibrées dynamiquement selon le tablier)
-    const granaryPosition = player === Player.One
+    const granaryPosRaw = player === Player.One
       ? GRANARY_POSITIONS.playerOne   // Grenier GAUCHE (Joueur 1 - bas)
       : GRANARY_POSITIONS.playerTwo;  // Grenier DROIT (Joueur 2 - haut)
+
+    const granaryPosition = invertView
+      ? { ...granaryPosRaw, x: 100 - granaryPosRaw.x, y: 100 - granaryPosRaw.y }
+      : granaryPosRaw;
 
     const maxVisuals = Math.min(score, 15); // Reduced from 20 for better visibility
     const sizeClass = score > 10 ? 'w-1 h-1 sm:w-1.5 sm:h-1.5' : 'w-1.5 h-1.5 sm:w-2 sm:h-2'; // Smaller seeds
@@ -252,7 +256,7 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
           <div
             className={`absolute top-1/2 -translate-y-1/2 ${scorePosition} z-50 ${isSimulationSetup ? 'cursor-pointer hover:scale-110 transition-transform' : 'pointer-events-none'}`}
             style={{
-              transform: `translateY(-50%) ${invertView ? 'rotate(180deg)' : ''}`
+              transform: `translateY(-50%)`
             }}
             onClick={isSimulationSetup ? () => onEditScore?.(player) : undefined}
             onKeyDown={isSimulationSetup ? (e) => {
@@ -288,7 +292,10 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
       (isPlayerOnePlayable && pitIndex < 7)) && isMyPit && !isSpectator;
 
     const canPlay = !isAnimating && !isSimulationSetup && isPlayable && validation.valid;
-    const position = PIT_POSITIONS[pitIndex as keyof typeof PIT_POSITIONS];
+    let position = PIT_POSITIONS[pitIndex as keyof typeof PIT_POSITIONS];
+    if (invertView) {
+      position = { ...position, x: 100 - position.x, y: 100 - position.y };
+    }
     const seeds = board[pitIndex];
 
     const visualSeeds = React.useMemo(() => {
@@ -364,7 +371,8 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
           {visualSeeds}
           {seeds > 0 && (
             <div
-              className={`absolute ${isTopPit ? '-top-8' : ''} ${isBottomPit ? '-bottom-8' : ''}
+              className={`absolute ${(isTopPit && !invertView) || (isBottomPit && invertView) ? '-top-8' : ''} ${(isBottomPit && !invertView) || (isTopPit && invertView) ? '-bottom-8' : ''}
+                                        left-1/2 -translate-x-1/2
                                         min-w-[1.75rem] h-[1.75rem]
                                         flex items-center justify-center
                                         px-2 rounded-full
@@ -373,9 +381,6 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
                                         transition-all duration-300
                                         ${seeds > 0 ? 'text-white bg-black/50' : 'text-transparent'}
                                       `}
-              style={{
-                transform: invertView ? 'rotate(180deg)' : 'none'
-              }}
             >
               {seeds}
             </div>
@@ -383,9 +388,6 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
           {seeds > 18 && (
             <div
               className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
-              style={{
-                transform: invertView ? 'rotate(180deg)' : 'none'
-              }}
             >
               <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(139,90,43,0.5)', border: '1px solid rgba(255,140,0,0.5)' }}>
                 <span className="text-amber-400 text-xs font-bold">+{seeds - 18}</span>
@@ -422,18 +424,16 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
 
       {/* BOARD IMAGE WITH POSITIONED PITS */}
       <div
-        className="relative w-full max-w-5xl aspect-[21/9] rounded-3xl overflow-hidden shadow-2xl"
-        style={{
-          transform: invertView ? 'rotate(180deg)' : 'none'
-        }}
+        className="relative w-full max-w-5xl aspect-[21/9] shadow-2xl"
         role="application"
         aria-label="Plateau de jeu Songo"
       >
         <img
           src={boardSkinUrl}
           alt="Illustration du plateau"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover rounded-3xl"
         />
+
         {/* Render all pits */}
         {Object.keys(PIT_POSITIONS).map((idx) => renderPit(parseInt(idx)))}
         {/* Render granaries with captured seeds */}

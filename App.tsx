@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, Flag } from 'lucide-react';
 import BoardRevolutionary from './components/BoardRevolutionary';
 import { createInitialState, executeMove, isValidMove, getMoveSteps, resolveGameStalemate } from './services/songoLogic';
 import { GameState, GameStatus, Player, GameMode, AnimationStep, AIDifficulty } from './types';
@@ -12,6 +12,8 @@ import { useAuth } from './hooks/useAuth';
 import { useOnlineGame } from './hooks/useOnlineGame';
 import { useGameAnimation } from './hooks/useGameAnimation';
 import { useBoardSkin } from './hooks/useBoardSkin';
+import { useGameContext } from './contexts/GameContext';
+import { useNavigationBlocker } from './hooks/useNavigationBlocker';
 import AuthScreen from './components/auth/AuthScreen';
 import ProfilePage from './components/auth/ProfilePage';
 import GameNavbar from './components/layout/GameNavbar';
@@ -22,6 +24,7 @@ import { SurrenderModal } from './components/modals/SurrenderModal';
 import { EditSimulationModal } from './components/modals/EditSimulationModal';
 import SimulationControlPanel from './components/SimulationControlPanel';
 import BoardCalibrationTool from './components/BoardCalibrationTool';
+import InvitationSystem from './components/InvitationSystem';
 import type { Profile } from './services/supabase';
 import toast from 'react-hot-toast';
 
@@ -35,6 +38,9 @@ const App: React.FC = () => {
     [Player.One]: null,
     [Player.Two]: null,
   });
+
+  // Game context for navigation blocking
+  const { setGameInProgress } = useGameContext();
 
   // Get user's selected board skin
   const { boardSkinUrl } = useBoardSkin(user?.id || null);
@@ -56,14 +62,32 @@ const App: React.FC = () => {
     assignRole: (connId: string) => void;
   }>({ playMove: () => { }, playMoveAnimation: () => { }, assignRole: () => { } });
 
+  // Declare gameMode before it's used in effects
+  const [gameMode, setGameMode] = useState<GameMode | null>(null);
+
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  const [gameMode, setGameMode] = useState<GameMode | null>(null);
-  const [menuStep, setMenuStep] = useState<'main' | 'ai_difficulty' | 'ai_select' | 'online_menu' | 'online_lobby' | 'online_join'>('main');
+  // Update game in progress status based on gameState
+  useEffect(() => {
+    const isPlaying = gameState.status === GameStatus.Playing && gameMode !== null;
+    setGameInProgress(isPlaying);
+  }, [gameState.status, gameMode, setGameInProgress]);
+
+  // Block navigation when game is in progress
+  useNavigationBlocker(
+    gameState.status === GameStatus.Playing && gameMode !== null,
+    () => {
+      // Show toast when user tries to navigate away
+      toast.error('Veuillez abandonner la partie avant de quitter', {
+        icon: '⚠️',
+        duration: 3000,
+      });
+    }
+  );
+  const [menuStep, setMenuStep] = useState<'main' | 'ai_difficulty' | 'ai_select' | 'online_menu' | 'online_lobby' | 'online_join' | 'room_waiting'>('main');
   const [showRules, setShowRules] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
 
   // Surrender State
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
@@ -93,7 +117,7 @@ const App: React.FC = () => {
     setIsAnimating: (isAnimating: boolean) => void;
   } | null>(null);
 
-  const handleOnlineRestart = () => {
+  function handleOnlineRestart() {
     const nextStarter = onlineStarter === Player.One ? Player.Two : Player.One;
     // The host is the authority and tells everyone to restart.
     // The `RESTART` message just tells clients to reset their local board state.
@@ -101,9 +125,9 @@ const App: React.FC = () => {
     // The host then starts a new authoritative game state with the next player starting.
     startGame(GameMode.OnlineHost, null, nextStarter);
     setOnlineStarter(nextStarter);
-  };
+  }
 
-  const restartGame = () => {
+  function restartGame() {
     if (gameMode === GameMode.OnlineHost) {
       // If the host clicks restart, they are the authority.
       handleOnlineRestart();
@@ -115,7 +139,7 @@ const App: React.FC = () => {
     } else if (gameMode !== null) {
       startGame(gameMode, aiPlayer);
     }
-  };
+  }
 
   // Online Game Hook
   const onlineGame = useOnlineGame({
@@ -177,17 +201,42 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleUserInteraction = () => {
       audioService.init();
-      audioService.playBackgroundMusic('/sounds/background.mp3');
+      // Background music disabled - add music file to /public/sounds/background.mp3 to enable
+      // audioService.playBackgroundMusic('/sounds/background.mp3');
       window.removeEventListener('click', handleUserInteraction);
     };
     window.addEventListener('click', handleUserInteraction);
     return () => window.removeEventListener('click', handleUserInteraction);
   }, []);
 
-  const toggleMute = () => {
-    const muted = audioService.toggleMute();
-    setIsMuted(muted);
-  };
+  // Handle Invitation Links
+  useEffect(() => {
+    if (loading) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const joinCode = params.get('join');
+    const mode = params.get('mode');
+
+    if (joinCode && mode === 'online') {
+      if (!user) {
+        toast.error("Veuillez vous connecter pour rejoindre la partie");
+        return;
+      }
+
+      console.log('[App] Found invitation code:', joinCode);
+      setMenuStep('online_join');
+      onlineGame.setJoinInputId(joinCode);
+
+      // Auto-join
+      setTimeout(() => {
+        handleJoinRoom(joinCode);
+      }, 500);
+
+      // Clean URL
+      window.history.replaceState({}, '', '/');
+    }
+  }, [user, loading]);
+
 
   // AI Turn Logic
   useEffect(() => {
@@ -323,7 +372,7 @@ const App: React.FC = () => {
     playMove(pitIndex);
   }, [gameMode, animation.isAnimating, simSpeed, aiPlayer, isSimAuto, onlineGame.roomId]);
 
-  const startGame = (mode: GameMode, aiPlayerConfig: Player | null = null, startingPlayer: Player = Player.One) => {
+  function startGame(mode: GameMode, aiPlayerConfig: Player | null = null, startingPlayer: Player = Player.One) {
     audioService.init();
     setGameMode(mode);
     setAiPlayer(aiPlayerConfig);
@@ -349,9 +398,9 @@ const App: React.FC = () => {
 
     animation.setAnimHand({ pitIndex: null, seedCount: 0 });
     animation.setIsAnimating(false);
-  };
+  }
 
-  const restartSimulation = () => {
+  function restartSimulation() {
     if (simulationInitialState) {
       // Restore board/scores/currentPlayer from snapshot, but force Playing status
       setGameState({
@@ -365,9 +414,9 @@ const App: React.FC = () => {
       // Fallback if no snapshot
       startGame(GameMode.Simulation);
     }
-  };
+  }
 
-  const exitToMenu = () => {
+  function exitToMenu() {
     if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest || gameMode === GameMode.OnlineSpectator) {
       onlineGame.cleanup();
     }
@@ -376,7 +425,7 @@ const App: React.FC = () => {
     setGameState(createInitialState());
     setAiPlayer(null);
     setOnlineStarter(Player.One); // Reset starter on exit
-  };
+  }
 
   // --- Edit Modal Logic (Simulation) ---
   const handleEditPit = (idx: number) => {
@@ -423,15 +472,33 @@ const App: React.FC = () => {
 
   // --- Online Logic ---
   const handleCreateRoom = async () => {
-    setMenuStep('online_lobby');
+    // Navigate to lobby? No, wait.
+    // setMenuStep('online_lobby'); // Original had this?
+    // Let's remove valid code?
+    // The original code (Step 375):
+    /*
+      const handleCreateRoom = async () => {
+        setMenuStep('online_lobby');
+   
+        // Use the hook to handle room creation
+        await onlineGame.handleCreateRoom();
+      };
+    */
+    // I want to replace the whole block.
 
-    // Use the hook to handle room creation
-    await onlineGame.handleCreateRoom();
+    // Create connection, room, etc.
+    const result = await onlineGame.handleCreateRoom();
+    if (result) {
+      setMenuStep('room_waiting');
+    }
   };
 
-  const handleJoinRoom = async () => {
+  const handleJoinRoom = async (roomId?: string) => {
     // Use the hook to handle room joining
-    await onlineGame.handleJoinRoom();
+    const result = await onlineGame.handleJoinRoom(roomId);
+    if (result) {
+      setMenuStep('room_waiting');
+    }
   };
 
   // --- SURRENDER ---
@@ -478,9 +545,11 @@ const App: React.FC = () => {
           aiStartsFirst={aiStartsFirst}
           onlineGame={{
             roomId: onlineGame.roomId,
+            room: onlineGame.room,
             onlineStatus: onlineGame.onlineStatus,
             joinInputId: onlineGame.joinInputId,
-            setJoinInputId: onlineGame.setJoinInputId
+            setJoinInputId: onlineGame.setJoinInputId,
+            isGuest: onlineGame.isGuest
           }}
         />
       ) : (
@@ -535,24 +604,7 @@ const App: React.FC = () => {
               title="Règles du jeu"
               aria-label="Voir les règles du jeu"
             >
-              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </button>
-
-            {/* Sound Toggle */}
-            <button
-              onClick={toggleMute}
-              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95 ${isMuted ? 'bg-gray-600/90 hover:bg-gray-600' : 'bg-amber-500/90 hover:bg-amber-500'
-                }`}
-              title={isMuted ? "Activer le son" : "Couper le son"}
-              aria-label={isMuted ? "Activer le son" : "Couper le son"}
-            >
-              {isMuted ? (
-                <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              ) : (
-                <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              )}
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </button>
 
             {/* Surrender Button - Only in active game */}
@@ -563,9 +615,7 @@ const App: React.FC = () => {
                 title="Abandonner la partie"
                 aria-label="Abandonner la partie"
               >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-                </svg>
+                <Flag className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </button>
             )}
           </div>

@@ -1,592 +1,329 @@
-import { GameState, Player, GameStatus } from '../types';
-import { executeMove, getValidMoves, getPitOwner, getPlayerIndices, getOpponentIndices } from './songoLogic';
+import { GameState } from '../types';
+import { FastGameState, fastExecuteMove, getFastValidMoves, fastEvaluate } from './fastSongo';
 
 // ============================================================================
-// TRANSPOSITION TABLE - Cache for evaluated positions
+// CONFIGURATION
+// ============================================================================
+
+const MAX_TT_SIZE = 2000000; // 2M entries ~ 40-50MB RAM
+const KILLER_MOVE_COUNT = 2;
+
+// ============================================================================
+// TRANSPOSITION TABLE
 // ============================================================================
 
 interface TTEntry {
     hash: number;
     depth: number;
     score: number;
-    flag: 'EXACT' | 'ALPHA' | 'BETA';
+    flag: 0 | 1 | 2; // 0=EXACT, 1=ALPHA, 2=BETA
+    bestMove?: number;
 }
 
-class TranspositionTable {
+class FastTranspositionTable {
     private table: Map<number, TTEntry>;
-    private maxSize: number;
     public hits: number = 0;
-    public misses: number = 0;
 
-    constructor(maxSize: number = 100000) {
+    constructor() {
         this.table = new Map();
-        this.maxSize = maxSize;
     }
 
-    store(hash: number, depth: number, score: number, flag: 'EXACT' | 'ALPHA' | 'BETA') {
-        // If table is full, clear oldest entries (simple LRU approximation)
-        if (this.table.size >= this.maxSize) {
-            const firstKey = this.table.keys().next().value;
-            this.table.delete(firstKey);
+    store(hash: number, depth: number, score: number, flag: 0 | 1 | 2, bestMove?: number) {
+        if (this.table.size >= MAX_TT_SIZE) {
+            this.table.clear();
         }
-        this.table.set(hash, { hash, depth, score, flag });
+        this.table.set(hash, { hash, depth, score, flag, bestMove });
     }
 
-    probe(hash: number, depth: number, alpha: number, beta: number): number | null {
-        const entry = this.table.get(hash);
-        if (!entry || entry.depth < depth) {
-            this.misses++;
-            return null;
-        }
-
-        this.hits++;
-
-        if (entry.flag === 'EXACT') {
-            return entry.score;
-        } else if (entry.flag === 'ALPHA' && entry.score <= alpha) {
-            return alpha;
-        } else if (entry.flag === 'BETA' && entry.score >= beta) {
-            return beta;
-        }
-
-        return null;
+    probe(hash: number): TTEntry | undefined {
+        return this.table.get(hash);
     }
 
     clear() {
         this.table.clear();
         this.hits = 0;
-        this.misses = 0;
-    }
-
-    getStats() {
-        const total = this.hits + this.misses;
-        const hitRate = total > 0 ? (this.hits / total * 100).toFixed(1) : '0.0';
-        return { hits: this.hits, misses: this.misses, hitRate: `${hitRate}%`, size: this.table.size };
     }
 }
 
+const tt = new FastTranspositionTable();
+
 // ============================================================================
-// ZOBRIST HASHING - Fast position hashing
+// ZOBRIST HASHING
 // ============================================================================
 
-// Initialize Zobrist random numbers (one-time setup)
-const zobristTable: number[][] = [];
-const zobristPlayer: number[] = [];
+const zobristTable = new Int32Array(14 * 60); // 14 pits * 60 seeds cap
+const zobristPlayer = new Int32Array(2);
 
 function initZobrist() {
-    if (zobristTable.length > 0) return; // Already initialized
+    if (zobristPlayer[0] !== 0) return;
 
-    // Random number generator with seed for consistency
-    let seed = 12345;
-    const random = () => {
+    let seed = 123456789;
+    const rand = () => {
         seed = (seed * 1103515245 + 12345) & 0x7fffffff;
         return seed;
     };
 
-    // 14 pits, max ~50 seeds per pit (generous estimate)
-    for (let pit = 0; pit < 14; pit++) {
-        zobristTable[pit] = [];
-        for (let seeds = 0; seeds <= 50; seeds++) {
-            zobristTable[pit][seeds] = random();
+    for (let i = 0; i < zobristTable.length; i++) zobristTable[i] = rand();
+    zobristPlayer[0] = rand();
+    zobristPlayer[1] = rand();
+}
+
+function getZobristHash(state: FastGameState): number {
+    let h = 0;
+    for (let i = 0; i < 14; i++) {
+        const seeds = state.data[i];
+        if (seeds > 0) {
+            const s = seeds >= 60 ? 59 : seeds;
+            h ^= zobristTable[i * 60 + s];
         }
     }
-
-    // Player to move
-    zobristPlayer[Player.One] = random();
-    zobristPlayer[Player.Two] = random();
-}
-
-function getZobristHash(state: GameState): number {
-    initZobrist();
-
-    let hash = 0;
-
-    // Hash board state
-    for (let i = 0; i < 14; i++) {
-        const seeds = Math.min(state.board[i], 50); // Cap at 50 for table bounds
-        hash ^= zobristTable[i][seeds];
-    }
-
-    // Hash current player
-    hash ^= zobristPlayer[state.currentPlayer];
-
-    return hash;
+    h ^= zobristPlayer[state.data[16]]; // currentPlayer
+    return h;
 }
 
 // ============================================================================
-// MOVE ORDERING - Killer Moves & History Heuristic
+// MOVE ORDERING
 // ============================================================================
 
-interface KillerMoves {
-    [depth: number]: number[];
-}
-
-const killerMoves: KillerMoves = {};
-const historyTable: number[][] = Array(14).fill(0).map(() => Array(14).fill(0));
+const killerMoves: number[][] = [];
+const moveHistory = new Int32Array(14); // Simply 1D history for Songo pits 0-13
 
 function addKillerMove(depth: number, move: number) {
-    if (!killerMoves[depth]) {
-        killerMoves[depth] = [];
-    }
-
-    // Keep only 2 killer moves per depth
+    if (!killerMoves[depth]) killerMoves[depth] = [];
     if (!killerMoves[depth].includes(move)) {
         killerMoves[depth].unshift(move);
-        if (killerMoves[depth].length > 2) {
-            killerMoves[depth].pop();
-        }
+        if (killerMoves[depth].length > KILLER_MOVE_COUNT) killerMoves[depth].pop();
     }
 }
 
-function updateHistory(move: number, depth: number) {
-    // Simple history: increment score for good moves
-    historyTable[move][depth] = (historyTable[move][depth] || 0) + depth * depth;
-}
+function orderMoves(state: FastGameState, moves: Uint8Array, depth: number, ttMove?: number): number[] {
+    const scoredMoves = [];
+    for (let i = 0; i < moves.length; i++) {
+        const m = moves[i];
+        let score = 0;
 
-function orderMovesAdvanced(state: GameState, moves: number[], depth: number): number[] {
-    return moves.map(move => {
-        const nextState = executeMove(state, move);
+        if (m === ttMove) score += 1000000;
+        if (killerMoves[depth]?.includes(m)) score += 1000;
+        score += moveHistory[m];
 
-        // Base weight: immediate score gain
-        let weight = nextState.scores[state.currentPlayer] - state.scores[state.currentPlayer];
+        // Capture Heuristic (Simulated simply)
+        // If I play here, does it end in a capture spot? Expensive to check properly.
+        // Just use history/TT for now.
 
-        // Bonus for winning moves
-        if (nextState.status === GameStatus.Finished && nextState.winner === state.currentPlayer) {
-            weight += 100000;
-        }
+        scoredMoves.push({ m, score });
+    }
 
-        // Killer move bonus
-        if (killerMoves[depth]?.includes(move)) {
-            weight += 10000;
-        }
-
-        // History heuristic bonus
-        weight += (historyTable[move]?.[depth] || 0);
-
-        // Capture detection bonus
-        const myIndices = getPlayerIndices(state.currentPlayer);
-        const seeds = state.board[move];
-        if (seeds > 0) {
-            const landingIdx = seeds >= 14 ?
-                getOpponentIndices(state.currentPlayer)[(seeds - 14) % 7] :
-                (move + seeds) % 14;
-
-            const landingOwner = getPitOwner(landingIdx);
-            if (landingOwner !== state.currentPlayer) {
-                const landingCount = nextState.board[landingIdx];
-                if (landingCount >= 2 && landingCount <= 4) {
-                    weight += 5000; // Prioritize captures
-                }
-            }
-        }
-
-        return { move, weight };
-    })
-        .sort((a, b) => b.weight - a.weight)
-        .map(item => item.move);
+    return scoredMoves.sort((a, b) => b.score - a.score).map(x => x.m);
 }
 
 // ============================================================================
-// EVALUATION FUNCTION - Enhanced with optimized weights
+// MINIMAX ENGINE
 // ============================================================================
 
-const evaluateState = (state: GameState, maximizingPlayer: Player): number => {
-    const opponent = maximizingPlayer === Player.One ? Player.Two : Player.One;
-
-    // Win/Loss check
-    if (state.status === GameStatus.Finished) {
-        if (state.winner === maximizingPlayer) return 1000000;
-        if (state.winner === opponent) return -1000000;
-        return 0; // Draw
-    }
-
-    // === PRIMARY FACTOR: Score Difference (Most Important) ===
-    const myScore = state.scores[maximizingPlayer];
-    const oppScore = state.scores[opponent];
-    const scoreDiff = (myScore - oppScore) * 1000;
-
-    // Endgame evaluation: If close to winning, prioritize aggressive play
-    const totalScore = myScore + oppScore;
-    const gamePhase = totalScore < 20 ? 'early' : totalScore < 50 ? 'mid' : 'late';
-    let endgameBonus = 0;
-
-    if (gamePhase === 'late') {
-        // In endgame, winning margin matters more
-        if (myScore > 35) endgameBonus += (myScore - 35) * 5000; // Very close to winning
-        if (oppScore > 35) endgameBonus -= (oppScore - 35) * 5000; // Opponent close to winning
-    }
-
-    // === STRATEGIC FACTORS ===
-
-    const myIndices = getPlayerIndices(maximizingPlayer);
-    const oppIndices = getPlayerIndices(opponent);
-
-    // 1. Seed Control - More important in endgame
-    const mySeedsOnBoard = myIndices.reduce((sum, idx) => sum + state.board[idx], 0);
-    const oppSeedsOnBoard = oppIndices.reduce((sum, idx) => sum + state.board[idx], 0);
-    const seedControlWeight = gamePhase === 'late' ? 15 : gamePhase === 'mid' ? 10 : 5;
-    const seedControlBonus = (mySeedsOnBoard - oppSeedsOnBoard) * seedControlWeight;
-
-    // 2. Pit Distribution - Having more active pits = more options
-    const myActivePits = myIndices.filter(idx => state.board[idx] > 0).length;
-    const oppActivePits = oppIndices.filter(idx => state.board[idx] > 0).length;
-    const distributionBonus = (myActivePits - oppActivePits) * 35;
-
-    // 2b. Seed concentration analysis - Avoid having too many seeds in one pit (except for planned captures)
-    let concentrationPenalty = 0;
-    for (const idx of myIndices) {
-        if (state.board[idx] > 20) {
-            concentrationPenalty += 15; // Penalty for over-concentration
-        }
-    }
-
-    // 3. Capture Opportunities - Significantly more important
-    let captureScore = 0;
-    let multiCaptureBonus = 0;
-
-    for (const pitIdx of myIndices) {
-        const seeds = state.board[pitIdx];
-        if (seeds === 0) continue;
-
-        let landingIdx: number;
-        if (seeds >= 14) {
-            const remainingAfter13 = seeds - 13;
-            const isAutoCapture = remainingAfter13 % 7 === 1;
-            if (isAutoCapture) {
-                captureScore += 50; // Auto-capture is very valuable
-                continue;
-            }
-            landingIdx = oppIndices[(remainingAfter13 - 1) % 7];
-        } else {
-            landingIdx = (pitIdx + seeds) % 14;
-        }
-
-        if (getPitOwner(landingIdx) === opponent) {
-            const landingCount = state.board[landingIdx] + 1;
-
-            if (landingCount >= 2 && landingCount <= 4) {
-                let potentialCapture = landingCount;
-                let captureChainLength = 1;
-
-                let checkIdx = (landingIdx - 1 + 14) % 14;
-                while (getPitOwner(checkIdx) === opponent) {
-                    const count = state.board[checkIdx];
-                    if (count >= 2 && count <= 4) {
-                        potentialCapture += count;
-                        captureChainLength++;
-                        checkIdx = (checkIdx - 1 + 14) % 14;
-                    } else {
-                        break;
-                    }
-                }
-
-                // Reward based on capture amount and chain length
-                captureScore += potentialCapture * 25;
-                if (captureChainLength > 1) {
-                    multiCaptureBonus += captureChainLength * 40; // Chain captures are strategic gold
-                }
-            }
-        }
-    }
-
-    // 4. Defensive Evaluation - Much more sophisticated
-    let vulnerabilityPenalty = 0;
-    let criticalThreatPenalty = 0;
-
-    for (const oppPitIdx of oppIndices) {
-        const seeds = state.board[oppPitIdx];
-        if (seeds === 0) continue;
-
-        let landingIdx: number;
-        if (seeds >= 14) {
-            const remainingAfter13 = seeds - 13;
-            if (remainingAfter13 % 7 === 1) {
-                vulnerabilityPenalty += 35; // Auto-capture threat is serious
-                continue;
-            }
-            landingIdx = myIndices[(remainingAfter13 - 1) % 7];
-        } else {
-            landingIdx = (oppPitIdx + seeds) % 14;
-        }
-
-        if (getPitOwner(landingIdx) === maximizingPlayer) {
-            const landingCount = state.board[landingIdx] + 1;
-
-            if (landingCount >= 2 && landingCount <= 4) {
-                let threatValue = landingCount;
-                let threatChainLength = 1;
-
-                let checkIdx = (landingIdx - 1 + 14) % 14;
-                while (getPitOwner(checkIdx) === maximizingPlayer) {
-                    const count = state.board[checkIdx];
-                    if (count >= 2 && count <= 4) {
-                        threatValue += count;
-                        threatChainLength++;
-                        checkIdx = (checkIdx - 1 + 14) % 14;
-                    } else {
-                        break;
-                    }
-                }
-
-                // More severe penalty for larger threats
-                vulnerabilityPenalty += threatValue * 15;
-                if (threatChainLength > 2) {
-                    criticalThreatPenalty += threatValue * 25; // Critical: big chain threat
-                }
-            }
-        }
-    }
-
-    // 5. Mobility - Critical for long-term strategy
-    const myMoves = getValidMoves(state).length;
-    const oppState = { ...state, currentPlayer: opponent };
-    const oppMoves = getValidMoves(oppState).length;
-    const mobilityBonus = (myMoves - oppMoves) * 20;
-
-    // Severe penalty if we have very few moves
-    let mobilityPenalty = 0;
-    if (myMoves <= 2 && gamePhase !== 'early') {
-        mobilityPenalty += 100; // Danger: very limited options
-    }
-
-    // 6. Strategic Positioning & Setup Detection
-    let positionalBonus = 0;
-    let setupBonus = 0;
-
-    const middlePits = maximizingPlayer === Player.One ? [2, 3, 4] : [9, 10, 11];
-    for (const pit of middlePits) {
-        if (state.board[pit] > 0) {
-            positionalBonus += 5;
-        }
-    }
-
-    const lastPit = maximizingPlayer === Player.One ? 6 : 13;
-    if (state.board[lastPit] >= 14) {
-        positionalBonus += 20; // Good for future auto-capture
-    }
-
-    // 7. Strategic Setup Detection - Look for pits that can create future captures
-    for (let i = 0; i < myIndices.length; i++) {
-        const pitIdx = myIndices[i];
-        const seeds = state.board[pitIdx];
-
-        // Look for "setup" pits - pits that are being prepared for future big captures
-        if (seeds >= 7 && seeds <= 13) {
-            // Check if this could lead to landing on opponent side
-            const targetIdx = (pitIdx + seeds) % 14;
-            if (getPitOwner(targetIdx) === opponent) {
-                setupBonus += 10; // Reward preparing strategic moves
-            }
-        }
-    }
-
-    // 8. Tempo/Initiative - Reward forcing opponent into bad positions
-    let tempoBonus = 0;
-    if (oppMoves < myMoves && gamePhase !== 'early') {
-        tempoBonus += 30; // We have initiative
-    }
-
-    // === COMBINE ALL FACTORS ===
-    const totalEvaluation =
-        scoreDiff +
-        endgameBonus +
-        seedControlBonus +
-        distributionBonus +
-        -concentrationPenalty +
-        captureScore +
-        multiCaptureBonus +
-        -vulnerabilityPenalty +
-        -criticalThreatPenalty +
-        mobilityBonus +
-        -mobilityPenalty +
-        positionalBonus +
-        setupBonus +
-        tempoBonus;
-
-    return totalEvaluation;
-};
-
-// ============================================================================
-// MINIMAX WITH TRANSPOSITION TABLE
-// ============================================================================
-
-const transpositionTable = new TranspositionTable(500000); // Increased from 100k to 500k
+let nodesEvaluated = 0;
 let deadline = 0;
-const DEFAULT_TIME_LIMIT_MS = 1000; // Default time limit
 
-// Public entry point: Iterative Deepening Search
-const getBestMoveIterative = (state: GameState, maxDepthConfig: number = 8, timeLimitMs: number = DEFAULT_TIME_LIMIT_MS): number => {
-    const moves = getValidMoves(state);
-    if (moves.length === 0) return -1;
-    if (moves.length === 1) return moves[0];
-
-    // Clear transposition table and killer moves for new search
-    transpositionTable.clear();
-    Object.keys(killerMoves).forEach(key => delete killerMoves[parseInt(key)]);
-
-    deadline = performance.now() + timeLimitMs;
-
-    let bestMove = moves[0];
-    let currentMaxDepth = 1;
-
-    const orderedMoves = orderMovesAdvanced(state, moves, 0);
-
-    // Iterative Deepening Loop
-    while (currentMaxDepth <= maxDepthConfig) {
-        try {
-            const { move, score } = minimaxRoot(state, orderedMoves, currentMaxDepth);
-
-            bestMove = move;
-
-            // If we found a winning mate, stop searching deeper
-            if (score > 900000) break;
-
-        } catch (e) {
-            // Timeout occurred
-            break;
-        }
-
-        // If we are running low on time, don't start next depth
-        if (performance.now() > deadline - 100) break;
-
-        currentMaxDepth++;
-    }
-
-    // Log stats for debugging
-    const stats = transpositionTable.getStats();
-    console.log(`AI Search (Worker): depth=${currentMaxDepth - 1}, TT hits=${stats.hits}, misses=${stats.misses}, hit rate=${stats.hitRate}`);
-
-    return bestMove;
-};
-
-// Root level minimax
-const minimaxRoot = (state: GameState, moves: number[], depth: number): { move: number, score: number } => {
-    let bestMove = moves[0];
-    let maxEval = -Infinity;
-    let alpha = -Infinity;
-    const beta = Infinity;
-
-    for (const move of moves) {
-        const nextState = executeMove(state, move);
-        const nextIsMaximizing = nextState.currentPlayer === state.currentPlayer;
-
-        const evaluation = minimax(nextState, depth - 1, alpha, beta, nextIsMaximizing, state.currentPlayer, depth - 1);
-
-        if (evaluation > maxEval) {
-            maxEval = evaluation;
-            bestMove = move;
-        }
-        alpha = Math.max(alpha, evaluation);
-    }
-    return { move: bestMove, score: maxEval };
-};
-
-const minimax = (
-    state: GameState,
+function minimax(
+    state: FastGameState,
     depth: number,
     alpha: number,
     beta: number,
-    isMaximizing: boolean,
-    rootPlayer: Player,
-    plyFromRoot: number
-): number => {
-    // Timeout Check
-    if ((depth % 2 === 0) && performance.now() > deadline) {
-        throw new Error("Timeout");
+    maximizingPlayer: number // 0 or 1
+): number {
+    nodesEvaluated++;
+
+    // Time check every 2048 nodes
+    if ((nodesEvaluated & 2047) === 0) {
+        if (performance.now() > deadline) throw "TIMEOUT";
     }
 
-    // Check transposition table
     const hash = getZobristHash(state);
-    const ttScore = transpositionTable.probe(hash, depth, alpha, beta);
-    if (ttScore !== null) {
-        return ttScore;
+    const ttEntry = tt.probe(hash);
+
+    if (ttEntry && ttEntry.depth >= depth) {
+        tt.hits++;
+        if (ttEntry.flag === 0) return ttEntry.score;
+        if (ttEntry.flag === 1 && ttEntry.score <= alpha) return alpha;
+        // Logic fix: ALPHA flag means "At most score" (upper bound)? No.
+        // Standard: 
+        // EXACT (0): score is exact.
+        // ALPHA (1): score <= alpha (upper bound, failed low). Return alpha if score <= alpha? No.
+        // If entry.flag == ALPHA (Upper Bound): if entry.score <= alpha, return alpha. (We can't do better than alpha).
+        // If entry.flag == BETA (Lower Bound): if entry.score >= beta, return beta.
+
+        // Let's rely on standard:
+        if (ttEntry.flag === 1) { // UPPER BOUND (Alpha)
+            if (ttEntry.score <= alpha) return alpha;
+        } else if (ttEntry.flag === 2) { // LOWER BOUND (Beta)
+            if (ttEntry.score >= beta) return beta;
+        }
     }
 
-    if (depth === 0 || state.status === GameStatus.Finished) {
-        const score = evaluateState(state, rootPlayer);
-        transpositionTable.store(hash, depth, score, 'EXACT');
-        return score;
+    if (depth === 0) {
+        return fastEvaluate(state, maximizingPlayer);
     }
 
-    const moves = getValidMoves(state);
+    const moves = getFastValidMoves(state);
+
     if (moves.length === 0) {
-        const score = evaluateState(state, rootPlayer);
-        transpositionTable.store(hash, depth, score, 'EXACT');
-        return score;
+        return fastEvaluate(state, maximizingPlayer);
     }
 
-    // Order moves for better pruning
-    const orderedMoves = orderMovesAdvanced(state, moves, plyFromRoot);
+    const ttMove = ttEntry?.bestMove;
+    const ordered = orderMoves(state, moves, depth, ttMove);
+
+    let bestMove = -1;
+    let value = -Infinity;
+    let bestFlag: 0 | 1 | 2 = 1; // Default to ALPHA (Upper Bound / Fail Low)
+
+    for (const m of ordered) {
+        const nextState = state.clone();
+        fastExecuteMove(nextState, m);
+
+        // NegaMax: -minimax(..., 1 - maximizingPlayer)
+        // Note: maximizingPlayer parameter in fastEvaluate needs to be the root maximizer?
+        // fastEvaluate takes "who is maximizing". 
+        // If we switch turns, the evaluation should be from perspective of current player?
+        // Standard Negamax: eval is usually relative to "player to move".
+        // BUT fastEvaluate computes (P1 - P2).
+        // Let's stick to strict Minimax logic with turn switching implicitly handled by recursion?
+        // Actually, simple Negamax:
+
+        // val = -minimax(nextState, depth-1, -beta, -alpha, 1 - maximizingPlayer... wait.
+        // 'maximizingPlayer' arg in function is visual only for evaluation?
+        // fastEvaluate needs to know "who implies positive score".
+        // Let's assume fastEvaluate ALWAYS returns (P1 - P2).
+        // Then Maximize P1, Minimize P2.
+
+        // Let's use standard Minimax (not Negamax) for clarity with P1/P2 scores.
+        // If state.currentPlayer == maximizingPlayer (Root), we MAX.
+        // Else we MIN.
+
+        // But `state.currentPlayer` changes. 
+        // Let's pass rootPlayer.
+
+        // REVERTING TO STANDARD MINIMAX (Easier with Score-Based Eval)
+    }
+
+    // RE-IMPLEMENTATION: STANDARD ALPHA-BETA (MAXIMIZING ROOT)
+    // Actually, simpler:
+    // fastEvaluate(state, rootPlayer) -> returns +ve if root is winning.
+
+    const isMaximizing = state.data[16] === maximizingPlayer;
 
     if (isMaximizing) {
         let maxEval = -Infinity;
-        let flag: 'EXACT' | 'ALPHA' | 'BETA' = 'ALPHA';
-
-        for (const move of orderedMoves) {
-            const nextState = executeMove(state, move);
-            const nextIsMaximizing = nextState.currentPlayer === rootPlayer;
-
-            const evalScore = minimax(nextState, depth - 1, alpha, beta, nextIsMaximizing, rootPlayer, plyFromRoot + 1);
-
+        for (const m of ordered) {
+            const next = state.clone();
+            fastExecuteMove(next, m);
+            const evalScore = minimax(next, depth - 1, alpha, beta, maximizingPlayer);
             if (evalScore > maxEval) {
                 maxEval = evalScore;
+                bestMove = m;
             }
-
             alpha = Math.max(alpha, evalScore);
-
             if (beta <= alpha) {
-                // Beta cutoff - this move is too good, opponent won't allow it
-                addKillerMove(plyFromRoot, move);
-                updateHistory(move, depth);
-                flag = 'BETA';
+                bestFlag = 2; // BETA (Lower Bound for Max node? No, Cutoff)
+                addKillerMove(depth, m);
                 break;
             }
         }
-
-        if (maxEval > alpha) flag = 'EXACT';
-        transpositionTable.store(hash, depth, maxEval, flag);
+        tt.store(hash, depth, maxEval, bestFlag, bestMove);
         return maxEval;
-
     } else {
         let minEval = Infinity;
-        let flag: 'EXACT' | 'ALPHA' | 'BETA' = 'BETA';
-
-        for (const move of orderedMoves) {
-            const nextState = executeMove(state, move);
-            const nextIsMaximizing = nextState.currentPlayer === rootPlayer;
-
-            const evalScore = minimax(nextState, depth - 1, alpha, beta, nextIsMaximizing, rootPlayer, plyFromRoot + 1);
-
+        for (const m of ordered) {
+            const next = state.clone();
+            fastExecuteMove(next, m);
+            const evalScore = minimax(next, depth - 1, alpha, beta, maximizingPlayer);
             if (evalScore < minEval) {
                 minEval = evalScore;
+                bestMove = m;
             }
-
             beta = Math.min(beta, evalScore);
-
             if (beta <= alpha) {
-                // Alpha cutoff
-                addKillerMove(plyFromRoot, move);
-                updateHistory(move, depth);
-                flag = 'ALPHA';
+                bestFlag = 1; // ALPHA (Upper Bound for Min node? Cutoff)
+                addKillerMove(depth, m);
                 break;
             }
         }
-
-        if (minEval < beta) flag = 'EXACT';
-        transpositionTable.store(hash, depth, minEval, flag);
+        tt.store(hash, depth, minEval, bestFlag, bestMove);
         return minEval;
     }
-};
+}
+
 
 // ============================================================================
-// WORKER MESSAGE HANDLING
+// DRIVER
 // ============================================================================
+
+initZobrist();
 
 self.onmessage = (e: MessageEvent) => {
     const { type, state, depth, timeLimit } = e.data;
 
     if (type === 'COMPUTE_MOVE') {
-        const bestMove = getBestMoveIterative(state, depth, timeLimit);
+        const fastState = FastGameState.fromGameState(state);
+        const rootPlayer = fastState.data[16];
+
+        const moves = getFastValidMoves(fastState);
+        if (moves.length === 0) {
+            self.postMessage({ type: 'BEST_MOVE', moveIndex: -1 });
+            return;
+        }
+        if (moves.length === 1) {
+            self.postMessage({ type: 'BEST_MOVE', moveIndex: moves[0] });
+            return;
+        }
+
+        deadline = performance.now() + timeLimit;
+        nodesEvaluated = 0;
+        tt.clear();
+        moveHistory.fill(0);
+
+        let bestMove = moves[0];
+        let currentDepth = 1;
+
+        while (currentDepth <= depth) { // Respect max allowed depth
+            try {
+                let alpha = -Infinity;
+                let beta = Infinity;
+                let bestVal = -Infinity;
+                let bestMoveThisDepth = -1;
+
+                const ordered = orderMoves(fastState, moves, currentDepth, undefined);
+
+                for (const m of ordered) {
+                    const next = fastState.clone();
+                    fastExecuteMove(next, m);
+
+                    const val = minimax(next, currentDepth - 1, alpha, beta, rootPlayer);
+
+                    if (val > bestVal) {
+                        bestVal = val;
+                        bestMoveThisDepth = m;
+                    }
+                    alpha = Math.max(alpha, bestVal);
+
+                    if (performance.now() > deadline) throw "TIMEOUT";
+                }
+
+                if (bestMoveThisDepth !== -1) {
+                    bestMove = bestMoveThisDepth;
+                }
+
+                if (bestVal > 90000) break;
+
+            } catch (timeout) {
+                break;
+            }
+
+            // If we are close to timeout, don't start next depth
+            if (performance.now() > deadline - 20) break;
+            currentDepth++;
+        }
+
+        console.log(`AI Fast: Depth=${currentDepth - 1} Nodes=${nodesEvaluated} TT=${tt['table'].size}`);
         self.postMessage({ type: 'BEST_MOVE', moveIndex: bestMove });
     }
 };

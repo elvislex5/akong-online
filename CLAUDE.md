@@ -346,9 +346,12 @@ Uses React hooks with a critical **ref pattern** to avoid stale closures:
 index.tsx                        # Entry point, renders AppRouter
 AppRouter.tsx                    # Main router: routes, auth protection, layout management
 ├── App.tsx                      # Game orchestrator: menus, game modes, state management
+├── contexts/
+│   └── GameContext.tsx          # Shared game state (for navigation blocking)
 ├── hooks/
 │   ├── useAuth.ts               # Authentication state hook
-│   └── useBoardSkin.ts          # Board skin selection hook
+│   ├── useBoardSkin.ts          # Board skin selection hook
+│   └── useNavigationBlocker.ts  # Navigation blocking during active games
 ├── pages/
 │   ├── LandingPage.tsx          # Home page: Hero, Features, How to Play, CTA
 │   └── RulesPage.tsx            # Game rules explanation page
@@ -533,8 +536,36 @@ import { victoryConfetti } from './utils/confetti';
 victoryConfetti(); // Fires on victory
 ```
 
+## Navigation Blocking System
+
+### Overview
+
+The app prevents users from accidentally leaving active games by implementing a multi-layer navigation blocking system:
+
+**When a game is in progress** (`GameStatus.Playing`):
+- ✅ Navbar is **hidden** (no visible navigation links)
+- ✅ Browser navigation is **blocked** (back button, F5, close tab)
+- ✅ React Router navigation is **blocked** (internal links)
+- ✅ Warning toast shown on navigation attempts
+- ✅ Only the "Abandonner" button allows exiting (with confirmation)
+
+**Implementation:**
+- `contexts/GameContext.tsx` - Shared state between AppRouter and App
+- `hooks/useNavigationBlocker.ts` - Blocks browser and router navigation
+- `AppRouter.tsx` - Conditionally hides navbar based on game state
+- `App.tsx` - Updates context when game starts/ends
+
+**User Flow:**
+1. Game starts → Navbar disappears, navigation blocked
+2. User tries to leave → Toast warning shown, navigation cancelled
+3. User clicks "Abandonner" → Confirmation modal → Game ends → Navigation unlocked
+4. Game ends naturally → Navigation unlocked automatically
+
+See `docs/navigation-blocking.md` for complete documentation and testing guide.
+
 ## Known Quirks & Constraints
 
+- **Navigation blocking**: `beforeunload` dialog text is browser-native and cannot be customized
 - **Gemini API**: Mentioned in .env.example but not actively used
 - **Online guest view**: `invertView` prop affects visual rendering only, not game logic indices
 - **Audio initialization**: Requires user interaction (browser requirement)

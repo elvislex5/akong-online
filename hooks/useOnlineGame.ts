@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { onlineManager } from '../services/onlineManager';
 import { createGameRoom, joinGameRoom, getRoomByCode, updateGameState as saveGameState, finishGame, abandonGame } from '../services/roomService';
-import { GameState, GameMode, Player, OnlineMessage, GameRoom, Profile } from '../types';
+import { GameState, GameMode, Player, OnlineMessage } from '../types';
+import { GameRoom, Profile } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface UseOnlineGameProps {
@@ -56,7 +57,7 @@ export function useOnlineGame({
           toast.success('Connexion rétablie ! État du jeu restauré.');
         } else {
           setOnlineStatus('Reconnecté au serveur');
-          toast.info('Reconnecté au serveur');
+          toast('Reconnecté au serveur', { icon: 'ℹ️' });
         }
       });
 
@@ -96,17 +97,17 @@ export function useOnlineGame({
           }
         }
         else if (msg.type === 'GUEST_PROFILE_SHARE') {
-            console.log('[useOnlineGame] Host received guest profile:', msg.payload);
-            setRoom(prevRoom => {
-                if (prevRoom) {
-                    return { ...prevRoom, guest: msg.payload };
-                }
-                return null;
-            });
+          console.log('[useOnlineGame] Host received guest profile:', msg.payload);
+          setRoom(prevRoom => {
+            if (prevRoom) {
+              return { ...prevRoom, guest: msg.payload };
+            }
+            return null;
+          });
         }
         else if (msg.type === 'REMATCH_REQUEST') {
-            console.log('[useOnlineGame] Host received rematch request');
-            onRestartGame?.();
+          console.log('[useOnlineGame] Host received rematch request');
+          onRestartGame?.();
         }
         else if (msg.type === 'MOVE_INTENT') {
           latestHandlersRef.current.playMove(msg.payload.pitIndex);
@@ -140,8 +141,11 @@ export function useOnlineGame({
   };
 
   // Join Room Handler
-  const handleJoinRoom = async () => {
-    if (!joinInputId) {
+  const handleJoinRoom = async (overrideRoomId?: string) => {
+    // Use override if provided, otherwise state state
+    const targetRoomId = overrideRoomId || joinInputId;
+
+    if (!targetRoomId) {
       toast.error("Veuillez entrer un code de partie");
       return null;
     }
@@ -152,7 +156,7 @@ export function useOnlineGame({
       return null;
     }
 
-    const roomCode = joinInputId.toUpperCase();
+    const roomCode = targetRoomId.toUpperCase();
 
     try {
       // Connect to Socket.io server first (with authentication) - only if not already connected
@@ -191,34 +195,34 @@ export function useOnlineGame({
       // Join the room in Socket.io
       onlineManager.joinRoom(roomCode, user.id);
       setRoomId(roomCode);
-      
+
       const initialRoom = await getRoomByCode(roomCode);
       if (!initialRoom) {
-          toast.error(`La partie ${roomCode} n'a pas été trouvée.`);
-          onlineManager.destroy();
-          return null;
+        toast.error(`La partie ${roomCode} n'a pas été trouvée.`);
+        onlineManager.destroy();
+        return null;
       }
-      
+
       if (initialRoom.status === 'waiting') {
-          try {
-              const dbRoom = await joinGameRoom(roomCode, user.id);
-              setRoomDbId(dbRoom.id);
-              setRoom(dbRoom);
-              // After successfully joining as a player, share profile with the room
-              onlineManager.broadcast({ type: 'GUEST_PROFILE_SHARE', payload: profile });
-          } catch (joinError) {
-              console.warn('[useOnlineGame] Could not join as player, falling back to spectator. Error:', joinError);
-              const fallbackRoom = await getRoomByCode(roomCode);
-              if (fallbackRoom) {
-                  setRoomDbId(fallbackRoom.id);
-                  setRoom(fallbackRoom);
-              } else {
-                  throw new Error("La partie a disparu après une tentative de connexion.");
-              }
+        try {
+          const dbRoom = await joinGameRoom(roomCode, user.id);
+          setRoomDbId(dbRoom.id);
+          setRoom(dbRoom);
+          // After successfully joining as a player, share profile with the room
+          onlineManager.broadcast({ type: 'GUEST_PROFILE_SHARE', payload: profile });
+        } catch (joinError) {
+          console.warn('[useOnlineGame] Could not join as player, falling back to spectator. Error:', joinError);
+          const fallbackRoom = await getRoomByCode(roomCode);
+          if (fallbackRoom) {
+            setRoomDbId(fallbackRoom.id);
+            setRoom(fallbackRoom);
+          } else {
+            throw new Error("La partie a disparu après une tentative de connexion.");
           }
+        }
       } else {
-          setRoomDbId(initialRoom.id);
-          setRoom(initialRoom);
+        setRoomDbId(initialRoom.id);
+        setRoom(initialRoom);
       }
 
       setOnlineStatus("Connexion à l'hôte...");

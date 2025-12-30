@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GameMode, Player } from '../../types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
+import { AlertTriangle } from 'lucide-react';
 
 interface SurrenderModalProps {
   isOpen: boolean;
@@ -70,10 +71,10 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
                 stiffness: 200,
                 delay: 0.1
               }}
-              className="mb-6 text-6xl sm:text-7xl text-red-500"
+              className="mb-6 flex justify-center text-red-500"
               aria-hidden="true"
             >
-              !
+              <AlertTriangle className="w-20 h-20" />
             </motion.div>
 
             {/* Title with gradient */}

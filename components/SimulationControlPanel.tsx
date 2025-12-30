@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Player, GameStatus, AIDifficulty } from '../types';
-import { FlaskConical, Turtle, Zap, Rocket, Bot, Smile, Meh, Frown, Gamepad2, Wrench, Trash2, RotateCcw, Target, X, Flame, Crown } from 'lucide-react';
+import { FlaskConical, Turtle, Zap, Rocket, Bot, Smile, Meh, Frown, Gamepad2, Wrench, Trash2, RotateCcw, Target, X, Flame, Crown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface SimulationControlPanelProps {
@@ -43,18 +43,28 @@ const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({
 
   // Accessibility: Focus trap
   const panelRef = useFocusTrap<HTMLDivElement>(true);
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   return (
     <motion.div
-      initial={{ x: 300 }}
-      animate={{ x: 0 }}
-      exit={{ x: 300 }}
+      initial={{ x: 320 }}
+      animate={{ x: isCollapsed ? 320 : 0 }}
+      exit={{ x: 320 }}
       transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-      className="fixed right-0 top-20 bottom-0 w-80 glass-modal border-l-2 border-purple-500/30 shadow-2xl z-40 flex flex-col"
+      className="fixed right-0 top-20 bottom-0 w-80 glass-modal border-l-2 border-purple-500/30 shadow-2xl z-40 flex flex-col overflow-visible"
       ref={panelRef}
       role="dialog"
       aria-label="Panneau de contrôle de simulation"
     >
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -left-8 top-24 bg-purple-600/90 hover:bg-purple-500 text-white w-8 h-12 rounded-l-xl shadow-lg flex items-center justify-center transition-all duration-300 z-50 border-y border-l border-purple-400/30 backdrop-blur-md"
+        aria-label={isCollapsed ? "Ouvrir le panneau" : "Réduire le panneau"}
+        title={isCollapsed ? "Ouvrir le panneau" : "Réduire le panneau"}
+      >
+        {isCollapsed ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+      </button>
+
       <div className="glow-overlay-purple rounded-l-3xl"></div>
 
       <div className="relative z-10 p-4 space-y-4 overflow-y-auto flex-1">

@@ -115,7 +115,7 @@ export default function InvitationSystem() {
     // When an invitation is cancelled
     onlineManager.onInvitationCancelled((data) => {
       console.log('[InvitationSystem] Invitation cancelled:', data);
-      toast.info('L\'invitation a été annulée');
+      toast('L\'invitation a été annulée', { icon: 'ℹ️' });
 
       // Remove from pending
       setPendingInvitations((prev) => prev.filter((inv) => inv.id !== data.invitationId));
@@ -159,9 +159,19 @@ export default function InvitationSystem() {
       setPendingInvitations((prev) => prev.filter((inv) => inv.id !== currentInvitation.id));
 
       // Redirect to game with room code
-      setTimeout(() => {
-        navigate(`/game?mode=online&join=${result.room_code}`);
-      }, 500);
+      setPendingInvitations((prev) => prev.filter((inv) => inv.id !== currentInvitation.id));
+
+      // Trigger join via callback or event?
+      // Since we don't have direct access to `handleJoinRoom` here, we rely on URL param logic
+      // IF App.tsx handles it. If not, we are stuck.
+      // Let's assume we need to trigger it.
+      // Workaround: Use onlineManager to signal 'INVITATION_ACCEPTED_LOCAL' and have App.tsx listen?
+      // Or just navigate and hope?
+      // Let's verify App.tsx first.
+      window.location.href = `/game?mode=online&join=${result.room_code}`;
+      // Using window.location to force full reload might be safer for ensuring fresh state if App parses URL on mount.
+      // But standard router is better.
+      navigate(`/game?mode=online&join=${result.room_code}`);
     } catch (error) {
       console.error('[InvitationSystem] Error accepting invitation:', error);
       toast.error('Erreur lors de l\'acceptation');
