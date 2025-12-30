@@ -58,3 +58,6 @@ export interface OnlineMessage {
   type: OnlineMessageType;
   payload?: any;
 }
+
+// AI Difficulty Levels
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'legend';

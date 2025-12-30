@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GameMode, Player } from '../../types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
 
 interface SurrenderModalProps {
   isOpen: boolean;
@@ -10,6 +12,14 @@ interface SurrenderModalProps {
 }
 
 export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: SurrenderModalProps) {
+  // Accessibility: Focus trap
+  const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
+
+  // Accessibility: Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'Escape', handler: onClose, description: 'Annuler' }
+  ], isOpen);
+
   const handleSurrender = () => {
     // For local multiplayer, we don't know which player is surrendering
     // For online/AI, it's always the human player (Player.One for online guest, or the non-AI player)
@@ -38,7 +48,12 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-gradient-to-br from-gray-900/95 to-red-950/95 backdrop-blur-xl border-2 border-red-500/30 rounded-3xl shadow-2xl text-center max-w-md w-full relative overflow-hidden"
+          ref={modalRef}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="surrender-title"
+          aria-describedby="surrender-desc"
+          className="modal-container border-red-500/30 text-center max-w-md"
         >
           {/* Subtle glow effect */}
           <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-orange-500/10 pointer-events-none rounded-3xl"></div>
@@ -56,6 +71,7 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
                 delay: 0.1
               }}
               className="mb-6 text-6xl sm:text-7xl text-red-500"
+              aria-hidden="true"
             >
               !
             </motion.div>
@@ -65,7 +81,8 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500 mb-4 uppercase tracking-wider"
+              id="surrender-title"
+              className="title-section text-gradient-red mb-4 uppercase tracking-wider"
             >
               Abandonner ?
             </motion.h2>
@@ -75,6 +92,7 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
+              id="surrender-desc"
               className="mb-8"
             >
               <p className="text-gray-300 mb-3 text-sm sm:text-base">
@@ -94,13 +112,13 @@ export function SurrenderModal({ isOpen, gameMode, onClose, onSurrender }: Surre
             >
               <button
                 onClick={handleSurrender}
-                className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-red-500/50 text-sm sm:text-base"
+                className="btn-danger text-sm sm:text-base py-3 focus-visible-ring"
               >
                 OUI, ABANDONNER
               </button>
               <button
                 onClick={onClose}
-                className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 rounded-xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-emerald-500/50 text-sm sm:text-base"
+                className="btn-emerald text-sm sm:text-base py-3 focus-visible-ring"
               >
                 NON, CONTINUER
               </button>

@@ -88,19 +88,19 @@
   --font-display: 'Inter', sans-serif;
   --font-mono: 'Fira Code', 'Courier New', monospace;
   
-  /* Font Sizes */
+  /* Font Sizes - Optimized for better proportions */
   --text-xs: 0.75rem;      /* 12px */
   --text-sm: 0.875rem;     /* 14px */
   --text-base: 1rem;       /* 16px */
   --text-lg: 1.125rem;     /* 18px */
   --text-xl: 1.25rem;      /* 20px */
-  --text-2xl: 1.5rem;      /* 24px */
-  --text-3xl: 1.875rem;    /* 30px */
-  --text-4xl: 2.25rem;     /* 36px */
-  --text-5xl: 3rem;        /* 48px */
-  --text-6xl: 3.75rem;     /* 60px */
-  --text-7xl: 4.5rem;      /* 72px */
-  --text-8xl: 6rem;        /* 96px */
+  --text-2xl: 1.25rem;     /* 20px - reduced from 24px */
+  --text-3xl: 1.5rem;      /* 24px - reduced from 30px */
+  --text-4xl: 1.875rem;    /* 30px - reduced from 36px */
+  --text-5xl: 2.5rem;      /* 40px - reduced from 48px */
+  --text-6xl: 3rem;        /* 48px - reduced from 60px */
+  --text-7xl: 3.75rem;     /* 60px - reduced from 72px */
+  --text-8xl: 5rem;        /* 80px - reduced from 96px */
   
   /* Font Weights */
   --font-light: 300;
@@ -137,18 +137,18 @@
   --space-3: 0.75rem;      /* 12px */
   --space-4: 1rem;         /* 16px */
   --space-5: 1.25rem;      /* 20px */
-  --space-6: 1.5rem;       /* 24px */
-  --space-8: 2rem;         /* 32px */
-  --space-10: 2.5rem;      /* 40px */
-  --space-12: 3rem;        /* 48px */
-  --space-16: 4rem;        /* 64px */
-  --space-20: 5rem;        /* 80px */
-  --space-24: 6rem;        /* 96px */
-  --space-32: 8rem;        /* 128px */
-  --space-40: 10rem;       /* 160px */
-  --space-48: 12rem;       /* 192px */
-  --space-56: 14rem;       /* 224px */
-  --space-64: 16rem;       /* 256px */
+  --space-6: 1.25rem;      /* 20px - reduced from 24px */
+  --space-8: 1.75rem;      /* 28px - reduced from 32px */
+  --space-10: 2.25rem;     /* 36px - reduced from 40px */
+  --space-12: 2.75rem;     /* 44px - reduced from 48px */
+  --space-16: 3.5rem;      /* 56px - reduced from 64px */
+  --space-20: 4.5rem;      /* 72px - reduced from 80px */
+  --space-24: 5.5rem;      /* 88px - reduced from 96px */
+  --space-32: 7rem;        /* 112px - reduced from 128px */
+  --space-40: 9rem;        /* 144px - reduced from 160px */
+  --space-48: 10.5rem;     /* 168px - reduced from 192px */
+  --space-56: 12.5rem;     /* 200px - reduced from 224px */
+  --space-64: 14rem;       /* 224px - reduced from 256px */
   
   /* ========================================
      BORDER RADIUS
@@ -266,16 +266,16 @@
   --board-border: var(--color-gold);
   --board-shadow: var(--shadow-3d-xl);
   
-  /* Pit */
-  --pit-size: 80px;
+  /* Pit - Optimized size */
+  --pit-size: 70px;        /* Reduced from 80px */
   --pit-bg: var(--color-charcoal);
   --pit-border: var(--color-gold);
   --pit-border-width: 2px;
   --pit-shadow: var(--shadow-3d-md);
   --pit-glow: var(--glow-gold-sm);
   
-  /* Seed */
-  --seed-size: 14px;
+  /* Seed - Optimized size */
+  --seed-size: 12px;       /* Reduced from 14px */
   --seed-color: var(--color-gold);
   --seed-shadow: var(--shadow-3d-sm);
   --seed-glow: var(--glow-gold-sm);

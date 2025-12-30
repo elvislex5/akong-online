@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GameState, GameMode, Player } from '../../types';
 import type { Profile } from '../../services/supabase';
 import confetti from 'canvas-confetti';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
+import { useAnnouncer } from '../../hooks/useAnnouncer';
 
 interface GameOverModalProps {
   gameState: GameState;
@@ -23,6 +26,17 @@ export function GameOverModal({
   onRestart,
   onExitToMenu
 }: GameOverModalProps) {
+  // Accessibility: Focus trap
+  const modalRef = useFocusTrap<HTMLDivElement>(true);
+
+  // Accessibility: Announcer for screen readers
+  const { announceGameState } = useAnnouncer();
+
+  // Accessibility: Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'Escape', handler: onExitToMenu, description: 'Fermer et retourner au menu' }
+  ]);
+
   // Déterminer quel joueur est l'utilisateur connecté
   const currentUserPlayer = React.useMemo(() => {
     if (!currentUserId) return null;
@@ -34,6 +48,22 @@ export function GameOverModal({
   // Déterminer si l'utilisateur a gagné
   const userWon = currentUserPlayer !== null && gameState.winner === currentUserPlayer;
   const userLost = currentUserPlayer !== null && gameState.winner !== 'Draw' && gameState.winner !== null && gameState.winner !== currentUserPlayer;
+
+  // Announce result to screen readers
+  useEffect(() => {
+    if (gameState.winner === 'Draw') {
+      announceGameState('Match nul');
+    } else if (userWon) {
+      announceGameState('Vous avez gagné !');
+    } else if (userLost) {
+      announceGameState('Vous avez perdu');
+    } else if (gameState.winner) {
+      const winnerName = playerProfiles[gameState.winner]?.display_name ||
+        playerProfiles[gameState.winner]?.username ||
+        `Joueur ${gameState.winner === Player.One ? '1' : '2'}`;
+      announceGameState(`${winnerName} a gagné`);
+    }
+  }, [gameState.winner, userWon, userLost, playerProfiles, announceGameState]);
 
   // Trigger confetti on mount for victories (only if user won)
   useEffect(() => {
@@ -97,18 +127,18 @@ export function GameOverModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className={`bg-gradient-to-br ${
-            userLost
-              ? 'from-gray-900/95 to-red-950/95 border-red-500/30'
-              : 'from-gray-900/95 to-black/95 border-amber-500/30'
-          } backdrop-blur-xl border-2 rounded-3xl shadow-2xl text-center max-w-md w-full max-h-[85vh] overflow-hidden relative flex flex-col`}
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="game-over-title"
+          className={`modal-container text-center max-w-md ${userLost ? 'border-red-500/30' : ''
+            }`}
         >
           {/* Subtle glow effect */}
-          <div className={`absolute inset-0 ${
-            userLost
-              ? 'bg-gradient-to-br from-red-500/10 to-gray-900/10'
-              : 'bg-gradient-to-br from-amber-500/5 to-orange-500/5'
-          } pointer-events-none rounded-3xl`}></div>
+          <div className={`absolute inset-0 ${userLost
+            ? 'bg-gradient-to-br from-red-500/10 to-gray-900/10'
+            : 'bg-gradient-to-br from-amber-500/5 to-orange-500/5'
+            } pointer-events-none rounded-3xl`}></div>
 
           {/* Content - Scrollable */}
           <div className="relative z-10 p-6 overflow-y-auto flex-1">
@@ -129,11 +159,11 @@ export function GameOverModal({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className={`text-2xl sm:text-3xl font-black text-transparent bg-clip-text ${
-                userLost
-                  ? 'bg-gradient-to-r from-red-400 to-red-600'
-                  : 'bg-gradient-to-r from-amber-400 to-orange-500'
-              } mb-3 uppercase tracking-wider`}
+              id="game-over-title"
+              className={`title-section ${userLost
+                ? 'text-gradient-red'
+                : 'text-gradient-gold'
+                } mb-3 uppercase tracking-wider`}
             >
               {gameState.winner === 'Draw' ? 'Match Nul' : (
                 userWon ? 'VICTOIRE !' : (
@@ -152,9 +182,8 @@ export function GameOverModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.35 }}
-                className={`text-sm sm:text-base mb-6 ${
-                  userLost ? 'text-red-300' : 'text-amber-300'
-                }`}
+                className={`text-sm sm:text-base mb-6 ${userLost ? 'text-red-300' : 'text-amber-300'
+                  }`}
               >
                 {userWon ? (
                   <>Félicitations <span className="font-bold">{userName}</span> !</>
@@ -171,67 +200,58 @@ export function GameOverModal({
               transition={{ delay: 0.5 }}
               className="flex justify-center gap-4 mb-6 font-mono text-lg"
             >
-              <div className={`bg-white/5 border ${
-                currentUserPlayer === Player.One
-                  ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
-                  : 'border-amber-500/20'
-              } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
-                <span className={`text-xs uppercase block mb-1 ${
-                  currentUserPlayer === Player.One ? 'text-amber-300' : 'text-gray-400'
-                }`}>
+              <div className={`bg-white/5 border ${currentUserPlayer === Player.One
+                ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
+                : 'border-amber-500/20'
+                } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
+                <span className={`text-xs uppercase block mb-1 ${currentUserPlayer === Player.One ? 'text-amber-300' : 'text-gray-400'
+                  }`}>
                   {playerOneName} {currentUserPlayer === Player.One && '(Vous)'}
                 </span>
-                <span className={`font-bold text-xl ${
-                  gameState.winner === Player.One
-                    ? (userWon ? 'text-amber-400' : 'text-amber-500')
-                    : (userLost && currentUserPlayer === Player.One ? 'text-red-400' : 'text-blue-400')
-                }`}>
+                <span className={`font-bold text-xl ${gameState.winner === Player.One
+                  ? (userWon ? 'text-amber-400' : 'text-amber-500')
+                  : (userLost && currentUserPlayer === Player.One ? 'text-red-400' : 'text-blue-400')
+                  }`}>
                   {gameState.scores[Player.One]}
                 </span>
               </div>
-              <div className={`bg-white/5 border ${
-                currentUserPlayer === Player.Two
-                  ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
-                  : 'border-amber-500/20'
-              } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
-                <span className={`text-xs uppercase block mb-1 ${
-                  currentUserPlayer === Player.Two ? 'text-amber-300' : 'text-gray-400'
-                }`}>
+              <div className={`bg-white/5 border ${currentUserPlayer === Player.Two
+                ? (userWon ? 'border-amber-500/50' : 'border-red-500/50')
+                : 'border-amber-500/20'
+                } p-3 rounded-xl hover:border-amber-500/40 transition-all duration-300 min-w-[100px]`}>
+                <span className={`text-xs uppercase block mb-1 ${currentUserPlayer === Player.Two ? 'text-amber-300' : 'text-gray-400'
+                  }`}>
                   {playerTwoName} {currentUserPlayer === Player.Two && '(Vous)'}
                 </span>
-                <span className={`font-bold text-xl ${
-                  gameState.winner === Player.Two
-                    ? (userWon ? 'text-amber-400' : 'text-amber-500')
-                    : (userLost && currentUserPlayer === Player.Two ? 'text-red-400' : 'text-orange-400')
-                }`}>
+                <span className={`font-bold text-xl ${gameState.winner === Player.Two
+                  ? (userWon ? 'text-amber-400' : 'text-amber-500')
+                  : (userLost && currentUserPlayer === Player.Two ? 'text-red-400' : 'text-orange-400')
+                  }`}>
                   {gameState.scores[Player.Two]}
                 </span>
               </div>
             </motion.div>
 
-            {/* Action buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-3 justify-center"
-            >
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
               <button
                 onClick={onRestart}
-                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-amber-500/50 text-sm"
+                className="btn-primary text-sm py-2.5 focus-visible-ring"
+                aria-label="Rejouer une nouvelle partie"
               >
                 REJOUER
               </button>
               <button
                 onClick={onExitToMenu}
-                className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300 text-sm"
+                className="btn-secondary text-sm py-2.5 focus-visible-ring"
+                aria-label="Retourner au menu principal"
               >
                 MENU
               </button>
-            </motion.div>
+            </div>
           </div>
         </motion.div>
-      </motion.div>
-    </AnimatePresence>
+      </motion.div >
+    </AnimatePresence >
   );
 }

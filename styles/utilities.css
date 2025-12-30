@@ -1,0 +1,611 @@
+/**
+ * AKÔNG - Utility Classes
+ * Standardized classes for consistent design across all pages
+ */
+
+/* ========================================
+   CARDS & CONTAINERS
+   ======================================== */
+
+.card-primary {
+  @apply bg-gradient-to-br backdrop-blur-xl border-2 rounded-3xl p-6 sm:p-8 transition-all duration-300 shadow-2xl;
+}
+
+.card-secondary {
+  @apply bg-white/5 backdrop-blur-md border rounded-2xl p-4 transition-all duration-300;
+}
+
+.card-game-mode {
+  @apply bg-gradient-to-br backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 overflow-hidden;
+}
+
+/* Modal standardisé */
+.modal-container {
+  @apply bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl border-2 border-amber-500/30 rounded-3xl shadow-2xl w-full max-h-[85vh] overflow-hidden relative flex flex-col;
+}
+
+.modal-header {
+  @apply flex-shrink-0 bg-black/60 backdrop-blur-xl p-4 sm:p-6 border-b flex justify-between items-center z-10;
+}
+
+.modal-content {
+  @apply relative z-10 p-6 sm:p-8 overflow-y-auto flex-1;
+}
+
+/* ========================================
+   BORDERS & GLOWS
+   ======================================== */
+
+/* Bordures avec effet glow - Gold/Amber (Principal) */
+.border-glow-gold {
+  @apply border-2 border-amber-500/30 hover:border-amber-500/60 transition-colors duration-300;
+}
+
+/* Bordures avec effet glow - Emerald (Succès) */
+.border-glow-emerald {
+  @apply border-2 border-emerald-500/30 hover:border-emerald-500/60 transition-colors duration-300;
+}
+
+/* Bordures avec effet glow - Purple (Spécial) */
+.border-glow-purple {
+  @apply border-2 border-purple-500/30 hover:border-purple-500/60 transition-colors duration-300;
+}
+
+/* Bordures avec effet glow - Blue (Info) */
+.border-glow-blue {
+  @apply border-2 border-blue-500/30 hover:border-blue-500/60 transition-colors duration-300;
+}
+
+/* Bordures avec effet glow - Cyan */
+.border-glow-cyan {
+  @apply border-2 border-cyan-500/30 hover:border-cyan-500/60 transition-colors duration-300;
+}
+
+/* Bordures avec effet glow - Red (Erreur) */
+.border-glow-red {
+  @apply border-2 border-red-500/30 hover:border-red-500/60 transition-colors duration-300;
+}
+
+/* ========================================
+   BACKGROUNDS
+   ======================================== */
+
+/* Glass Modal Background */
+.glass-modal {
+  @apply bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl;
+}
+
+/* Glass Card Background */
+.glass-card {
+  @apply bg-white/5 backdrop-blur-md;
+}
+
+/* Glass Dark Background */
+.glass-dark {
+  @apply bg-black/60 backdrop-blur-xl;
+}
+
+/* Colored Glass Backgrounds */
+.glass-gold {
+  @apply bg-gradient-to-br from-amber-900/40 to-orange-800/20 backdrop-blur-xl;
+}
+
+.glass-emerald {
+  @apply bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 backdrop-blur-xl;
+}
+
+.glass-purple {
+  @apply bg-gradient-to-br from-purple-900/40 to-purple-800/20 backdrop-blur-xl;
+}
+
+.glass-blue {
+  @apply bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-xl;
+}
+
+.glass-cyan {
+  @apply bg-gradient-to-br from-cyan-900/40 to-cyan-800/20 backdrop-blur-xl;
+}
+
+/* ========================================
+   TEXT GRADIENTS
+   ======================================== */
+
+/* Gold Gradient (Principal - Titres) */
+.text-gradient-gold {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500;
+}
+
+/* Emerald Gradient (Succès) */
+.text-gradient-emerald {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500;
+}
+
+/* Purple Gradient (Spécial) */
+.text-gradient-purple {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500;
+}
+
+/* Blue Gradient */
+.text-gradient-blue {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-500;
+}
+
+/* Red Gradient (Erreur) */
+.text-gradient-red {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500;
+}
+
+/* ========================================
+   TYPOGRAPHY HIERARCHY
+   ======================================== */
+
+/* Hero Title (Landing Page only) */
+.title-hero {
+  @apply text-7xl sm:text-8xl lg:text-9xl font-black;
+}
+
+/* Page Title (H1) */
+.title-page {
+  @apply text-5xl sm:text-6xl lg:text-7xl font-black;
+}
+
+/* Section Title (H2) */
+.title-section {
+  @apply text-3xl sm:text-4xl font-black;
+}
+
+/* Card Title (H3) */
+.title-card {
+  @apply text-xl sm:text-2xl font-bold;
+}
+
+/* Small Title (H4) */
+.title-small {
+  @apply text-lg sm:text-xl font-semibold;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+/* Button Primary - Gold/Amber */
+.btn-primary {
+  @apply px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-amber-500/50;
+}
+
+/* Button Secondary - Ghost */
+.btn-secondary {
+  @apply px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all duration-300;
+}
+
+/* Button Emerald */
+.btn-emerald {
+  @apply px-6 py-3 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-emerald-500/50;
+}
+
+/* Button Purple */
+.btn-purple {
+  @apply px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-purple-500/50;
+}
+
+/* Button Danger */
+.btn-danger {
+  @apply px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-red-500/50;
+}
+
+/* Button Small */
+.btn-sm {
+  @apply px-4 py-2 text-sm;
+}
+
+/* Button Large */
+.btn-lg {
+  @apply px-8 py-4 text-lg;
+}
+
+/* ========================================
+   HOVER EFFECTS
+   ======================================== */
+
+/* Glow on hover */
+.hover-glow-gold {
+  @apply hover:shadow-[0_0_20px_rgba(255, 215, 0, 0.6)] transition-shadow duration-300;
+}
+
+.hover-glow-emerald {
+  @apply hover:shadow-[0_0_20px_rgba(0, 255, 127, 0.6)] transition-shadow duration-300;
+}
+
+.hover-glow-purple {
+  @apply hover:shadow-[0_0_20px_rgba(147, 51, 234, 0.6)] transition-shadow duration-300;
+}
+
+/* Scale on hover */
+.hover-scale {
+  @apply hover:scale-105 transition-transform duration-300;
+}
+
+.hover-scale-sm {
+  @apply hover:scale-102 transition-transform duration-300;
+}
+
+/* Lift on hover */
+.hover-lift {
+  @apply hover:-translate-y-1 transition-transform duration-300;
+}
+
+/* ========================================
+   EFFECTS & OVERLAYS
+   ======================================== */
+
+/* Subtle glow overlay */
+.glow-overlay-gold {
+  @apply absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 pointer-events-none rounded-3xl;
+}
+
+.glow-overlay-emerald {
+  @apply absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 pointer-events-none rounded-3xl;
+}
+
+.glow-overlay-purple {
+  @apply absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none rounded-3xl;
+}
+
+/* Hover overlay for cards */
+.hover-overlay-gold {
+  @apply absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+}
+
+.hover-overlay-emerald {
+  @apply absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+}
+
+.hover-overlay-purple {
+  @apply absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+}
+
+.hover-overlay-blue {
+  @apply absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+}
+
+/* ========================================
+   SPACING UTILITIES
+   ======================================== */
+
+/* Standard padding for sections */
+.section-padding {
+  @apply py-12 sm:py-16 lg:py-24;
+}
+
+/* Standard container */
+.container-standard {
+  @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+/* Pulse animation for glow effects */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Slow pulse for backgrounds */
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 8s ease-in-out infinite;
+}
+
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+
+/* Hide on mobile, show on desktop */
+.desktop-only {
+  @apply hidden lg:block;
+}
+
+/* Show on mobile, hide on desktop */
+.mobile-only {
+  @apply block lg:hidden;
+}
+
+/* Center content */
+.center-content {
+  @apply flex items-center justify-center;
+}
+
+/* ========================================
+   NEON TEXT EFFECTS (using design tokens)
+   ======================================== */
+
+.neon-text-gold {
+  text-shadow: var(--glow-gold-md);
+}
+
+.neon-text-emerald {
+  text-shadow: var(--glow-emerald-md);
+}
+
+.neon-text-purple {
+  text-shadow: 0 0 20px rgba(147, 51, 234, 0.6), 0 0 40px rgba(147, 51, 234, 0.3);
+}
+
+/* ========================================
+   NEON BORDER EFFECTS
+   ======================================== */
+
+.neon-border-gold {
+  @apply border-glow-gold;
+  box-shadow: var(--glow-gold-sm);
+}
+
+.neon-border-emerald {
+  @apply border-glow-emerald;
+
+  /* Button Secondary - Ghost */
+  .btn-secondary {
+    @apply px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all duration-300;
+  }
+
+  /* Button Emerald */
+  .btn-emerald {
+    @apply px-6 py-3 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-emerald-500/50;
+  }
+
+  /* Button Purple */
+  .btn-purple {
+    @apply px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-purple-500/50;
+  }
+
+  /* Button Danger */
+  .btn-danger {
+    @apply px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 rounded-2xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-red-500/50;
+  }
+
+  /* Button Small */
+  .btn-sm {
+    @apply px-4 py-2 text-sm;
+  }
+
+  /* Button Large */
+  .btn-lg {
+    @apply px-8 py-4 text-lg;
+  }
+
+  /* ========================================
+   HOVER EFFECTS
+   ======================================== */
+
+  /* Glow on hover */
+  .hover-glow-gold {
+    @apply hover:shadow-[0_0_20px_rgba(255, 215, 0, 0.6)] transition-shadow duration-300;
+  }
+
+  .hover-glow-emerald {
+    @apply hover:shadow-[0_0_20px_rgba(0, 255, 127, 0.6)] transition-shadow duration-300;
+  }
+
+  .hover-glow-purple {
+    @apply hover:shadow-[0_0_20px_rgba(147, 51, 234, 0.6)] transition-shadow duration-300;
+  }
+
+  /* Scale on hover */
+  .hover-scale {
+    @apply hover:scale-105 transition-transform duration-300;
+  }
+
+  .hover-scale-sm {
+    @apply hover:scale-102 transition-transform duration-300;
+  }
+
+  /* Lift on hover */
+  .hover-lift {
+    @apply hover:-translate-y-1 transition-transform duration-300;
+  }
+
+  /* ========================================
+   EFFECTS & OVERLAYS
+   ======================================== */
+
+  /* Subtle glow overlay */
+  .glow-overlay-gold {
+    @apply absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 pointer-events-none rounded-3xl;
+  }
+
+  .glow-overlay-emerald {
+    @apply absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5 pointer-events-none rounded-3xl;
+  }
+
+  .glow-overlay-purple {
+    @apply absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 pointer-events-none rounded-3xl;
+  }
+
+  /* Hover overlay for cards */
+  .hover-overlay-gold {
+    @apply absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+  }
+
+  .hover-overlay-emerald {
+    @apply absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+  }
+
+  .hover-overlay-purple {
+    @apply absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+  }
+
+  .hover-overlay-blue {
+    @apply absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity duration-300;
+  }
+
+  /* ========================================
+   SPACING UTILITIES
+   ======================================== */
+
+  /* Standard padding for sections */
+  .section-padding {
+    @apply py-12 sm:py-16 lg:py-24;
+  }
+
+  /* Standard container */
+  .container-standard {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ========================================
+   ANIMATIONS
+   ======================================== */
+
+  /* Pulse animation for glow effects */
+  @keyframes pulse-glow {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-glow {
+    animation: pulse-glow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Slow pulse for backgrounds */
+  @keyframes pulse-slow {
+
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.3;
+    }
+
+    50% {
+      transform: scale(1.1);
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 8s ease-in-out infinite;
+  }
+
+  /* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+
+  /* Hide on mobile, show on desktop */
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block lg:hidden;
+  }
+
+  /* Center content */
+  .center-content {
+    @apply flex items-center justify-center;
+  }
+
+  /* ========================================
+   NEON TEXT EFFECTS (using design tokens)
+   ======================================== */
+
+  .neon-text-gold {
+    text-shadow: var(--glow-gold-md);
+  }
+
+  .neon-text-emerald {
+    text-shadow: var(--glow-emerald-md);
+  }
+
+  .neon-text-purple {
+    text-shadow: 0 0 20px rgba(147, 51, 234, 0.6), 0 0 40px rgba(147, 51, 234, 0.3);
+  }
+
+  /* ========================================
+   NEON BORDER EFFECTS
+   ======================================== */
+
+  .neon-border-gold {
+    @apply border-glow-gold;
+    box-shadow: var(--glow-gold-sm);
+  }
+
+  .neon-border-emerald {
+    @apply border-glow-emerald;
+    box-shadow: var(--glow-emerald-sm);
+  }
+
+  .neon-border-purple {
+    @apply border-glow-purple;
+    text-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+  }
+
+  /* ========================================
+   ACCESSIBILITY UTILITIES
+   ======================================== */
+
+  /* Screen Reader Only - Visible uniquement aux lecteurs d'écran */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  /* Focus Visible Ring - Outline visible au focus clavier */
+  .focus-visible-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 transition-shadow duration-200;
+  }
+
+  /* Focus Visible Ring - Variantes */
+  .focus-visible-ring-emerald {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 transition-shadow duration-200;
+  }
+
+  .focus-visible-ring-purple {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 transition-shadow duration-200;
+  }
+
+  .focus-visible-ring-blue {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 transition-shadow duration-200;
+  }
+
+  /* Touch Target Minimum - Taille minimale 44x44px pour mobile */
+  .touch-target-min {
+    @apply min-w-[44px] min-h-[44px] flex items-center justify-center;
+  }
+
+  /* Skip Link - Lien "Aller au contenu" */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-6 focus:py-3 focus:bg-amber-500 focus:text-black focus:font-bold focus:rounded-xl focus:shadow-lg;
+  }

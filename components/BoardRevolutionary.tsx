@@ -183,7 +183,8 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
   // Render captured seeds in granaries/stores
   const renderGranary = (player: Player) => {
     const score = scores[player];
-    if (score === 0) return null;
+    // En mode setup, toujours afficher le score (même 0) pour permettre l'édition
+    if (score === 0 && !isSimulationSetup) return null;
 
     // Position des greniers sur l'image (calibrées dynamiquement selon le tablier)
     const granaryPosition = player === Player.One
@@ -193,38 +194,40 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
     const maxVisuals = Math.min(score, 15); // Reduced from 20 for better visibility
     const sizeClass = score > 10 ? 'w-1 h-1 sm:w-1.5 sm:h-1.5' : 'w-1.5 h-1.5 sm:w-2 sm:h-2'; // Smaller seeds
     const cols = 3; // Colonnes fixes pour grenier
-    const rows = Math.ceil(maxVisuals / cols);
+    const rows = Math.ceil(maxVisuals / cols) || 1; // Avoid division by zero if maxVisuals is 0
     const cellWidth = 80 / cols;
     const cellHeight = 90 / rows;
 
     const visualSeeds: JSX.Element[] = [];
-    for (let i = 0; i < maxVisuals; i++) {
-      const seedRandom = (i * 9301 + player * 49297) % 233280;
-      const rndX = (seedRandom % 100) / 100;
-      const rndY = ((seedRandom * 17) % 100) / 100;
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const baseX = 10 + col * cellWidth + cellWidth / 2;
-      const baseY = 5 + row * cellHeight + cellHeight / 2;
-      const jitterX = (rndX - 0.5) * (cellWidth * 0.6);
-      const jitterY = (rndY - 0.5) * (cellHeight * 0.6);
-      const finalX = Math.max(5, Math.min(95, baseX + jitterX));
-      const finalY = Math.max(5, Math.min(95, baseY + jitterY));
+    if (score > 0) {
+      for (let i = 0; i < maxVisuals; i++) {
+        const seedRandom = (i * 9301 + player * 49297) % 233280;
+        const rndX = (seedRandom % 100) / 100;
+        const rndY = ((seedRandom * 17) % 100) / 100;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const baseX = 10 + col * cellWidth + cellWidth / 2;
+        const baseY = 5 + row * cellHeight + cellHeight / 2;
+        const jitterX = (rndX - 0.5) * (cellWidth * 0.6);
+        const jitterY = (rndY - 0.5) * (cellHeight * 0.6);
+        const finalX = Math.max(5, Math.min(95, baseX + jitterX));
+        const finalY = Math.max(5, Math.min(95, baseY + jitterY));
 
-      visualSeeds.push(
-        <div
-          key={i}
-          className={`absolute ${sizeClass} rounded-full`}
-          style={{
-            background: 'radial-gradient(circle at 30% 30%, #2d2d2d, #1a1a1a 50%, #0a0a0a)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2)',
-            left: `${finalX}%`,
-            top: `${finalY}%`,
-            transform: 'translate(-50%, -50%)',
-            zIndex: 5 + i,
-          }}
-        />
-      );
+        visualSeeds.push(
+          <div
+            key={i}
+            className={`absolute ${sizeClass} rounded-full`}
+            style={{
+              background: 'radial-gradient(circle at 30% 30%, #2d2d2d, #1a1a1a 50%, #0a0a0a)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2)',
+              left: `${finalX}%`,
+              top: `${finalY}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 5 + i,
+            }}
+          />
+        );
+      }
     }
 
     // Determiner la position pour le score à l'extrémité
@@ -247,11 +250,21 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
 
           {/* Score Display - Simple text only */}
           <div
-            className={`absolute top-1/2 -translate-y-1/2 ${scorePosition} z-50 ${isSimulationSetup ? 'cursor-pointer' : 'pointer-events-none'}`}
+            className={`absolute top-1/2 -translate-y-1/2 ${scorePosition} z-50 ${isSimulationSetup ? 'cursor-pointer hover:scale-110 transition-transform' : 'pointer-events-none'}`}
             style={{
               transform: `translateY(-50%) ${invertView ? 'rotate(180deg)' : ''}`
             }}
             onClick={isSimulationSetup ? () => onEditScore?.(player) : undefined}
+            onKeyDown={isSimulationSetup ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onEditScore?.(player);
+              }
+            } : undefined}
+            role={isSimulationSetup ? "button" : undefined}
+            tabIndex={isSimulationSetup ? 0 : -1}
+            aria-label={`Score Joueur ${player === Player.One ? '1' : '2'}: ${score} graines${isSimulationSetup ? ', modifier' : ''}`}
+            title={isSimulationSetup ? "Modifier le score" : undefined}
           >
             <span className="font-black text-2xl sm:text-3xl text-amber-400 drop-shadow-[0_2px_6px_rgba(251,191,36,0.7)]" style={{
               textShadow: '0 0 12px rgba(251, 191, 36, 0.5), 0 0 24px rgba(251, 191, 36, 0.2)'
@@ -279,69 +292,79 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
     const seeds = board[pitIndex];
 
     const visualSeeds = React.useMemo(() => {
-        const visuals: JSX.Element[] = [];
-        if (!seeds) return visuals;
-        const maxVisuals = Math.min(seeds, 18); // Reduced from 25 for better overview
-        const sizeClass = seeds > 8 ? 'w-1.5 h-1.5 sm:w-2 sm:h-2' : 'w-2 h-2 sm:w-2.5 sm:h-2.5'; // Smaller seeds, responsive
-        const cols = Math.ceil(Math.sqrt(maxVisuals * 1.2));
-        const rows = Math.ceil(maxVisuals / cols);
-        const cellWidth = 80 / cols;
-        const cellHeight = 70 / rows;
-        for (let i = 0; i < maxVisuals; i++) {
-            const seedRandom = (i * 9301 + pitIndex * 49297) % 233280;
-            const rndX = (seedRandom % 100) / 100;
-            const rndY = ((seedRandom * 17) % 100) / 100;
-            const col = i % cols;
-            const row = Math.floor(i / cols);
-            const baseX = 10 + col * cellWidth + cellWidth / 2;
-            const baseY = 15 + row * cellHeight + cellHeight / 2;
-            const jitterX = (rndX - 0.5) * (cellWidth * 0.8);
-            const jitterY = (rndY - 0.5) * (cellHeight * 0.8);
-            const finalX = Math.max(5, Math.min(95, baseX + jitterX));
-            const finalY = Math.max(5, Math.min(95, baseY + jitterY));
-            visuals.push(
-                <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.03, duration: 0.2 }}
-                    className={`absolute ${sizeClass} rounded-full seed-3d`}
-                    style={{
-                        background: 'radial-gradient(circle at 30% 30%, #2d2d2d, #1a1a1a 50%, #0a0a0a)',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 3px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2)',
-                        left: `${finalX}%`,
-                        top: `${finalY}%`,
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 10 + i,
-                    }}
-                />
-            );
-        }
-        return visuals;
+      const visuals: JSX.Element[] = [];
+      if (!seeds) return visuals;
+      const maxVisuals = Math.min(seeds, 18); // Reduced from 25 for better overview
+      const sizeClass = seeds > 8 ? 'w-1.5 h-1.5 sm:w-2 sm:h-2' : 'w-2 h-2 sm:w-2.5 sm:h-2.5'; // Smaller seeds, responsive
+      const cols = Math.ceil(Math.sqrt(maxVisuals * 1.2));
+      const rows = Math.ceil(maxVisuals / cols);
+      const cellWidth = 80 / cols;
+      const cellHeight = 70 / rows;
+      for (let i = 0; i < maxVisuals; i++) {
+        const seedRandom = (i * 9301 + pitIndex * 49297) % 233280;
+        const rndX = (seedRandom % 100) / 100;
+        const rndY = ((seedRandom * 17) % 100) / 100;
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        const baseX = 10 + col * cellWidth + cellWidth / 2;
+        const baseY = 15 + row * cellHeight + cellHeight / 2;
+        const jitterX = (rndX - 0.5) * (cellWidth * 0.8);
+        const jitterY = (rndY - 0.5) * (cellHeight * 0.8);
+        const finalX = Math.max(5, Math.min(95, baseX + jitterX));
+        const finalY = Math.max(5, Math.min(95, baseY + jitterY));
+        visuals.push(
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.03, duration: 0.2 }}
+            className={`absolute ${sizeClass} rounded-full seed-3d`}
+            style={{
+              background: 'radial-gradient(circle at 30% 30%, #2d2d2d, #1a1a1a 50%, #0a0a0a)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 3px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.2)',
+              left: `${finalX}%`,
+              top: `${finalY}%`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10 + i,
+            }}
+          />
+        );
+      }
+      return visuals;
     }, [seeds, pitIndex]);
 
-        const isTopPit = pitIndex >= 7 && pitIndex <= 13; // North player's pits
-        const isBottomPit = pitIndex >= 0 && pitIndex <= 6; // South player's pits (user's side)
+    const isTopPit = pitIndex >= 7 && pitIndex <= 13; // North player's pits
+    const isBottomPit = pitIndex >= 0 && pitIndex <= 6; // South player's pits (user's side)
 
-        return (
-            <motion.div
-                key={pitIndex}
-                id={`pit-${pitIndex}`}
-                className="absolute group"
-                style={{
-                    left: `${position.x}%`,
-                    top: `${position.y}%`,
-                    width: `${position.w}%`,
-                    height: `${position.h}%`,
-                    transform: 'translate(-50%, -50%)',
-                }}
-                onClick={() => handlePitClick(pitIndex)}
-            >
-                            <div className={`relative w-full h-full rounded-full flex items-center justify-center transition-all duration-200`}>
-                                {visualSeeds}
-                                {seeds > 0 && (
-                                    <div
-                                      className={`absolute ${isTopPit ? '-top-8' : ''} ${isBottomPit ? '-bottom-8' : ''}
+    return (
+      <motion.div
+        key={pitIndex}
+        id={`pit-${pitIndex}`}
+        className={`absolute group rounded-full focus-visible-ring`}
+        style={{
+          left: `${position.x}%`,
+          top: `${position.y}%`,
+          width: `${position.w}%`,
+          height: `${position.h}%`,
+          transform: 'translate(-50%, -50%)',
+        }}
+        onClick={() => handlePitClick(pitIndex)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handlePitClick(pitIndex);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Case ${pitIndex + 1}, ${seeds} graines${isPlayable ? ', jouable' : ''}`}
+        aria-disabled={!isPlayable && !isSimulationSetup}
+      >
+        <div className={`relative w-full h-full rounded-full flex items-center justify-center transition-all duration-200`}>
+          {visualSeeds}
+          {seeds > 0 && (
+            <div
+              className={`absolute ${isTopPit ? '-top-8' : ''} ${isBottomPit ? '-bottom-8' : ''}
                                         min-w-[1.75rem] h-[1.75rem]
                                         flex items-center justify-center
                                         px-2 rounded-full
@@ -350,96 +373,94 @@ const BoardRevolutionary: React.FC<BoardRevolutionaryProps> = ({
                                         transition-all duration-300
                                         ${seeds > 0 ? 'text-white bg-black/50' : 'text-transparent'}
                                       `}
-                                      style={{
-                                        transform: invertView ? 'rotate(180deg)' : 'none'
-                                      }}
-                                    >
-                                      {seeds}
-                                    </div>
-                                )}
-                                {seeds > 18 && (
-                                  <div
-                                    className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
-                                    style={{
-                                      transform: invertView ? 'rotate(180deg)' : 'none'
-                                    }}
-                                  >
-                                    <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(139,90,43,0.5)', border: '1px solid rgba(255,140,0,0.5)' }}>
-                                      <span className="text-amber-400 text-xs font-bold">+{seeds - 18}</span>
-                                    </div>
-                                  </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    );
-                  };
-                
-                  return (
-                    <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-2 sm:p-4 md:p-6 relative gap-4">
-                      <Hand isActive={isAnimating} pitIndex={handState.pitIndex} seedCount={handState.seedCount} />
-                
-                      {/* TOP PLAYER NAMEPLATE - Compact Mobile First */}
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`w-full max-w-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-xl border transition-all duration-300 ${
-                          ((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
-                            ? 'bg-gradient-to-r from-amber-500/30 to-orange-500/30 border-amber-500 shadow-lg shadow-amber-500/30'
-                            : 'bg-white/5 border-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center">
-                          <span className={`text-sm sm:text-base md:text-lg font-bold uppercase tracking-wide truncate ${
-                            ((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
-                              ? 'text-amber-400'
-                              : 'text-white/60'
-                          }`}>
-                            {getTopLabel()}
-                          </span>
-                        </div>
-                      </motion.div>
-                
-                      {/* BOARD IMAGE WITH POSITIONED PITS */}
-                      <div
-                        className="relative w-full max-w-5xl aspect-[21/9] rounded-3xl overflow-hidden shadow-2xl"
-                        style={{
-                          transform: invertView ? 'rotate(180deg)' : 'none'
-                        }}
-                      >
-                        <img
-                          src={boardSkinUrl}
-                          alt="Plateau de jeu"
-                          className="absolute inset-0 w-full h-full object-cover"
-                        />
-                        {/* Render all pits */}
-                        {Object.keys(PIT_POSITIONS).map((idx) => renderPit(parseInt(idx)))}
-                        {/* Render granaries with captured seeds */}
-                        {renderGranary(Player.One)}
-                        {renderGranary(Player.Two)}
-                      </div>
-                
-                      {/* BOTTOM PLAYER NAMEPLATE - Compact Mobile First */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`w-full max-w-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-xl border transition-all duration-300 ${
-                          ((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
-                            ? 'bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border-blue-500 shadow-lg shadow-blue-500/30'
-                            : 'bg-white/5 border-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-center">
-                          <span className={`text-sm sm:text-base md:text-lg font-bold uppercase tracking-wide truncate ${
-                            ((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
-                              ? 'text-blue-400'
-                              : 'text-white/60'
-                          }`}>
-                            {getBottomLabel()}
-                          </span>
-                        </div>
-                      </motion.div>
-                    </div>
-                  );
-                };
+              style={{
+                transform: invertView ? 'rotate(180deg)' : 'none'
+              }}
+            >
+              {seeds}
+            </div>
+          )}
+          {seeds > 18 && (
+            <div
+              className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none"
+              style={{
+                transform: invertView ? 'rotate(180deg)' : 'none'
+              }}
+            >
+              <div className="rounded-lg px-2 py-1" style={{ background: 'rgba(139,90,43,0.5)', border: '1px solid rgba(255,140,0,0.5)' }}>
+                <span className="text-amber-400 text-xs font-bold">+{seeds - 18}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col items-center w-full max-w-7xl mx-auto p-2 sm:p-4 md:p-6 relative gap-4">
+      <Hand isActive={isAnimating} pitIndex={handState.pitIndex} seedCount={handState.seedCount} />
+
+      {/* TOP PLAYER NAMEPLATE - Compact Mobile First */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`w-full max-w-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-xl border transition-all duration-300 ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
+          ? 'bg-gradient-to-r from-amber-500/30 to-orange-500/30 border-amber-500 shadow-lg shadow-amber-500/30'
+          : 'bg-white/5 border-white/10'
+          }`}
+      >
+        <div className="flex items-center justify-center">
+          <span className={`text-sm sm:text-base md:text-lg font-bold uppercase tracking-wide truncate ${((invertView && currentPlayer === Player.One) || (!invertView && currentPlayer === Player.Two)) && status === GameStatus.Playing
+            ? 'text-amber-400'
+            : 'text-white/60'
+            }`}>
+            {getTopLabel()}
+          </span>
+        </div>
+      </motion.div>
+
+      {/* BOARD IMAGE WITH POSITIONED PITS */}
+      <div
+        className="relative w-full max-w-5xl aspect-[21/9] rounded-3xl overflow-hidden shadow-2xl"
+        style={{
+          transform: invertView ? 'rotate(180deg)' : 'none'
+        }}
+        role="application"
+        aria-label="Plateau de jeu Songo"
+      >
+        <img
+          src={boardSkinUrl}
+          alt="Illustration du plateau"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Render all pits */}
+        {Object.keys(PIT_POSITIONS).map((idx) => renderPit(parseInt(idx)))}
+        {/* Render granaries with captured seeds */}
+        {renderGranary(Player.One)}
+        {renderGranary(Player.Two)}
+      </div>
+
+      {/* BOTTOM PLAYER NAMEPLATE - Compact Mobile First */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`w-full max-w-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl backdrop-blur-xl border transition-all duration-300 ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
+          ? 'bg-gradient-to-r from-blue-500/30 to-cyan-500/30 border-blue-500 shadow-lg shadow-blue-500/30'
+          : 'bg-white/5 border-white/10'
+          }`}
+      >
+        <div className="flex items-center justify-center">
+          <span className={`text-sm sm:text-base md:text-lg font-bold uppercase tracking-wide truncate ${((invertView && currentPlayer === Player.Two) || (!invertView && currentPlayer === Player.One)) && status === GameStatus.Playing
+            ? 'text-blue-400'
+            : 'text-white/60'
+            }`}>
+            {getBottomLabel()}
+          </span>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 export default BoardRevolutionary;

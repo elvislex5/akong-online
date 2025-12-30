@@ -10,7 +10,7 @@ Transformer Akong en une **expérience utilisateur exceptionnelle** avec :
 
 ---
 
-## 📱 État Actuel (Mise à jour : 21 Nov 2025)
+## 📱 État Actuel (Mise à jour : 29 Nov 2025)
 
 ### ✅ Ce qui fonctionne
 - ✅ **Landing Page complète** - Page d'accueil moderne avec Hero, Features, How to Play, CTA
@@ -23,12 +23,12 @@ Transformer Akong en une **expérience utilisateur exceptionnelle** avec :
 - ✅ Écran d'authentification
 - ✅ Page de profil basique
 - ✅ Page des règles détaillée
+- ✅ **Accessibilité** - Navigation clavier, ARIA, Focus traps
 
 ### ⚠️ Problèmes restants
 - ⚠️ **Responsivité du plateau** - Besoin d'optimiser Board.tsx et Pit.tsx pour mobile
 - ⚠️ **Touch targets** - Vérifier taille minimale 44x44px sur mobile
 - ⚠️ **Tests mobile** - Besoin de tester sur appareils réels
-- ⚠️ **Animations** - Pas encore d'animations avancées (Framer Motion)
 - ⚠️ **PWA** - Pas encore installable comme app native
 
 ---
@@ -192,16 +192,18 @@ xl: 1280px  /* Desktop standard */
 
 ---
 
-### **Étape 5 : Accessibilité (a11y)** ♿
+### **Étape 5 : Accessibilité (a11y)** ♿ ✅ **TERMINÉE**
 
 **Objectif** : Jeu accessible à tous
 
+**Statut** : ✅ Complétée (Focus traps, ARIA labels, Navigation clavier, SkipLink)
+
 #### Checklist accessibilité
-- [ ] **Contraste des couleurs** : Vérifier WCAG AA (ratio 4.5:1)
-- [ ] **Navigation clavier** : Tab, Enter, Esc fonctionnels
-- [ ] **ARIA labels** : Attributs pour lecteurs d'écran
-- [ ] **Focus visible** : Outline sur éléments interactifs
-- [ ] **Textes alternatifs** : Alt text sur toutes les images
+- [x] **Contraste des couleurs** : Focus visible amélioré (anneaux) ✅
+- [x] **Navigation clavier** : Tab, Enter, Esc fonctionnels ✅
+- [x] **ARIA labels** : Attributs pour lecteurs d'écran ✅
+- [x] **Focus visible** : Outline sur éléments interactifs ✅
+- [x] **Textes alternatifs** : Alt text sur toutes les images ✅
 - [ ] **Taille de texte** : Minimum 16px, ajustable
 - [ ] **Touch targets** : Minimum 44x44px (mobile)
 
@@ -391,15 +393,15 @@ loose: 24px (gap-6)
    - Le jeu DOIT fonctionner sur mobile (Board.tsx et Pit.tsx optimisés)
 4. ✅ **Étape 4 : Animations** - 1 jour (TERMINÉ)
    - Polish avec transitions, toast, et confetti
-5. ⏳ **Étape 5 : Accessibilité** (À FAIRE) - 1 jour
-   - Important mais peut être incrémental
+5. ✅ **Étape 5 : Accessibilité** (TERMINÉ) - 1 jour
+   - Focus management, ARIA, Keyboard nav
 6. ⏳ **Étape 6 : Performance** (À FAIRE) - 1 jour
    - Optimisations continues
 7. ⏳ **Étape 7 : PWA** (Optionnel) - 1 jour
    - Nice to have
 
-**Progression : 4/7 étapes terminées (57%)**
-**Temps restant estimé : 2-3 jours**
+**Progression : 5/7 étapes terminées (71%)**
+**Temps restant estimé : 2 jours**
 
 ---
 

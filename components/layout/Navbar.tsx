@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface NavbarProps {
   isAuthenticated: boolean;
@@ -9,6 +10,9 @@ interface NavbarProps {
 const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+
+  // Accessibility: Focus trap for mobile menu
+  const mobileMenuRef = useFocusTrap<HTMLDivElement>(isMobileMenuOpen);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -20,14 +24,14 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
   ];
 
   return (
-    <nav className="glass-navbar fixed top-0 left-0 right-0 z-50">
+    <nav className="glass-navbar fixed top-0 left-0 right-0 z-50" aria-label="Navigation principale">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
 
           {/* Logo - Neon Style */}
-          <Link to="/" className="flex items-center space-x-3 group">
+          <Link to="/" className="flex items-center space-x-3 group focus-visible-ring rounded-xl" aria-label="AKÔNG - Retour à l'accueil">
             <div className="w-12 h-12 sm:w-14 sm:h-14 glass-glow-gold rounded-xl flex items-center justify-center transform group-hover:scale-110 group-hover-glow-gold transition-all duration-300">
-              <span className="text-3xl sm:text-4xl font-black neon-text-gold">Â</span>
+              <span className="text-3xl sm:text-4xl font-black neon-text-gold" aria-hidden="true">Â</span>
             </div>
             <span className="text-2xl sm:text-3xl font-black neon-text-gold tracking-tight hidden sm:block shimmer-gold">
               AKÔNG
@@ -40,9 +44,10 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 ${isActive(link.path)
-                    ? 'glass-glow-gold neon-text-gold scale-105'
-                    : 'glass text-white-80 hover:text-gold hover:glass-glow-gold hover:scale-105'
+                aria-current={isActive(link.path) ? 'page' : undefined}
+                className={`px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 focus-visible-ring ${isActive(link.path)
+                  ? 'glass-glow-gold neon-text-gold scale-105'
+                  : 'glass text-white-80 hover:text-gold hover:glass-glow-gold hover:scale-105'
                   }`}
               >
                 {link.label}
@@ -56,7 +61,7 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
               <button
                 onClick={onShowProfile}
                 aria-label="Voir le profil utilisateur"
-                className="neon-button px-5 py-2.5 rounded-xl flex items-center space-x-2"
+                className="neon-button px-5 py-2.5 rounded-xl flex items-center space-x-2 focus-visible-ring"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -69,9 +74,10 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl glass hover:glass-glow-gold transition-all duration-300"
+            className="md:hidden p-2 rounded-xl glass hover:glass-glow-gold transition-all duration-300 focus-visible-ring"
             aria-label={isMobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
             aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-menu"
           >
             {isMobileMenuOpen ? (
               <svg className="w-6 h-6 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -88,16 +94,21 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
 
       {/* Mobile Menu - Animated Dropdown */}
       {isMobileMenuOpen && (
-        <div className="md:hidden glass-dark border-t border-gold/30 animate-slide-in-down">
+        <div
+          id="mobile-menu"
+          ref={mobileMenuRef}
+          className="md:hidden glass-dark border-t border-gold/30 animate-slide-in-down"
+        >
           <div className="px-4 py-4 space-y-2">
             {navLinks.map((link, index) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block px-5 py-3 rounded-xl font-semibold transition-all duration-300 animate-fade-in-up ${isActive(link.path)
-                    ? 'glass-glow-gold neon-text-gold'
-                    : 'glass text-white-80 hover:text-gold hover:glass-glow-gold'
+                aria-current={isActive(link.path) ? 'page' : undefined}
+                className={`block px-5 py-3 rounded-xl font-semibold transition-all duration-300 animate-fade-in-up focus-visible-ring ${isActive(link.path)
+                  ? 'glass-glow-gold neon-text-gold'
+                  : 'glass text-white-80 hover:text-gold hover:glass-glow-gold'
                   }`}
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -112,7 +123,7 @@ const Navbar: React.FC<NavbarProps> = ({ isAuthenticated, onShowProfile }) => {
                   setIsMobileMenuOpen(false);
                 }}
                 aria-label="Voir le profil utilisateur"
-                className="w-full neon-button px-5 py-3 rounded-xl flex items-center justify-center space-x-2 animate-fade-in-up"
+                className="w-full neon-button px-5 py-3 rounded-xl flex items-center justify-center space-x-2 animate-fade-in-up focus-visible-ring"
                 style={{ animationDelay: `${navLinks.length * 50}ms` }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">

@@ -132,7 +132,7 @@ const Pit: React.FC<PitProps> = ({ seeds, onClick, isOwner, isPlayable, pitIndex
           transform-3d
           
           /* Focus */
-          focus:outline-none focus:ring-4 focus:ring-amber-600 focus:ring-offset-2 focus:ring-offset-black
+          focus-visible-ring
           
           /* Cursor */
           ${isPlayable || isEditable ? 'cursor-pointer' : 'cursor-default'}

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './hooks/useAuth';
 import { usePresence } from './hooks/usePresence';
 import UnifiedNavbar from './components/layout/UnifiedNavbar';
+import { SkipLink } from './components/accessibility/SkipLink';
 import type { Profile } from './services/supabase';
 
 // Lazy load heavy components for better performance
@@ -56,10 +57,13 @@ const pageVariants = {
 const AnimatedPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <motion.div
+      id="main-content"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
+      tabIndex={-1}
+      className="outline-none"
     >
       {children}
     </motion.div>
@@ -179,6 +183,7 @@ const AppRouter: React.FC = () => {
 
   return (
     <BrowserRouter>
+      <SkipLink />
       <Suspense fallback={<PageLoader />}>
         {/* Global Fixed Background - Akong Pattern */}
         <div className="fixed inset-0 z-0">

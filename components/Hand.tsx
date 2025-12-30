@@ -83,17 +83,17 @@ const Hand: React.FC<HandProps> = ({ pitIndex, seedCount, isActive }) => {
       return (
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Palm */}
-          <ellipse cx="32" cy="40" rx="16" ry="20" fill={skinTone} stroke={shadowColor} strokeWidth="2"/>
+          <ellipse cx="32" cy="40" rx="16" ry="20" fill={skinTone} stroke={shadowColor} strokeWidth="2" />
           {/* Thumb */}
-          <ellipse cx="18" cy="38" rx="6" ry="10" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-20 18 38)"/>
+          <ellipse cx="18" cy="38" rx="6" ry="10" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-20 18 38)" />
           {/* Index finger */}
-          <rect x="26" y="14" width="6" height="20" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5"/>
+          <rect x="26" y="14" width="6" height="20" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" />
           {/* Middle finger */}
-          <rect x="32" y="10" width="6" height="24" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5"/>
+          <rect x="32" y="10" width="6" height="24" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" />
           {/* Ring finger */}
-          <rect x="38" y="14" width="6" height="20" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5"/>
+          <rect x="38" y="14" width="6" height="20" rx="3" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" />
           {/* Pinky */}
-          <rect x="44" y="18" width="5" height="18" rx="2.5" fill={skinTone} stroke={shadowColor} strokeWidth="1.5"/>
+          <rect x="44" y="18" width="5" height="18" rx="2.5" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" />
         </svg>
       );
     } else if (pose === 'closed') {
@@ -101,13 +101,13 @@ const Hand: React.FC<HandProps> = ({ pitIndex, seedCount, isActive }) => {
       return (
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Fist body */}
-          <ellipse cx="32" cy="36" rx="18" ry="16" fill={skinTone} stroke={shadowColor} strokeWidth="2"/>
+          <ellipse cx="32" cy="36" rx="18" ry="16" fill={skinTone} stroke={shadowColor} strokeWidth="2" />
           {/* Thumb on top */}
-          <ellipse cx="20" cy="32" rx="7" ry="12" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-30 20 32)"/>
+          <ellipse cx="20" cy="32" rx="7" ry="12" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-30 20 32)" />
           {/* Knuckles indication */}
-          <line x1="28" y1="28" x2="28" y2="32" stroke={shadowColor} strokeWidth="2" strokeLinecap="round"/>
-          <line x1="34" y1="26" x2="34" y2="30" stroke={shadowColor} strokeWidth="2" strokeLinecap="round"/>
-          <line x1="40" y1="28" x2="40" y2="32" stroke={shadowColor} strokeWidth="2" strokeLinecap="round"/>
+          <line x1="28" y1="28" x2="28" y2="32" stroke={shadowColor} strokeWidth="2" strokeLinecap="round" />
+          <line x1="34" y1="26" x2="34" y2="30" stroke={shadowColor} strokeWidth="2" strokeLinecap="round" />
+          <line x1="40" y1="28" x2="40" y2="32" stroke={shadowColor} strokeWidth="2" strokeLinecap="round" />
         </svg>
       );
     } else {
@@ -115,14 +115,14 @@ const Hand: React.FC<HandProps> = ({ pitIndex, seedCount, isActive }) => {
       return (
         <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Palm */}
-          <ellipse cx="32" cy="38" rx="15" ry="18" fill={skinTone} stroke={shadowColor} strokeWidth="2"/>
+          <ellipse cx="32" cy="38" rx="15" ry="18" fill={skinTone} stroke={shadowColor} strokeWidth="2" />
           {/* Thumb */}
-          <ellipse cx="20" cy="36" rx="6" ry="10" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-15 20 36)"/>
+          <ellipse cx="20" cy="36" rx="6" ry="10" fill={skinTone} stroke={shadowColor} strokeWidth="1.5" transform="rotate(-15 20 36)" />
           {/* Curved fingers */}
-          <path d="M 28 20 Q 28 30, 30 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone}/>
-          <path d="M 34 18 Q 34 28, 35 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone}/>
-          <path d="M 40 20 Q 40 30, 40 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone}/>
-          <path d="M 45 24 Q 44 32, 44 36" stroke={shadowColor} strokeWidth="4" strokeLinecap="round" fill={skinTone}/>
+          <path d="M 28 20 Q 28 30, 30 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone} />
+          <path d="M 34 18 Q 34 28, 35 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone} />
+          <path d="M 40 20 Q 40 30, 40 36" stroke={shadowColor} strokeWidth="5" strokeLinecap="round" fill={skinTone} />
+          <path d="M 45 24 Q 44 32, 44 36" stroke={shadowColor} strokeWidth="4" strokeLinecap="round" fill={skinTone} />
         </svg>
       );
     }
@@ -137,6 +137,7 @@ const Hand: React.FC<HandProps> = ({ pitIndex, seedCount, isActive }) => {
         opacity: visible ? 1 : 0,
         transform: `translate(-50%, -50%) scale(${visible ? 1 : 0.5})`,
       }}
+      aria-hidden="true"
     >
       <div className="relative">
         {/* Subtle shadow */}

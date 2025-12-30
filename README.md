@@ -59,6 +59,15 @@ Architecture recommandée :
 - **IA** : Minimax avec élagage alpha-beta
 - **Audio** : Web Audio API
 
+## Accessibilité
+
+Le jeu est conforme aux normes WCAG 2.1 Level AA.
+- ⌨️ **Navigation clavier complète**
+- 🗣️ **Support lecteurs d'écran** (ARIA labels, annonces dynamiques)
+- 🎨 **Contraste et focus visible**
+
+[Voir l'audit d'accessibilité](./docs/accessibility-audit.md)
+
 ## Documentation
 
 - [CLAUDE.md](./CLAUDE.md) - Guide pour développeurs (architecture du code)

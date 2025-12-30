@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Target, Clipboard, Sliders, Lightbulb, X } from 'lucide-react';
 import { getAllBoardConfigs, type BoardSkinConfig, type PitPosition } from '../config/boardSkinConfigs';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface BoardCalibrationToolProps {
   onClose: () => void;
@@ -26,6 +27,9 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
   // État pour l'élément sélectionné pour l'édition fine
   const [selectedElement, setSelectedElement] = useState<{ type: ElementType; id: string | number } | null>(null);
 
+  // Accessibility
+  const modalRef = useFocusTrap<HTMLDivElement>(true);
+
   // Changer de tablier
   const handleBoardChange = (config: BoardSkinConfig) => {
     setSelectedConfig(config);
@@ -38,6 +42,10 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
   // Gestion du drag & drop
   const handleMouseDown = (type: ElementType, id: string | number) => {
     setDragging({ type, id });
+    setSelectedElement({ type, id });
+  };
+
+  const handleSelect = (type: ElementType, id: string | number) => {
     setSelectedElement({ type, id });
   };
 
@@ -120,6 +128,10 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-20 sm:pt-24">
       <motion.div
+        ref={modalRef}
+        role="dialog"
+        aria-label="Outil de calibration du tablier"
+        aria-modal="true"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-7xl bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl border-2 border-purple-500/30 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
@@ -128,15 +140,16 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
         <div className="bg-black/60 backdrop-blur-xl p-3 sm:p-4 border-b border-purple-500/30 flex justify-between items-center flex-shrink-0">
           <div>
             <h2 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
-              <Target className="w-6 h-6 inline mr-2 text-purple-400" /> Calibration du Tablier
+              <Target className="w-6 h-6 inline mr-2 text-purple-400" aria-hidden="true" /> Calibration du Tablier
             </h2>
             <p className="text-[10px] sm:text-xs text-gray-400 mt-1 hidden sm:block">Calibrez tous les trous (0-13) et les 2 greniers</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300"
+            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300 focus-visible-ring"
+            aria-label="Fermer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -147,16 +160,17 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
             {/* Board Selector */}
             <div className="mb-2 sm:mb-3 bg-white/5 border border-purple-500/20 rounded-xl p-2 sm:p-3">
               <label className="text-[10px] sm:text-xs font-bold text-purple-400 uppercase mb-1 sm:mb-2 block">
-                <Clipboard className="w-3 h-3 inline mr-1" /> Tablier
+                <Clipboard className="w-3 h-3 inline mr-1" aria-hidden="true" /> Tablier
               </label>
               <div className="grid grid-cols-3 gap-1 sm:gap-2">
                 {getAllBoardConfigs().map((config) => (
                   <button
                     key={config.skinId}
                     onClick={() => handleBoardChange(config)}
-                    className={`p-1.5 sm:p-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${selectedConfig.skinId === config.skinId
-                        ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                    aria-pressed={selectedConfig.skinId === config.skinId}
+                    className={`p-1.5 sm:p-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all focus-visible-ring ${selectedConfig.skinId === config.skinId
+                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/20'
                       }`}
                   >
                     {config.skinName}
@@ -171,6 +185,8 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
+              role="application"
+              aria-label="Zone de prévisualisation du tablier"
             >
               <img src={selectedConfig.imageUrl} alt="Plateau" className="absolute inset-0 w-full h-full object-cover" />
 
@@ -183,12 +199,22 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
                 return (
                   <div
                     key={`pit-${pitIndex}`}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Trou ${pitIndex}`}
+                    aria-pressed={isPitSelected}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleSelect('pit', pitIndex);
+                      }
+                    }}
                     className={`absolute border-2 ${isPitDragging
-                        ? 'border-yellow-400 bg-yellow-500/40'
-                        : isPitSelected
-                          ? 'border-green-400 bg-green-500/30'
-                          : 'border-blue-400 bg-blue-500/20'
-                      } rounded-lg cursor-move transition-all hover:border-green-400`}
+                      ? 'border-yellow-400 bg-yellow-500/40'
+                      : isPitSelected
+                        ? 'border-green-400 bg-green-500/30'
+                        : 'border-blue-400 bg-blue-500/20'
+                      } rounded-lg cursor-move transition-all hover:border-green-400 focus-visible-ring`}
                     style={{
                       left: `${pos.x}%`,
                       top: `${pos.y}%`,
@@ -210,12 +236,22 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 
               {/* Granary One (Player 1 - GAUCHE) */}
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Grenier 1 (Gauche)"
+                aria-pressed={selectedElement?.type === 'granary' && selectedElement?.id === 'one'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSelect('granary', 'one');
+                  }
+                }}
                 className={`absolute border-4 ${dragging?.type === 'granary' && dragging?.id === 'one'
-                    ? 'border-blue-500 bg-blue-500/40'
-                    : selectedElement?.type === 'granary' && selectedElement?.id === 'one'
-                      ? 'border-green-500 bg-green-500/30'
-                      : 'border-blue-400 bg-blue-500/20'
-                  } rounded-lg cursor-move transition-all`}
+                  ? 'border-blue-500 bg-blue-500/40'
+                  : selectedElement?.type === 'granary' && selectedElement?.id === 'one'
+                    ? 'border-green-500 bg-green-500/30'
+                    : 'border-blue-400 bg-blue-500/20'
+                  } rounded-lg cursor-move transition-all focus-visible-ring`}
                 style={{
                   left: `${granaryOne.x}%`,
                   top: `${granaryOne.y}%`,
@@ -235,12 +271,22 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 
               {/* Granary Two (Player 2 - DROIT) */}
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Grenier 2 (Droit)"
+                aria-pressed={selectedElement?.type === 'granary' && selectedElement?.id === 'two'}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleSelect('granary', 'two');
+                  }
+                }}
                 className={`absolute border-4 ${dragging?.type === 'granary' && dragging?.id === 'two'
-                    ? 'border-amber-500 bg-amber-500/40'
-                    : selectedElement?.type === 'granary' && selectedElement?.id === 'two'
-                      ? 'border-green-500 bg-green-500/30'
-                      : 'border-amber-400 bg-amber-500/20'
-                  } rounded-lg cursor-move transition-all`}
+                  ? 'border-amber-500 bg-amber-500/40'
+                  : selectedElement?.type === 'granary' && selectedElement?.id === 'two'
+                    ? 'border-green-500 bg-green-500/30'
+                    : 'border-amber-400 bg-amber-500/20'
+                  } rounded-lg cursor-move transition-all focus-visible-ring`}
                 style={{
                   left: `${granaryTwo.x}%`,
                   top: `${granaryTwo.y}%`,
@@ -262,7 +308,7 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 
           {/* Right Panel - Fine Tuning Controls */}
           <div className="w-80 border-l border-purple-500/30 bg-black/40 p-4 overflow-y-auto">
-            <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center"><Sliders className="w-4 h-4 mr-2" /> Ajustements Précis</h3>
+            <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center"><Sliders className="w-4 h-4 mr-2" aria-hidden="true" /> Ajustements Précis</h3>
 
             {selectedElement ? (
               <div className="space-y-3">
@@ -277,54 +323,58 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
                 {selectedPosition && (
                   <>
                     <div>
-                      <label className="text-xs text-gray-400">Position X: {selectedPosition.x.toFixed(1)}%</label>
+                      <label htmlFor="pos-x" className="text-xs text-gray-400">Position X: {selectedPosition.x.toFixed(1)}%</label>
                       <input
+                        id="pos-x"
                         type="range"
                         min="0"
                         max="100"
                         step="0.1"
                         value={selectedPosition.x}
                         onChange={(e) => updateSelectedPosition('x', parseFloat(e.target.value))}
-                        className="w-full"
+                        className="w-full focus-visible-ring"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-gray-400">Position Y: {selectedPosition.y.toFixed(1)}%</label>
+                      <label htmlFor="pos-y" className="text-xs text-gray-400">Position Y: {selectedPosition.y.toFixed(1)}%</label>
                       <input
+                        id="pos-y"
                         type="range"
                         min="0"
                         max="100"
                         step="0.1"
                         value={selectedPosition.y}
                         onChange={(e) => updateSelectedPosition('y', parseFloat(e.target.value))}
-                        className="w-full"
+                        className="w-full focus-visible-ring"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-gray-400">Largeur: {selectedPosition.w.toFixed(1)}%</label>
+                      <label htmlFor="pos-w" className="text-xs text-gray-400">Largeur: {selectedPosition.w.toFixed(1)}%</label>
                       <input
+                        id="pos-w"
                         type="range"
                         min="1"
                         max="30"
                         step="0.1"
                         value={selectedPosition.w}
                         onChange={(e) => updateSelectedPosition('w', parseFloat(e.target.value))}
-                        className="w-full"
+                        className="w-full focus-visible-ring"
                       />
                     </div>
 
                     <div>
-                      <label className="text-xs text-gray-400">Hauteur: {selectedPosition.h.toFixed(1)}%</label>
+                      <label htmlFor="pos-h" className="text-xs text-gray-400">Hauteur: {selectedPosition.h.toFixed(1)}%</label>
                       <input
+                        id="pos-h"
                         type="range"
                         min="1"
                         max="30"
                         step="0.1"
                         value={selectedPosition.h}
                         onChange={(e) => updateSelectedPosition('h', parseFloat(e.target.value))}
-                        className="w-full"
+                        className="w-full focus-visible-ring"
                       />
                     </div>
                   </>
@@ -338,7 +388,7 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 
             {/* Instructions */}
             <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-              <h4 className="text-xs font-bold text-blue-400 mb-2 flex items-center"><Lightbulb className="w-3 h-3 mr-1" /> Instructions</h4>
+              <h4 className="text-xs font-bold text-blue-400 mb-2 flex items-center"><Lightbulb className="w-3 h-3 mr-1" aria-hidden="true" /> Instructions</h4>
               <ul className="text-[10px] text-gray-300 space-y-1">
                 <li>• <strong>Cliquez et glissez</strong> pour déplacer</li>
                 <li>• <strong>Cliquez</strong> pour sélectionner</li>
@@ -353,13 +403,13 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
         <div className="bg-black/60 backdrop-blur-xl p-4 border-t border-purple-500/30 flex gap-3 flex-shrink-0">
           <button
             onClick={copyToClipboard}
-            className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/50"
+            className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/50 focus-visible-ring"
           >
-            <span className="flex items-center justify-center"><Clipboard className="w-5 h-5 mr-2" /> Copier la Configuration</span>
+            <span className="flex items-center justify-center"><Clipboard className="w-5 h-5 mr-2" aria-hidden="true" /> Copier la Configuration</span>
           </button>
           <button
             onClick={onClose}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300"
+            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300 focus-visible-ring"
           >
             Fermer
           </button>

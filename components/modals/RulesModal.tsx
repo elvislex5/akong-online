@@ -1,5 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
+import { VisuallyHidden } from '../accessibility/VisuallyHidden';
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -7,6 +10,14 @@ interface RulesModalProps {
 }
 
 export function RulesModal({ isOpen, onClose }: RulesModalProps) {
+  // Accessibility: Focus trap
+  const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
+
+  // Accessibility: Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'Escape', handler: onClose, description: 'Fermer la fenêtre des règles' }
+  ], isOpen);
+
   if (!isOpen) return null;
 
   return (
@@ -24,21 +35,26 @@ export function RulesModal({ isOpen, onClose }: RulesModalProps) {
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl border-2 border-amber-500/30 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden relative flex flex-col"
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rules-title"
+          className="modal-container max-w-2xl"
         >
           {/* Subtle glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-orange-500/5 pointer-events-none rounded-3xl"></div>
+          <div className="glow-overlay-gold"></div>
 
           {/* Header - Sticky */}
           <div className="flex-shrink-0 bg-black/60 backdrop-blur-xl p-4 sm:p-6 border-b border-amber-500/30 flex justify-between items-center z-10">
-            <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500">
+            <h2 id="rules-title" className="title-card text-gradient-gold">
               Règles du Songo
             </h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300 focus-visible-ring"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <VisuallyHidden>Fermer</VisuallyHidden>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -82,20 +98,20 @@ export function RulesModal({ isOpen, onClose }: RulesModalProps) {
               </h3>
               <ul className="list-none space-y-2 text-gray-300">
                 <li className="flex gap-2 text-sm">
-                  <span className="text-emerald-400 font-bold">•</span>
+                  <span className="text-emerald-400 font-bold" aria-hidden="true">•</span>
                   <div>
                     <strong className="text-emerald-400">Auto-capture :</strong> Tour complet avec 1 graine → capturée automatiquement.
                   </div>
                 </li>
                 <li className="flex gap-2 text-sm">
-                  <span className="text-amber-400 font-bold">•</span>
+                  <span className="text-amber-400 font-bold" aria-hidden="true">•</span>
                   <div>
                     <strong className="text-amber-400">Solidarité :</strong> Si 1 seule graine dans votre dernière case, vous l'auto-capturez.
                     L'adversaire DOIT vous nourrir.
                   </div>
                 </li>
                 <li className="flex gap-2 text-sm">
-                  <span className="text-red-400 font-bold">•</span>
+                  <span className="text-red-400 font-bold" aria-hidden="true">•</span>
                   <div>
                     <strong className="text-red-400">Interdiction d'assécher :</strong> On ne peut pas capturer toutes les graines
                     de l'adversaire si cela le prive de mouvement.
@@ -108,7 +124,7 @@ export function RulesModal({ isOpen, onClose }: RulesModalProps) {
             <div className="flex justify-center pt-2">
               <button
                 onClick={onClose}
-                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl font-bold text-white transition-all duration-300 shadow-lg hover:shadow-amber-500/50 text-sm"
+                className="btn-primary text-sm py-2.5 focus-visible-ring"
               >
                 Compris !
               </button>

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Volume2, VolumeX } from 'lucide-react';
 import BoardRevolutionary from './components/BoardRevolutionary';
 import { createInitialState, executeMove, isValidMove, getMoveSteps, resolveGameStalemate } from './services/songoLogic';
-import { GameState, GameStatus, Player, GameMode, AnimationStep } from './types';
-import { getBestMoveIterative } from './services/ai';
+import { GameState, GameStatus, Player, GameMode, AnimationStep, AIDifficulty } from './types';
+import { aiService } from './services/ai';
 import { audioService } from './services/audioService';
 import { onlineManager } from './services/onlineManager';
 import { useAuth } from './hooks/useAuth';
@@ -70,12 +70,13 @@ const App: React.FC = () => {
 
   // AI Configuration
   const [aiPlayer, setAiPlayer] = useState<Player | null>(null);
-  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
   const [aiStartsFirst, setAiStartsFirst] = useState(false); // Track who starts first
+  const [isAiThinking, setIsAiThinking] = useState(false); // Track if AI is computing
 
   // Simulation Settings
   const [simSpeed, setSimSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
-  const [simDifficulty, setSimDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [simDifficulty, setSimDifficulty] = useState<AIDifficulty>('medium');
   const [isSimAuto, setIsSimAuto] = useState(true);
   const [simulationInitialState, setSimulationInitialState] = useState<GameState | null>(null);
   const [onlineStarter, setOnlineStarter] = useState<Player>(Player.One);
@@ -195,13 +196,14 @@ const App: React.FC = () => {
 
     let timer: number;
 
-    const runAI = () => {
+    const runAI = async () => {
       const isAiTurn = (gameMode === GameMode.VsAI && gameState.currentPlayer === aiPlayer) ||
         (gameMode === GameMode.Simulation && isSimAuto);
 
       if (isAiTurn) {
         let delay = 500;
         let maxDepth = 6;
+        let timeLimit = 1000; // Default time limit in ms
 
         if (gameMode === GameMode.Simulation) {
           switch (simSpeed) {
@@ -210,35 +212,46 @@ const App: React.FC = () => {
             case 'fast': delay = 100; break;
           }
           switch (simDifficulty) {
-            case 'easy': maxDepth = 2; break;
-            case 'medium': maxDepth = 4; break;
-            case 'hard': maxDepth = 10; break;
+            case 'easy': maxDepth = 4; timeLimit = 500; break;
+            case 'medium': maxDepth = 10; timeLimit = 1500; break;
+            case 'hard': maxDepth = 18; timeLimit = 3000; break;
+            case 'expert': maxDepth = 25; timeLimit = 8000; break;
+            case 'legend': maxDepth = 35; timeLimit = 15000; break;
           }
         } else if (gameMode === GameMode.VsAI) {
           delay = 500;
           switch (aiDifficulty) {
-            case 'easy': maxDepth = 2; break;
-            case 'medium': maxDepth = 4; break;
-            case 'hard': maxDepth = 12; break;
+            case 'easy': maxDepth = 4; timeLimit = 500; break;
+            case 'medium': maxDepth = 10; timeLimit = 1500; break;
+            case 'hard': maxDepth = 18; timeLimit = 3000; delay = 800; break;
+            case 'expert': maxDepth = 25; timeLimit = 8000; delay = 1200; break;
+            case 'legend': maxDepth = 35; timeLimit = 15000; delay = 1500; break;
           }
         }
 
-        timer = window.setTimeout(() => {
+        // Show thinking indicator for Expert and Legend levels
+        if (aiDifficulty === 'expert' || aiDifficulty === 'legend' ||
+          (gameMode === GameMode.Simulation && (simDifficulty === 'expert' || simDifficulty === 'legend'))) {
+          setIsAiThinking(true);
+        }
+
+        timer = window.setTimeout(async () => {
           try {
-            requestAnimationFrame(() => {
-              // AI uses current state from closure, which is fine as effect reruns on state change
-              const moveIndex = getBestMoveIterative(gameState, maxDepth);
-              if (moveIndex !== -1) {
-                playMove(moveIndex);
-              } else {
-                console.log("AI has no moves available. Resolving stalemate...");
-                const endState = resolveGameStalemate(gameState);
-                setGameState(endState);
-                if (endState.status === GameStatus.Finished) audioService.playWin();
-              }
-            });
+            // Async AI call - no longer blocks the main thread!
+            const moveIndex = await aiService.getBestMove(gameState, maxDepth, timeLimit);
+
+            setIsAiThinking(false); // Hide thinking indicator
+            if (moveIndex !== -1) {
+              playMove(moveIndex);
+            } else {
+              console.log("AI has no moves available. Resolving stalemate...");
+              const endState = resolveGameStalemate(gameState);
+              setGameState(endState);
+              if (endState.status === GameStatus.Finished) audioService.playWin();
+            }
           } catch (e) {
             console.error("AI Error:", e);
+            setIsAiThinking(false);
           }
         }, delay);
       }
@@ -449,175 +462,186 @@ const App: React.FC = () => {
   return (
     <div className="relative z-10 flex flex-col items-center justify-center min-h-screen pb-20 pt-16 sm:pt-20 md:pt-32">
 
-  {gameMode === null ? (
-    /* MAIN MENU */
-    <MainMenuRevolutionary
-      menuStep={menuStep}
-      setMenuStep={setMenuStep}
-      startGame={startGame}
-      handleCreateRoom={handleCreateRoom}
-      handleJoinRoom={handleJoinRoom}
-      exitToMenu={exitToMenu}
-      setAiPlayer={setAiPlayer}
-      setAiStartsFirst={setAiStartsFirst}
-      setAiDifficulty={setAiDifficulty}
-      aiPlayer={aiPlayer}
-      aiStartsFirst={aiStartsFirst}
-      onlineGame={{
-        roomId: onlineGame.roomId,
-        onlineStatus: onlineGame.onlineStatus,
-        joinInputId: onlineGame.joinInputId,
-        setJoinInputId: onlineGame.setJoinInputId
-      }}
-    />
-  ) : (
-    /* GAME BOARD */
-    <div className="w-full h-full flex flex-col py-2 sm:py-4 md:py-8">
-      <BoardRevolutionary
-        gameState={gameState}
-        onMove={handlePitClick}
-        gameMode={gameMode}
-        isAnimating={animation.isAnimating}
-        handState={animation.animHand}
-        onEditPit={handleEditPit}
-        onEditScore={handleEditScore}
-        aiPlayer={aiPlayer}
-        playerProfiles={playerProfiles}
-        isSimulationManual={!isSimAuto && gameMode === GameMode.Simulation}
-        invertView={onlineGame.isGuest}
-        boardSkinUrl={boardSkinUrl}
-      />
+      {gameMode === null ? (
+        /* MAIN MENU */
+        <MainMenuRevolutionary
+          menuStep={menuStep}
+          setMenuStep={setMenuStep}
+          startGame={startGame}
+          handleCreateRoom={handleCreateRoom}
+          handleJoinRoom={handleJoinRoom}
+          exitToMenu={exitToMenu}
+          setAiPlayer={setAiPlayer}
+          setAiStartsFirst={setAiStartsFirst}
+          setAiDifficulty={setAiDifficulty}
+          aiPlayer={aiPlayer}
+          aiStartsFirst={aiStartsFirst}
+          onlineGame={{
+            roomId: onlineGame.roomId,
+            onlineStatus: onlineGame.onlineStatus,
+            joinInputId: onlineGame.joinInputId,
+            setJoinInputId: onlineGame.setJoinInputId
+          }}
+        />
+      ) : (
+        /* GAME BOARD */
+        <div className="w-full h-full flex flex-col py-2 sm:py-4 md:py-8">
+          <BoardRevolutionary
+            gameState={gameState}
+            onMove={handlePitClick}
+            gameMode={gameMode}
+            isAnimating={animation.isAnimating}
+            handState={animation.animHand}
+            onEditPit={handleEditPit}
+            onEditScore={handleEditScore}
+            aiPlayer={aiPlayer}
+            playerProfiles={playerProfiles}
+            isSimulationManual={!isSimAuto && gameMode === GameMode.Simulation}
+            invertView={onlineGame.isGuest}
+            boardSkinUrl={boardSkinUrl}
+          />
 
-      {/* Status Bar */}
-      <div className="mt-2 sm:mt-3 md:mt-4 px-4 flex justify-center">
-        <div className={`
+          {/* Status Bar */}
+          <div className="mt-2 sm:mt-3 md:mt-4 px-4 flex flex-col items-center gap-2">
+            <div className={`
                         px-4 py-1.5 sm:px-6 sm:py-2 rounded-full font-bold text-xs sm:text-sm shadow-lg flex items-center gap-2
                         ${gameState.status === GameStatus.Playing
-            ? (gameState.currentPlayer === Player.One ? 'bg-blue-900 text-blue-200 border border-blue-700' : 'bg-amber-900 text-amber-200 border border-amber-700')
-            : 'bg-gray-800 text-gray-400 border border-gray-600'}
+                ? (gameState.currentPlayer === Player.One ? 'bg-blue-900 text-blue-200 border border-blue-700' : 'bg-amber-900 text-amber-200 border border-amber-700')
+                : 'bg-gray-800 text-gray-400 border border-gray-600'}
                     `}>
-          {gameState.status === GameStatus.Playing && <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
-          {gameState.message}
+              {gameState.status === GameStatus.Playing && <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>}
+              {gameState.message}
+            </div>
+
+            {/* AI Thinking Indicator */}
+            {isAiThinking && (
+              <div className="px-4 py-2 bg-gradient-to-r from-purple-900/80 to-pink-900/80 backdrop-blur-xl border border-purple-500/50 rounded-full text-purple-200 text-xs sm:text-sm font-bold shadow-lg animate-pulse flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                <span>L'IA {aiDifficulty === 'legend' ? 'Légende' : 'Expert'} réfléchit...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Game Controls - Fixed Bottom Right (Mobile First) */}
+          <div className="fixed bottom-4 right-4 z-30 flex flex-col gap-2 items-end">
+            {/* Rules Button */}
+            <button
+              onClick={() => setShowRules(true)}
+              className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600/90 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95"
+              title="Règles du jeu"
+              aria-label="Voir les règles du jeu"
+            >
+              <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </button>
+
+            {/* Sound Toggle */}
+            <button
+              onClick={toggleMute}
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95 ${isMuted ? 'bg-gray-600/90 hover:bg-gray-600' : 'bg-amber-500/90 hover:bg-amber-500'
+                }`}
+              title={isMuted ? "Activer le son" : "Couper le son"}
+              aria-label={isMuted ? "Activer le son" : "Couper le son"}
+            >
+              {isMuted ? (
+                <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+              )}
+            </button>
+
+            {/* Surrender Button - Only in active game */}
+            {gameState.status === GameStatus.Playing && gameMode !== GameMode.Simulation && gameMode !== GameMode.OnlineSpectator && (
+              <button
+                onClick={() => setShowSurrenderModal(true)}
+                className="w-11 h-11 sm:w-12 sm:h-12 bg-red-600/90 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95"
+                title="Abandonner la partie"
+                aria-label="Abandonner la partie"
+              >
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Game Controls - Fixed Bottom Right (Mobile First) */}
-      <div className="fixed bottom-4 right-4 z-30 flex flex-col gap-2 items-end">
-        {/* Rules Button */}
-        <button
-          onClick={() => setShowRules(true)}
-          className="w-11 h-11 sm:w-12 sm:h-12 bg-blue-600/90 hover:bg-blue-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95"
-          title="Règles du jeu"
-          aria-label="Voir les règles du jeu"
-        >
-          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-        </button>
+      {/* SIMULATION CONTROL PANEL - Revolutionary Design */}
+      {
+        gameMode === GameMode.Simulation && (
+          <SimulationControlPanel
+            gameStatus={gameState.status}
+            currentPlayer={gameState.currentPlayer}
+            simSpeed={simSpeed}
+            simDifficulty={simDifficulty}
+            isSimAuto={isSimAuto}
+            onSetCurrentPlayer={(player) => setGameState(prev => ({ ...prev, currentPlayer: player }))}
+            onSetSimSpeed={setSimSpeed}
+            onSetSimDifficulty={setSimDifficulty}
+            onToggleSimAuto={() => setIsSimAuto(!isSimAuto)}
+            onStartSimulation={startSimulation}
+            onRestartSimulation={restartSimulation}
+            onClearBoard={clearBoard}
+            onResetBoard={resetBoard}
+            onExit={exitToMenu}
+            onOpenCalibration={() => setCalibrationOpen(true)}
+          />
+        )
+      }
 
-        {/* Sound Toggle */}
-        <button
-          onClick={toggleMute}
-          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95 ${
-            isMuted ? 'bg-gray-600/90 hover:bg-gray-600' : 'bg-amber-500/90 hover:bg-amber-500'
-          }`}
-          title={isMuted ? "Activer le son" : "Couper le son"}
-          aria-label={isMuted ? "Activer le son" : "Couper le son"}
-        >
-          {isMuted ? (
-            <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          ) : (
-            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          )}
-        </button>
+      {/* BOARD CALIBRATION TOOL */}
+      {
+        calibrationOpen && (
+          <BoardCalibrationTool
+            onClose={() => setCalibrationOpen(false)}
+          />
+        )
+      }
 
-        {/* Surrender Button - Only in active game */}
-        {gameState.status === GameStatus.Playing && gameMode !== GameMode.Simulation && gameMode !== GameMode.OnlineSpectator && (
-          <button
-            onClick={() => setShowSurrenderModal(true)}
-            className="w-11 h-11 sm:w-12 sm:h-12 bg-red-600/90 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all active:scale-95"
-            title="Abandonner la partie"
-            aria-label="Abandonner la partie"
-          >
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
-            </svg>
-          </button>
-        )}
-      </div>
-    </div>
-  )}
+      {/* MODALS */}
 
-  {/* SIMULATION CONTROL PANEL - Revolutionary Design */}
-  {
-    gameMode === GameMode.Simulation && (
-      <SimulationControlPanel
-        gameStatus={gameState.status}
-        currentPlayer={gameState.currentPlayer}
-        simSpeed={simSpeed}
-        simDifficulty={simDifficulty}
-        isSimAuto={isSimAuto}
-        onSetCurrentPlayer={(player) => setGameState(prev => ({ ...prev, currentPlayer: player }))}
-        onSetSimSpeed={setSimSpeed}
-        onSetSimDifficulty={setSimDifficulty}
-        onToggleSimAuto={() => setIsSimAuto(!isSimAuto)}
-        onStartSimulation={startSimulation}
-        onRestartSimulation={restartSimulation}
-        onClearBoard={clearBoard}
-        onResetBoard={resetBoard}
-        onExit={exitToMenu}
-        onOpenCalibration={() => setCalibrationOpen(true)}
+      {/* Edit Modal (Simulation) */}
+      <EditSimulationModal
+        isOpen={editModalOpen}
+        editPitIndex={editPitIndex}
+        editScorePlayer={editScorePlayer}
+        editValue={editValue}
+        onSetEditValue={setEditValue}
+        onConfirm={confirmEdit}
+        onCancel={() => setEditModalOpen(false)}
       />
-    )
-  }
 
-  {/* BOARD CALIBRATION TOOL */}
-  {
-    calibrationOpen && (
-      <BoardCalibrationTool
-        onClose={() => setCalibrationOpen(false)}
-      />
-    )
-  }
+      {/* Rules Modal */}
+      <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
 
-  {/* MODALS */}
+      {/* Game Over / Victory Modal */}
+      {
+        gameState.status === GameStatus.Finished && (
+          <GameOverModal
+            gameState={gameState}
+            gameMode={gameMode}
+            aiPlayer={aiPlayer}
+            playerProfiles={playerProfiles}
+            currentUserId={user?.id}
+            onRestart={restartGame}
+            onExitToMenu={exitToMenu}
+          />
+        )
+      }
 
-  {/* Edit Modal (Simulation) */}
-  <EditSimulationModal
-    isOpen={editModalOpen}
-    editPitIndex={editPitIndex}
-    editScorePlayer={editScorePlayer}
-    editValue={editValue}
-    onSetEditValue={setEditValue}
-    onConfirm={confirmEdit}
-    onCancel={() => setEditModalOpen(false)}
-  />
-
-  {/* Rules Modal */}
-  <RulesModal isOpen={showRules} onClose={() => setShowRules(false)} />
-
-  {/* Game Over / Victory Modal */}
-  {
-    gameState.status === GameStatus.Finished && (
-      <GameOverModal
-        gameState={gameState}
+      {/* Surrender Confirmation Modal */}
+      <SurrenderModal
+        isOpen={showSurrenderModal}
         gameMode={gameMode}
-        aiPlayer={aiPlayer}
-        playerProfiles={playerProfiles}
-        currentUserId={user?.id}
-        onRestart={restartGame}
-        onExitToMenu={exitToMenu}
+        onClose={() => setShowSurrenderModal(false)}
+        onSurrender={handleSurrender}
       />
-    )
-  }
-
-  {/* Surrender Confirmation Modal */}
-  <SurrenderModal
-    isOpen={showSurrenderModal}
-    gameMode={gameMode}
-    onClose={() => setShowSurrenderModal(false)}
-    onSurrender={handleSurrender}
-  />
     </div>
   );
 };
