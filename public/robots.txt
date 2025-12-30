@@ -1,0 +1,14 @@
+# robots.txt pour Akông Online
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://akong-online.com/sitemap.xml
+
+# Crawl-delay pour être respectueux des serveurs
+Crawl-delay: 1
+
+# Bloquer les chemins inutiles (si vous avez des pages admin/api à ne pas indexer)
+# Disallow: /admin/
+# Disallow: /api/
