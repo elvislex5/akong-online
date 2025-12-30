@@ -35,6 +35,26 @@ export async function signIn(email: string, password: string) {
 }
 
 // ============================================
+// SIGN IN WITH GOOGLE (OAuth)
+// ============================================
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}/game`,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error) throw error;
+
+  return data;
+}
+
+// ============================================
 // SIGN OUT
 // ============================================
 export async function signOut() {
