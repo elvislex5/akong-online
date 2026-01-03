@@ -21,6 +21,8 @@ interface UseOnlineGameProps {
   onGameEnded?: (state: GameState) => void;
   onRestart?: () => void;
   onRestartGame?: () => void;
+  onChatMessage?: (message: any) => void;
+  onChatTyping?: (userId: string, userName: string, isTyping: boolean) => void;
 }
 
 export function useOnlineGame({
@@ -33,7 +35,9 @@ export function useOnlineGame({
   onGameModeUpdate,
   onGameEnded,
   onRestart,
-  onRestartGame
+  onRestartGame,
+  onChatMessage,
+  onChatTyping
 }: UseOnlineGameProps) {
   // Online State
   const [roomId, setRoomId] = useState<string>(''); // Room code (6 chars)
@@ -44,6 +48,30 @@ export function useOnlineGame({
   const [isGuest, setIsGuest] = useState(false);
   const [isConnected, setIsConnected] = useState(true); // Track Socket.io connection
   const [hasPlayer2, setHasPlayer2] = useState(false); // Track if Player 2 has joined
+
+  // Ref for callbacks to avoid closure issues
+  const callbacksRef = useRef({
+    onGameStateUpdate,
+    onGameModeUpdate,
+    onGameEnded,
+    onRestart,
+    onRestartGame,
+    onChatMessage,
+    onChatTyping
+  });
+
+  // Update callbacks ref when props change
+  useEffect(() => {
+    callbacksRef.current = {
+      onGameStateUpdate,
+      onGameModeUpdate,
+      onGameEnded,
+      onRestart,
+      onRestartGame,
+      onChatMessage,
+      onChatTyping
+    };
+  }, [onGameStateUpdate, onGameModeUpdate, onGameEnded, onRestart, onRestartGame, onChatMessage, onChatTyping]);
 
   // Handle reconnection and state restoration
   useEffect(() => {
@@ -107,13 +135,24 @@ export function useOnlineGame({
         }
         else if (msg.type === 'REMATCH_REQUEST') {
           console.log('[useOnlineGame] Host received rematch request');
-          onRestartGame?.();
+          if (callbacksRef.current.onRestartGame) {
+            callbacksRef.current.onRestartGame();
+          } else {
+            console.error('[useOnlineGame] onRestartGame is not defined!');
+          }
         }
         else if (msg.type === 'MOVE_INTENT') {
           latestHandlersRef.current.playMove(msg.payload.pitIndex);
         }
         else if (msg.type === 'GAME_ENDED') {
-          onGameEnded?.(msg.payload);
+          callbacksRef.current.onGameEnded?.(msg.payload);
+        }
+        else if (msg.type === 'CHAT_MESSAGE') {
+          callbacksRef.current.onChatMessage?.(msg.payload);
+        }
+        else if (msg.type === 'CHAT_TYPING') {
+          const { userId, userName, isTyping } = msg.payload;
+          callbacksRef.current.onChatTyping?.(userId, userName, isTyping);
         }
       });
 
@@ -170,25 +209,32 @@ export function useOnlineGame({
           if (msg.payload === 'PLAYER') {
             setIsGuest(true); // Inverts view
             setOnlineStatus("Connecté en tant que JOUEUR 2");
-            onGameModeUpdate?.(GameMode.OnlineGuest);
+            callbacksRef.current.onGameModeUpdate?.(GameMode.OnlineGuest);
           } else {
             setIsGuest(false); // Spectators see Host view (standard)
             setOnlineStatus("Connecté en tant que SPECTATEUR");
-            onGameModeUpdate?.(GameMode.OnlineSpectator);
+            callbacksRef.current.onGameModeUpdate?.(GameMode.OnlineSpectator);
           }
         }
         else if (msg.type === 'SYNC_STATE') {
-          onGameStateUpdate?.(msg.payload);
+          callbacksRef.current.onGameStateUpdate?.(msg.payload);
         }
         else if (msg.type === 'REMOTE_MOVE') {
           const { pitIndex, newState, steps } = msg.payload;
           latestHandlersRef.current.playMoveAnimation(pitIndex, newState, steps);
         }
         else if (msg.type === 'RESTART') {
-          onRestart?.();
+          callbacksRef.current.onRestart?.();
         }
         else if (msg.type === 'GAME_ENDED') {
-          onGameEnded?.(msg.payload);
+          callbacksRef.current.onGameEnded?.(msg.payload);
+        }
+        else if (msg.type === 'CHAT_MESSAGE') {
+          callbacksRef.current.onChatMessage?.(msg.payload);
+        }
+        else if (msg.type === 'CHAT_TYPING') {
+          const { userId, userName, isTyping } = msg.payload;
+          callbacksRef.current.onChatTyping?.(userId, userName, isTyping);
         }
       });
 
@@ -307,6 +353,22 @@ export function useOnlineGame({
     setJoinInputId('');
   };
 
+  // Chat broadcast functions
+  const broadcastChatMessage = (message: any) => {
+    onlineManager.broadcast({ type: 'CHAT_MESSAGE', payload: message });
+  };
+
+  const broadcastTyping = (isTyping: boolean) => {
+    if (!user?.id || !profile) return;
+
+    const payload = {
+      userId: user.id,
+      userName: profile.username || profile.display_name || 'Joueur',
+      isTyping
+    };
+    onlineManager.broadcast({ type: 'CHAT_TYPING', payload });
+  };
+
   return {
     // State
     roomId,
@@ -332,6 +394,10 @@ export function useOnlineGame({
     saveGameStateToDB,
     finishGameInDB,
     abandonGameInDB,
+
+    // Chat functions
+    broadcastChatMessage,
+    broadcastTyping,
 
     // Utilities
     cleanup,

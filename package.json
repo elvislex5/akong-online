@@ -29,10 +29,12 @@
     "react-use-audio-player": "^4.0.2",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "three": "^0.181.2"
+    "three": "^0.181.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.0.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",

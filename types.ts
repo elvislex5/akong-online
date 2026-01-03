@@ -52,11 +52,27 @@ export interface AnimationStep {
 }
 
 // Online Messages
-export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE' | 'GUEST_PROFILE_SHARE' | 'REMATCH_REQUEST' | 'GAME_ENDED' | 'PLAYER_DISCONNECTED' | 'PLAYER_RECONNECTED' | 'SPECTATOR_JOINED' | 'SPECTATOR_LEFT';
+export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE' | 'GUEST_PROFILE_SHARE' | 'REMATCH_REQUEST' | 'GAME_ENDED' | 'PLAYER_DISCONNECTED' | 'PLAYER_RECONNECTED' | 'SPECTATOR_JOINED' | 'SPECTATOR_LEFT' | 'CHAT_MESSAGE' | 'CHAT_TYPING';
 
 export interface OnlineMessage {
   type: OnlineMessageType;
   payload?: any;
+}
+
+// Chat Types (Real-time only, no persistence)
+export interface ChatMessage {
+  id: string;                    // Unique message ID (uuid)
+  senderId: string;              // User ID
+  senderName: string;            // Display name or username
+  text: string;                  // Message text (max 200 chars)
+  timestamp: number;             // Unix timestamp
+  emoji?: string;                // Optional emoji reaction
+}
+
+export interface ChatTypingPayload {
+  userId: string;
+  userName: string;
+  isTyping: boolean;
 }
 
 // AI Difficulty Levels

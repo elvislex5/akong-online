@@ -222,6 +222,29 @@ export async function abandonGame(roomId: string, abandonerId: string): Promise<
   }
 }
 
+/**
+ * Increment game count and return new count
+ * Used for alternating starting player
+ * @param roomId - Room UUID
+ * @returns New game count
+ */
+export async function incrementGameCount(roomId: string): Promise<number> {
+  console.log('[roomService] Incrementing game count for room:', roomId);
+
+  const { data, error } = await supabase.rpc('increment_game_count', {
+    p_room_id: roomId,
+  });
+
+  if (error) {
+    console.error('[roomService] Error incrementing game count:', error);
+    // Return 0 as fallback (will default to Player.One)
+    return 0;
+  }
+
+  console.log('[roomService] New game count:', data);
+  return data;
+}
+
 // ============================================
 // SPECTATOR MANAGEMENT
 // ============================================

@@ -10,6 +10,7 @@ import { audioService } from './services/audioService';
 import { onlineManager } from './services/onlineManager';
 import { useAuth } from './hooks/useAuth';
 import { useOnlineGame } from './hooks/useOnlineGame';
+import { useChat } from './hooks/useChat';
 import { useGameAnimation } from './hooks/useGameAnimation';
 import { useBoardSkin } from './hooks/useBoardSkin';
 import { useGameContext } from './contexts/GameContext';
@@ -25,6 +26,8 @@ import { EditSimulationModal } from './components/modals/EditSimulationModal';
 import SimulationControlPanel from './components/SimulationControlPanel';
 import BoardCalibrationTool from './components/BoardCalibrationTool';
 import InvitationSystem from './components/InvitationSystem';
+import ChatOverlay from './components/chat/ChatOverlay';
+import LandscapePrompt from './components/LandscapePrompt';
 import type { Profile } from './services/supabase';
 import toast from 'react-hot-toast';
 
@@ -117,12 +120,26 @@ const App: React.FC = () => {
     setIsAnimating: (isAnimating: boolean) => void;
   } | null>(null);
 
-  function handleOnlineRestart() {
-    const nextStarter = onlineStarter === Player.One ? Player.Two : Player.One;
-    // The host is the authority and tells everyone to restart.
-    // The `RESTART` message just tells clients to reset their local board state.
+  async function handleOnlineRestart() {
+    // Increment game count in DB to track alternation
+    if (!onlineGame.roomDbId) {
+      console.error('[App] Cannot restart: no room ID');
+      return;
+    }
+
+    // Import the incrementGameCount function
+    const { incrementGameCount } = await import('./services/roomService');
+    const newGameCount = await incrementGameCount(onlineGame.roomDbId);
+
+    // Determine starter based on game count (even = Player.One, odd = Player.Two)
+    const nextStarter = newGameCount % 2 === 0 ? Player.One : Player.Two;
+
+    console.log('[App] Restarting game #', newGameCount, 'Starter:', nextStarter === Player.One ? 'Player.One' : 'Player.Two');
+
+    // Broadcast restart to all players
     onlineManager.broadcast({ type: 'RESTART' });
-    // The host then starts a new authoritative game state with the next player starting.
+
+    // Start new game with the determined starter
     startGame(GameMode.OnlineHost, null, nextStarter);
     setOnlineStarter(nextStarter);
   }
@@ -140,6 +157,44 @@ const App: React.FC = () => {
       startGame(gameMode, aiPlayer);
     }
   }
+
+  // Chat Hook
+  const chat = useChat({
+    userId: user?.id || null,
+    userName: profile?.username || profile?.display_name || 'Joueur',
+    onBroadcastMessage: (message) => {
+      onlineManager.broadcast({ type: 'CHAT_MESSAGE', payload: message });
+    },
+    onBroadcastTyping: (isTyping) => {
+      if (!user?.id || !profile) return;
+      const payload = {
+        userId: user.id,
+        userName: profile.username || profile.display_name || 'Joueur',
+        isTyping
+      };
+      onlineManager.broadcast({ type: 'CHAT_TYPING', payload });
+    }
+  });
+
+  // Play notification sound when receiving message while chat is closed
+  useEffect(() => {
+    // This effect will run when chat.messages changes
+    // If chat is not open and we have messages, play the notification for the latest message
+    if (!chat.isOpen && chat.messages.length > 0) {
+      const latestMessage = chat.messages[chat.messages.length - 1];
+      // Only play sound if the message is from someone else
+      if (latestMessage.senderId !== user?.id) {
+        audioService.playChatNotification();
+      }
+    }
+  }, [chat.messages, chat.isOpen, user?.id]);
+
+  // Clear chat when leaving online games
+  useEffect(() => {
+    if (gameMode !== GameMode.OnlineHost && gameMode !== GameMode.OnlineGuest) {
+      chat.clearMessages();
+    }
+  }, [gameMode]);
 
   // Online Game Hook
   const onlineGame = useOnlineGame({
@@ -163,6 +218,8 @@ const App: React.FC = () => {
       }
     },
     onRestartGame: handleOnlineRestart,
+    onChatMessage: (msg) => chat.receiveMessage(msg),
+    onChatTyping: (uid, uname, typing) => chat.receiveTyping(uid, uname, typing),
   });
 
   // Animation Hook
@@ -380,9 +437,18 @@ const App: React.FC = () => {
     const initialState = createInitialState(mode === GameMode.Simulation ? GameStatus.Setup : GameStatus.Playing);
     initialState.message = mode === GameMode.Simulation ? "Configuration" : "Nouvelle partie";
 
-    // Set the starting player (for AI mode, this determines who plays first)
-    if (mode === GameMode.VsAI) {
+    // Set the starting player (for AI mode and Online Host mode)
+    if (mode === GameMode.VsAI || mode === GameMode.OnlineHost) {
       initialState.currentPlayer = startingPlayer;
+      // Update message to reflect who starts - use real player names for online mode
+      let playerName = startingPlayer === Player.One ? "Joueur 1" : "Joueur 2";
+      if (mode === GameMode.OnlineHost) {
+        const profile = startingPlayer === Player.One ? playerProfiles[Player.One] : playerProfiles[Player.Two];
+        if (profile) {
+          playerName = profile.display_name || profile.username || playerName;
+        }
+      }
+      initialState.message = `Nouvelle partie ! Au tour de ${playerName}.`;
     }
 
     if (mode === GameMode.OnlineHost) {
@@ -506,7 +572,16 @@ const App: React.FC = () => {
     setShowSurrenderModal(false);
 
     const winner = surrenderingPlayer === Player.One ? Player.Two : Player.One;
-    const msg = surrenderingPlayer === Player.One ? "Joueur 1 a abandonné." : "Joueur 2 a abandonné.";
+
+    // Use real player names for online mode
+    let playerName = surrenderingPlayer === Player.One ? "Joueur 1" : "Joueur 2";
+    if (gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) {
+      const profile = playerProfiles[surrenderingPlayer];
+      if (profile) {
+        playerName = profile.display_name || profile.username || playerName;
+      }
+    }
+    const msg = `${playerName} a abandonné.`;
 
     const newState: GameState = {
       ...gameStateRef.current,
@@ -692,6 +767,24 @@ const App: React.FC = () => {
         onClose={() => setShowSurrenderModal(false)}
         onSurrender={handleSurrender}
       />
+
+      {/* Chat Overlay (only visible during online games) */}
+      {(gameMode === GameMode.OnlineHost || gameMode === GameMode.OnlineGuest) && (
+        <ChatOverlay
+          messages={chat.messages}
+          currentUserId={user?.id || null}
+          currentUserName={profile?.username || profile?.display_name || 'Joueur'}
+          typingUsers={chat.typingUsers}
+          onSendMessage={chat.sendMessage}
+          onTypingChange={chat.handleTyping}
+          isOpen={chat.isOpen}
+          onToggle={chat.toggleChat}
+          unreadCount={chat.unreadCount}
+        />
+      )}
+
+      {/* Landscape Prompt (suggest landscape mode on mobile) */}
+      <LandscapePrompt isGameActive={gameState.status === GameStatus.Playing} />
     </div>
   );
 };

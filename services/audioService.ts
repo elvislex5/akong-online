@@ -144,6 +144,31 @@ export class AudioService {
       osc.stop(startTime + 0.5);
     });
   }
+
+  // Sound: "Chat Notification" - Two-tone ping
+  public playChatNotification() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    // Two-tone notification: 800Hz -> 1000Hz
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.linearRampToValueAtTime(1000, t + 0.1);
+
+    // Soft and short envelope (0.2s total)
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.25, t + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.2);
+  }
 }
 
 export const audioService = new AudioService();
