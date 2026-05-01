@@ -1,4 +1,13 @@
 import { supabase } from './supabase';
+import type { PitPosition, GranaryPosition } from '../config/boardSkinConfigs';
+
+export interface BoardSkinCalibration {
+  pitPositions: { [pitIndex: string]: PitPosition };
+  granaryPositions: {
+    playerOne: GranaryPosition;
+    playerTwo: GranaryPosition;
+  };
+}
 
 export interface BoardSkin {
   id: string;
@@ -8,6 +17,7 @@ export interface BoardSkin {
   price: number;
   is_premium: boolean;
   is_active: boolean;
+  calibration: BoardSkinCalibration | null;
   created_at: string;
   updated_at: string;
 }
@@ -134,7 +144,7 @@ export async function getUserSelectedSkin(userId: string): Promise<BoardSkin | n
     .single();
 
   if (skinError) {
-    console.error('[boardSkinService] Error fetching selected skin:', error);
+    console.error('[boardSkinService] Error fetching selected skin:', skinError);
     return null;
   }
 
@@ -156,4 +166,88 @@ export async function getAllSkinsWithUnlockStatus(userId: string): Promise<Array
     ...skin,
     unlocked: unlockedIds.has(skin.id),
   }));
+}
+
+// ============================================
+// CALIBRATION
+// ============================================
+
+// In-memory cache for calibration data (image_url -> calibration)
+const calibrationCache: Map<string, BoardSkinCalibration> = new Map();
+
+/**
+ * Load all calibrations from the database and populate the cache
+ */
+export async function loadAllCalibrations(): Promise<Map<string, BoardSkinCalibration>> {
+  const { data, error } = await supabase
+    .from('board_skins')
+    .select('image_url, calibration')
+    .eq('is_active', true)
+    .not('calibration', 'is', null);
+
+  if (error) {
+    console.error('[boardSkinService] Error loading calibrations:', error);
+    return calibrationCache;
+  }
+
+  for (const skin of data || []) {
+    if (skin.calibration) {
+      calibrationCache.set(skin.image_url, skin.calibration as BoardSkinCalibration);
+    }
+  }
+
+  return calibrationCache;
+}
+
+/**
+ * Get calibration for a specific board skin image URL (from cache)
+ */
+export function getCachedCalibration(imageUrl: string): BoardSkinCalibration | null {
+  return calibrationCache.get(imageUrl) || null;
+}
+
+/**
+ * Save calibration data for a board skin (admin only)
+ */
+export async function saveCalibration(skinId: string, calibration: BoardSkinCalibration): Promise<boolean> {
+  const { error } = await supabase
+    .from('board_skins')
+    .update({ calibration })
+    .eq('id', skinId);
+
+  if (error) {
+    console.error('[boardSkinService] Error saving calibration:', error);
+    throw error;
+  }
+
+  // Update cache: find image_url for this skin
+  const { data: skin } = await supabase
+    .from('board_skins')
+    .select('image_url')
+    .eq('id', skinId)
+    .single();
+
+  if (skin) {
+    calibrationCache.set(skin.image_url, calibration);
+  }
+
+  return true;
+}
+
+/**
+ * Get all board skins with their calibration data (for calibration tool)
+ */
+export async function getAllBoardSkinsWithCalibration(): Promise<BoardSkin[]> {
+  const { data, error } = await supabase
+    .from('board_skins')
+    .select('*')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('[boardSkinService] Error fetching skins with calibration:', error);
+    throw error;
+  }
+
+  return data || [];
 }

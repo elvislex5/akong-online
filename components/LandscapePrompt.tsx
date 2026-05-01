@@ -1,27 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCw } from 'lucide-react';
+import { RotateCw, X } from 'lucide-react';
 
 interface LandscapePromptProps {
   isGameActive: boolean;
 }
 
+const DISMISS_KEY = 'akong_landscape_dismissed';
+
 export default function LandscapePrompt({ isGameActive }: LandscapePromptProps) {
   const [showPrompt, setShowPrompt] = useState(false);
+  const [dismissed, setDismissed] = useState(() =>
+    sessionStorage.getItem(DISMISS_KEY) === '1'
+  );
+
+  // Try to lock orientation when game starts
+  useEffect(() => {
+    if (!isGameActive) {
+      try { (screen?.orientation as any)?.unlock?.(); } catch { /* not supported */ }
+      return;
+    }
+
+    const orientation = screen?.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+    if (orientation?.lock) {
+      orientation.lock('landscape-primary').catch(() => {
+        // iOS et autres : le verrou n'est pas supporté → le toast s'affichera
+      });
+    }
+  }, [isGameActive]);
 
   useEffect(() => {
-    const checkOrientation = () => {
-      const isMobile = window.innerWidth < 1024; // Mobile si largeur < 1024px
-      const isPortrait = window.innerHeight > window.innerWidth; // Portrait si hauteur > largeur
+    if (dismissed) return;
 
-      // Afficher le prompt si : mobile + portrait + partie active
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth < 1024;
+      const isPortrait = window.innerHeight > window.innerWidth;
       setShowPrompt(isMobile && isPortrait && isGameActive);
     };
 
-    // Vérifier à l'initialisation
     checkOrientation();
-
-    // Écouter les changements d'orientation et de taille
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
 
@@ -29,74 +46,51 @@ export default function LandscapePrompt({ isGameActive }: LandscapePromptProps) 
       window.removeEventListener('resize', checkOrientation);
       window.removeEventListener('orientationchange', checkOrientation);
     };
-  }, [isGameActive]);
+  }, [isGameActive, dismissed]);
+
+  // Auto-hide after 6 seconds
+  useEffect(() => {
+    if (!showPrompt) return;
+    const timer = setTimeout(() => setShowPrompt(false), 6000);
+    return () => clearTimeout(timer);
+  }, [showPrompt]);
+
+  const dismiss = useCallback(() => {
+    setShowPrompt(false);
+    setDismissed(true);
+    sessionStorage.setItem(DISMISS_KEY, '1');
+  }, []);
 
   return (
     <AnimatePresence>
       {showPrompt && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center p-6"
+          initial={{ opacity: 0, y: -32 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -32 }}
+          transition={{ duration: 0.2 }}
+          className="fixed top-3 left-3 right-3 z-50 flex items-center gap-3 px-3 py-2.5 bg-surface border border-rule shadow-md"
+          role="status"
         >
-          {/* Rotating phone icon animation */}
           <motion.div
             animate={{ rotate: [0, -90, -90, 0] }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              repeatDelay: 0.5,
-              times: [0, 0.3, 0.7, 1],
-            }}
-            className="mb-8"
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 1, times: [0, 0.3, 0.7, 1] }}
+            aria-hidden="true"
           >
-            <RotateCw className="w-20 h-20 text-emerald-400" />
+            <RotateCw size={16} strokeWidth={1.75} className="text-accent" />
           </motion.div>
 
-          {/* Message */}
-          <h2 className="text-2xl font-bold text-white mb-4 text-center">
-            Mode Paysage Recommandé
-          </h2>
-          <p className="text-gray-300 text-center max-w-md mb-6">
-            Pour une meilleure expérience de jeu, veuillez tourner votre appareil en mode paysage.
+          <p className="text-xs sm:text-sm text-ink-muted flex-1">
+            Tournez en <span className="text-ink font-medium">mode paysage</span> pour une meilleure expérience.
           </p>
 
-          {/* Dismiss button (optional) */}
           <button
-            onClick={() => setShowPrompt(false)}
-            className="px-6 py-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-xl text-emerald-400 transition-colors"
+            onClick={dismiss}
+            className="inline-flex items-center justify-center w-7 h-7 text-ink-muted hover:text-ink hover:bg-canvas transition-colors duration-150"
+            aria-label="Fermer"
           >
-            Continuer en mode portrait
+            <X size={14} strokeWidth={1.75} />
           </button>
-
-          {/* Visual phone representation */}
-          <div className="mt-8 flex gap-8 items-center">
-            {/* Portrait phone (red X) */}
-            <div className="text-center">
-              <div className="relative">
-                <div className="w-16 h-24 border-4 border-red-500/50 rounded-lg mb-2"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-red-500 text-4xl font-bold">✕</div>
-                </div>
-              </div>
-              <span className="text-xs text-gray-500">Portrait</span>
-            </div>
-
-            {/* Arrow */}
-            <div className="text-emerald-400 text-3xl">→</div>
-
-            {/* Landscape phone (green check) */}
-            <div className="text-center">
-              <div className="relative">
-                <div className="w-24 h-16 border-4 border-emerald-500/50 rounded-lg mb-2"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-emerald-500 text-4xl font-bold">✓</div>
-                </div>
-              </div>
-              <span className="text-xs text-gray-500">Paysage</span>
-            </div>
-          </div>
         </motion.div>
       )}
     </AnimatePresence>

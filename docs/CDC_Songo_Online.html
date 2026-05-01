@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cahier des Charges – Plateforme Songo Online</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a1a; background: #fff; line-height: 1.75; }
+  .page { max-width: 920px; margin: 0 auto; padding: 48px 56px; }
+  .cover { text-align: center; padding: 60px 0 50px; border-bottom: 4px solid #8B5E3C; margin-bottom: 48px; }
+  .cover-icon { font-size: 64px; margin-bottom: 16px; }
+  .cover h1 { font-size: 30px; color: #8B5E3C; font-weight: 800; margin-bottom: 6px; letter-spacing: 1px; }
+  .cover .subtitle { font-size: 17px; color: #555; margin-bottom: 6px; }
+  .cover .subtitle2 { font-size: 14px; color: #888; margin-bottom: 32px; font-style: italic; }
+  .cover .meta-table { display: inline-block; text-align: left; margin-top: 20px; }
+  .cover .meta-table table { border-collapse: collapse; }
+  .cover .meta-table td { padding: 5px 18px 5px 0; font-size: 13px; color: #444; }
+  .cover .meta-table td:first-child { font-weight: 700; color: #8B5E3C; min-width: 140px; }
+  .toc { background: #fdf6f0; border-left: 4px solid #8B5E3C; padding: 20px 24px; border-radius: 4px; margin-bottom: 40px; }
+  .toc h2 { font-size: 14px; font-weight: 700; color: #8B5E3C; margin-bottom: 12px; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 3px; font-size: 13px; color: #333; }
+  .toc li a { color: #8B5E3C; text-decoration: none; }
+  .toc li a:hover { text-decoration: underline; }
+  h2.section-title { font-size: 19px; font-weight: 800; color: #8B5E3C; border-bottom: 2px solid #8B5E3C; padding-bottom: 6px; margin: 44px 0 16px; }
+  h3.sub-title { font-size: 15px; font-weight: 700; color: #3E2723; margin: 26px 0 10px; }
+  h4.item-title { font-size: 13px; font-weight: 700; color: #8B5E3C; margin: 18px 0 6px; }
+  p { margin-bottom: 10px; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-bottom: 18px; font-size: 13px; }
+  th { background: #8B5E3C; color: #fff; padding: 8px 12px; text-align: left; font-weight: 700; }
+  td { padding: 7px 12px; border-bottom: 1px solid #e0d5cc; vertical-align: top; }
+  tr:nth-child(even) td { background: #fdf6f0; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+  .badge-must { background: #fde8e8; color: #b91c1c; }
+  .badge-should { background: #fef3cd; color: #92400e; }
+  .badge-could { background: #e8f5e9; color: #166534; }
+  .badge-v2 { background: #e8e8fd; color: #3730a3; }
+  .priority-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .priority-legend span { font-size: 12px; }
+  .infobox { background: #fdf6f0; border-left: 4px solid #8B5E3C; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #3E2723; }
+  .warnbox { background: #fff8e1; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #78350f; }
+  .greenbox { background: #e8f5e9; border-left: 4px solid #2e7d32; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #1b5e20; }
+  .screen-label { display: inline-block; background: #8B5E3C; color: #fff; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+  @media print { .page { padding: 28px 36px; } h2.section-title { margin-top: 28px; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-icon">🌰</div>
+    <h1>Cahier des Charges</h1>
+    <div class="subtitle">Songo Online — La Plateforme Mondiale du Jeu de Songo</div>
+    <div class="subtitle2">« Sème. Réfléchis. Conquiers. »</div>
+    <div class="meta-table">
+      <table>
+        <tr><td>Version</td><td>1.0 — Vision complète + MVP</td></tr>
+        <tr><td>Domaine</td><td>Gaming, Culture, Esport, Éducation</td></tr>
+        <tr><td>Cible</td><td>Grand public, joueurs compétitifs, diaspora africaine, écoles, B2B</td></tr>
+        <tr><td>Pays d'ancrage</td><td>Cameroun, Gabon, Guinée Équatoriale, Congo</td></tr>
+        <tr><td>Benchmark</td><td>Chess.com, Lichess.org, OGS (Go)</td></tr>
+        <tr><td>Date</td><td>Avril 2026</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Sommaire</h2>
+    <ol>
+      <li><a href="#s1">Vision et contexte du projet</a></li>
+      <li><a href="#s2">Étude de marché et positionnement</a></li>
+      <li><a href="#s3">Acteurs, rôles et personas</a></li>
+      <li><a href="#s4">Architecture fonctionnelle globale</a></li>
+      <li><a href="#s5">Module 1 — Jouer (Play)</a></li>
+      <li><a href="#s6">Module 2 — Apprendre (Learn)</a></li>
+      <li><a href="#s7">Module 3 — Tournois et compétitions (Compete)</a></li>
+      <li><a href="#s8">Module 4 — Communauté et social (Connect)</a></li>
+      <li><a href="#s9">Module 5 — Profil, progression et classement (Profile)</a></li>
+      <li><a href="#s10">Module 6 — Spectacle et retransmission (Watch)</a></li>
+      <li><a href="#s11">Règles du Songo — Spécification logique</a></li>
+      <li><a href="#s12">Écrans clés et parcours utilisateur</a></li>
+      <li><a href="#s13">Exigences techniques</a></li>
+      <li><a href="#s14">Monétisation et modèle économique</a></li>
+      <li><a href="#s15">Roadmap et phasage</a></li>
+      <li><a href="#s16">Hors périmètre MVP</a></li>
+      <li><a href="#s17">Critères d'acceptation du MVP</a></li>
+      <li><a href="#s18">Indicateurs de succès (KPI)</a></li>
+    </ol>
+  </div>
+
+  <!-- SECTION 1 -->
+  <h2 class="section-title" id="s1">1. Vision et contexte du projet</h2>
+
+  <h3 class="sub-title">1.1 Contexte culturel</h3>
+  <p>Le <strong>Songo</strong> (aussi appelé Songa) est un jeu de stratégie combinatoire de la famille des jeux de semailles (mancala). Pratiqué depuis des millénaires au <strong>Cameroun</strong>, au <strong>Gabon</strong>, en <strong>Guinée Équatoriale</strong> et au <strong>Congo</strong>, il est l'un des jeux de réflexion les plus sophistiqués d'Afrique centrale. Il se distingue de l'Awalé par un plateau de 2×7 cases (au lieu de 2×6), un sens de distribution horaire, un système de greniers (ndà), et des règles de capture plus complexes impliquant des contraintes stratégiques profondes (Yinda, bidoua, menaces doubles).</p>
+  <p>Malgré sa richesse tactique et stratégique — comparable à celle des échecs et du Go — le Songo n'a jamais bénéficié d'une plateforme numérique de référence. Chess.com compte plus de 200 millions de membres ; OGS (Go) en a des centaines de milliers. <strong>Le Songo a zéro plateforme dédiée de niveau international.</strong></p>
+
+  <h3 class="sub-title">1.2 Mission</h3>
+  <p>Créer <strong>la plateforme de référence mondiale pour le jeu de Songo</strong>, à l'image de ce que Chess.com est aux échecs : un écosystème complet permettant de jouer, apprendre, participer à des tournois, suivre des compétitions en direct, et rejoindre une communauté de passionnés. L'objectif est de faire du Songo un jeu reconnu, pratiqué et célébré à l'échelle internationale.</p>
+
+  <h3 class="sub-title">1.3 Objectifs stratégiques</h3>
+  <ul>
+    <li><strong>Préservation culturelle :</strong> Numériser et standardiser les règles du Songo pour en assurer la transmission.</li>
+    <li><strong>Démocratisation :</strong> Rendre le jeu accessible à tout le monde, partout, sur tout appareil.</li>
+    <li><strong>Compétition :</strong> Structurer un écosystème compétitif avec un système ELO, des tournois réguliers et des championnats.</li>
+    <li><strong>Éducation :</strong> Proposer un parcours d'apprentissage progressif, des débutants aux experts.</li>
+    <li><strong>Communauté :</strong> Fédérer les joueurs de Songo du monde entier et faire grandir la base de joueurs.</li>
+    <li><strong>Esport :</strong> Positionner le Songo dans l'univers de l'esport africain, puis mondial.</li>
+  </ul>
+
+  <h3 class="sub-title">1.4 Nom et identité</h3>
+  <table>
+    <tr><th>Attribut</th><th>Détail</th></tr>
+    <tr><td>Nom commercial</td><td><strong>Songo Online</strong> (domaines envisagés : songo.gg, songogame.com)</td></tr>
+    <tr><td>Slogan</td><td>« Sème. Réfléchis. Conquiers. »</td></tr>
+    <tr><td>Identité visuelle</td><td>Tons bois/terre (marron, ambre, or), inspirations africaines, typographie moderne</td></tr>
+    <tr><td>Mascotte</td><td>Le « Semeur » — figure stylisée d'un joueur de Songo</td></tr>
+    <tr><td>Langues MVP</td><td>Français, Anglais</td></tr>
+    <tr><td>Langues V2+</td><td>Espagnol, Portugais, langues locales (Éwondo, Fang, etc.)</td></tr>
+  </table>
+
+  <!-- SECTION 2 -->
+  <h2 class="section-title" id="s2">2. Étude de marché et positionnement</h2>
+
+  <h3 class="sub-title">2.1 Analyse concurrentielle</h3>
+  <table>
+    <tr><th>Plateforme</th><th>Jeu</th><th>Membres</th><th>Modèle</th><th>Forces</th></tr>
+    <tr><td>Chess.com</td><td>Échecs</td><td>200M+</td><td>Freemium</td><td>Écosystème complet, esport, IA, cours, communauté massive</td></tr>
+    <tr><td>Lichess.org</td><td>Échecs</td><td>15M+</td><td>100% gratuit</td><td>Open source, pas de pub, analyse puissante</td></tr>
+    <tr><td>OGS</td><td>Go</td><td>300K+</td><td>Freemium</td><td>Interface claire, système de rank, communauté</td></tr>
+    <tr><td>Mancala (apps)</td><td>Awalé/Mancala</td><td>~500K dl</td><td>Pub/achat</td><td>Apps mobiles simples, non compétitives</td></tr>
+    <tr><td><strong>Songo Online</strong></td><td><strong>Songo</strong></td><td><strong>À construire</strong></td><td><strong>Freemium</strong></td><td><strong>Premier et unique, ancrage culturel fort, potentiel esport</strong></td></tr>
+  </table>
+
+  <h3 class="sub-title">2.2 Marché adressable</h3>
+  <ul>
+    <li><strong>Primaire :</strong> Diaspora camerounaise, gabonaise, équato-guinéenne, congolaise (~5-10M de personnes potentiellement familières avec le Songo ou les jeux de semailles).</li>
+    <li><strong>Secondaire :</strong> Afrique subsaharienne au sens large (~50M de joueurs potentiels de jeux de stratégie).</li>
+    <li><strong>Tertiaire :</strong> Public mondial intéressé par les jeux de stratégie, la culture africaine, les jeux de plateau.</li>
+  </ul>
+
+  <h3 class="sub-title">2.3 Avantages concurrentiels</h3>
+  <ul>
+    <li><strong>First mover :</strong> Aucune plateforme dédiée au Songo n'existe à ce jour.</li>
+    <li><strong>Profondeur stratégique :</strong> Le Songo est méconnu mais objectivement aussi profond que l'Awalé, avec des règles plus riches.</li>
+    <li><strong>Ancrage identitaire :</strong> Forte valeur culturelle et émotionnelle pour les communautés d'origine.</li>
+    <li><strong>Timing :</strong> Essor de l'esport africain, fierté culturelle croissante, connectivité mobile en forte hausse sur le continent.</li>
+  </ul>
+
+  <!-- SECTION 3 -->
+  <h2 class="section-title" id="s3">3. Acteurs, rôles et personas</h2>
+
+  <h3 class="sub-title">3.1 Rôles système</h3>
+  <table>
+    <tr><th>Acteur</th><th>Description</th><th>Accès</th></tr>
+    <tr><td><strong>Visiteur (Guest)</strong></td><td>Non inscrit. Peut observer des parties, consulter les règles, jouer vs IA en mode non classé.</td><td>Interface publique limitée</td></tr>
+    <tr><td><strong>Membre</strong></td><td>Inscrit. Joue en ligne (classé/non classé), participe aux tournois, suit des cours, a un profil et un ELO.</td><td>Interface complète</td></tr>
+    <tr><td><strong>Membre Premium</strong></td><td>Abonné. Accès illimité aux cours, analyse avancée, statistiques détaillées, personnalisation étendue.</td><td>Interface complète + premium</td></tr>
+    <tr><td><strong>Entraîneur</strong></td><td>Joueur certifié proposant cours, coaching 1-on-1, encadrement de clubs.</td><td>Interface auteur + coaching</td></tr>
+    <tr><td><strong>Organisateur</strong></td><td>Crée et administre des tournois publics ou privés.</td><td>Console tournois</td></tr>
+    <tr><td><strong>Administrateur</strong></td><td>Modération, gestion utilisateurs, configuration compétitions, anti-triche, contenu.</td><td>Back-office complet</td></tr>
+  </table>
+
+  <h3 class="sub-title">3.2 Personas</h3>
+  <h4 class="item-title">🎯 Persona 1 — Alain, 28 ans, Douala (Cameroun)</h4>
+  <p>Développeur web, joue au Songo depuis l'enfance. Rêve de trouver des adversaires de son niveau en ligne. Veut un classement et des tournois. Smartphone Android en 4G.</p>
+
+  <h4 class="item-title">🎯 Persona 2 — Fatou, 22 ans, Paris (France)</h4>
+  <p>Étudiante d'origine camerounaise, connaît le Songo via ses grands-parents. Veut réapprendre avec un parcours progressif. Joue depuis un PC portable.</p>
+
+  <h4 class="item-title">🎯 Persona 3 — James, 35 ans, New York (USA)</h4>
+  <p>Passionné de jeux de stratégie (échecs, Go). Découvre le Songo via un article. Attend une interface polished façon Chess.com.</p>
+
+  <h4 class="item-title">🎯 Persona 4 — Mme Ondo, 45 ans, Libreville (Gabon)</h4>
+  <p>Enseignante souhaitant utiliser le Songo comme outil pédagogique pour le calcul mental et la stratégie. Cherche un mode classe.</p>
+
+  <!-- SECTION 4 -->
+  <h2 class="section-title" id="s4">4. Architecture fonctionnelle globale</h2>
+  <p>La plateforme est organisée en <strong>6 modules fonctionnels</strong>, calqués sur la structure de Chess.com et adaptés au Songo :</p>
+  <table>
+    <tr><th>Module</th><th>Équivalent Chess.com</th><th>Description</th></tr>
+    <tr><td>🎮 <strong>Play</strong></td><td>Play</td><td>Jouer en ligne, contre l'IA, quotidien, local 2J</td></tr>
+    <tr><td>📚 <strong>Learn</strong></td><td>Learn (Lessons, Puzzles)</td><td>Cours, puzzles tactiques, exercices, ouvertures</td></tr>
+    <tr><td>🏆 <strong>Compete</strong></td><td>Tournaments, Leagues</td><td>Tournois, ligues, championnats, arènes</td></tr>
+    <tr><td>👥 <strong>Connect</strong></td><td>Social, Clubs, Forums</td><td>Clubs, amis, forums, messagerie, événements</td></tr>
+    <tr><td>📊 <strong>Profile</strong></td><td>Profile, Stats, Leaderboards</td><td>Profil, ELO, statistiques, classements, badges</td></tr>
+    <tr><td>📺 <strong>Watch</strong></td><td>Watch, TV</td><td>Spectateur en direct, archives, commentaires</td></tr>
+  </table>
+
+  <div class="priority-legend">
+    <span><span class="badge badge-must">MUST</span> Indispensable MVP</span>
+    <span><span class="badge badge-should">SHOULD</span> Souhaité MVP</span>
+    <span><span class="badge badge-could">COULD</span> Si possible</span>
+    <span><span class="badge badge-v2">V2+</span> Post-MVP</span>
+  </div>
+
+  <!-- SECTION 5 -->
+  <h2 class="section-title" id="s5">5. Module 1 — Jouer (Play)</h2>
+
+  <h3 class="sub-title">5.1 Modes de jeu</h3>
+  <table>
+    <tr><th>Mode</th><th>Description</th><th>Priorité</th></tr>
+    <tr><td><strong>En ligne classé</strong></td><td>Matchmaking par ELO. Cadences : Bullet (2 min), Blitz (5 min), Rapide (10 min), Classique (20 min). Rating séparé par cadence.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>En ligne non classé</strong></td><td>Parties détendues sans impact sur le classement.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Contre l'IA (Bots)</strong></td><td>Bots avec personnalités et niveaux variés (ELO 400 à 2500+). Chaque bot a un nom, un avatar et un style caractéristique.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Partie quotidienne</strong></td><td>Parties lentes (min 1 coup/jour). Plusieurs simultanées possibles.</td><td><span class="badge badge-should">SHOULD</span></td></tr>
+    <tr><td><strong>Local 2 joueurs</strong></td><td>Deux joueurs sur le même appareil.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Contre un ami</strong></td><td>Invitation par lien ou pseudo pour une partie privée.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Handicap</strong></td><td>Parties avec handicap de graines pour équilibrer les niveaux.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+    <tr><td><strong>Simultanées</strong></td><td>Un joueur fort joue plusieurs parties en même temps.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+  </table>
+
+  <h3 class="sub-title">5.2 Bots — Personnalités IA</h3>
+  <table>
+    <tr><th>Niveau</th><th>ELO</th><th>Exemples</th><th>Style</th></tr>
+    <tr><td>Débutant</td><td>400–800</td><td>Petit Ngon, Aïcha</td><td>Coups aléatoires, erreurs fréquentes, encourage le joueur</td></tr>
+    <tr><td>Intermédiaire</td><td>800–1400</td><td>Tonton Mvondo, Maman Ngono</td><td>Captures basiques, commentaires éducatifs</td></tr>
+    <tr><td>Avancé</td><td>1400–1800</td><td>Maître Obiang, Coach Bikié</td><td>Stratégie greniers, menaces doubles</td></tr>
+    <tr><td>Expert</td><td>1800–2200</td><td>Grand Mbarga, Nkembo</td><td>Jeu positionnel, bidoua, Yinda avancé</td></tr>
+    <tr><td>Légendaire</td><td>2200+</td><td>Le Semeur, L'Ancien</td><td>Jeu quasi-parfait</td></tr>
+  </table>
+
+  <h3 class="sub-title">5.3 Fonctionnalités en partie</h3>
+  <ul>
+    <li><strong>Plateau interactif :</strong> 14 cases avec animation des semailles (graines case par case). <span class="badge badge-must">MUST</span></li>
+    <li><strong>Coups valides en surbrillance :</strong> Cases jouables mises en évidence. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Animation des captures :</strong> Mise en valeur visuelle et sonore. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Pendule :</strong> Timer par joueur avec incrément configurable. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Historique des coups :</strong> Notation (ex: S2→N0-N2 +6) avec replay. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Chat :</strong> Emojis et messages prédéfinis. <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Abandon / Offre de nul.</strong> <span class="badge badge-must">MUST</span></li>
+    <li><strong>Effets sonores :</strong> Semailles, captures, timer. <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Thèmes visuels :</strong> Choix plateau (bois, bambou, terre, moderne) et graines. <span class="badge badge-could">COULD</span></li>
+  </ul>
+
+  <h3 class="sub-title">5.4 Analyse post-partie</h3>
+  <ul>
+    <li><strong>Revue coup par coup</strong> avec évaluation (excellent, bon, imprécision, erreur, gaffe). <span class="badge badge-must">MUST</span></li>
+    <li><strong>Meilleur coup suggéré</strong> par l'IA à chaque position. <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Score d'exactitude</strong> (% de précision, comme le Game Review Chess.com). <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Partage / export</strong> en lien partageable et format SGN (Songo Game Notation). <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+
+  <!-- SECTION 6 -->
+  <h2 class="section-title" id="s6">6. Module 2 — Apprendre (Learn)</h2>
+
+  <h3 class="sub-title">6.1 Cours et leçons</h3>
+  <table>
+    <tr><th>Parcours</th><th>Contenu</th><th>Priorité</th></tr>
+    <tr><td><strong>Découverte du Songo</strong></td><td>Histoire, plateau, graines, camps Nord/Sud. Interactif.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Les bases</strong></td><td>Distribution (RADIMESE), sens horaire, premiers coups, premières captures.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Captures et interdits</strong></td><td>Règles de capture (DITOTO), contiguïté, interdits (N6/S0, asséchement, solidarité).</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Le Grenier (ndà)</strong></td><td>Construction, distribution post-tour, captures massives.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Stratégies fondamentales</strong></td><td>Menace simple, menace double, Yinda, bidoua.</td><td><span class="badge badge-should">SHOULD</span></td></tr>
+    <tr><td><strong>Ouvertures</strong></td><td>Séquences d'ouverture courantes et évaluation.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+    <tr><td><strong>Fins de partie</strong></td><td>Techniques, conversion d'avantage, comptage.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+    <tr><td><strong>Cours par des maîtres</strong></td><td>Contenu premium par des experts invités.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+  </table>
+
+  <h3 class="sub-title">6.2 Puzzles tactiques</h3>
+  <ul>
+    <li><strong>Puzzle du jour :</strong> Un puzzle quotidien pour tous. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Puzzles classés :</strong> Base de données avec rating ELO. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Puzzle Rush :</strong> Maximum de puzzles en temps limité (3 min, 5 min, survie). <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Puzzle Battle :</strong> Duel en temps réel. <span class="badge badge-v2">V2+</span></li>
+    <li><strong>Puzzles thématiques :</strong> Par thème : captures en chaîne, greniers, Yinda, menaces doubles. <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+
+  <h3 class="sub-title">6.3 Entraînement interactif</h3>
+  <ul>
+    <li><strong>Exercices de semailles :</strong> Visualisation complète de la distribution. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Exercices de capture :</strong> Trouver la meilleure capture. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Mode entraînement vs IA :</strong> Avec indices activés. <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Coach IA :</strong> Analyse personnalisée post-partie. <span class="badge badge-v2">V2+</span></li>
+  </ul>
+
+  <!-- SECTION 7 -->
+  <h2 class="section-title" id="s7">7. Module 3 — Tournois et compétitions (Compete)</h2>
+
+  <h3 class="sub-title">7.1 Types de tournois</h3>
+  <table>
+    <tr><th>Format</th><th>Description</th><th>Priorité</th></tr>
+    <tr><td><strong>Arène</strong></td><td>Inscription libre, durée fixe (1-2h), matchmaking auto, classement par points.</td><td><span class="badge badge-must">MUST</span></td></tr>
+    <tr><td><strong>Suisse</strong></td><td>Appariement suisse, nombre de rondes défini.</td><td><span class="badge badge-should">SHOULD</span></td></tr>
+    <tr><td><strong>Élimination directe</strong></td><td>Bracket simple/double pour finales et championnats.</td><td><span class="badge badge-should">SHOULD</span></td></tr>
+    <tr><td><strong>Round Robin</strong></td><td>Tous contre tous pour petits groupes.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+    <tr><td><strong>Quotidien</strong></td><td>Parties 1 coup/jour en format tournoi.</td><td><span class="badge badge-v2">V2+</span></td></tr>
+  </table>
+
+  <h3 class="sub-title">7.2 Compétitions régulières</h3>
+  <table>
+    <tr><th>Compétition</th><th>Fréquence</th><th>Description</th></tr>
+    <tr><td><strong>Arène hebdomadaire</strong></td><td>Chaque samedi</td><td>Tournoi arène ouvert, 2h, classement par points.</td></tr>
+    <tr><td><strong>Titled Tuesday Songo</strong></td><td>Chaque mardi</td><td>Réservé aux joueurs ELO &gt; 1800.</td></tr>
+    <tr><td><strong>Ligue mensuelle</strong></td><td>Mensuelle</td><td>Ligues (Bois → Légende). Montée/descente chaque mois.</td></tr>
+    <tr><td><strong>Championnat national</strong></td><td>Annuel</td><td>Par pays avec qualifications en ligne.</td></tr>
+    <tr><td><strong>Songo World Championship</strong></td><td>Annuel</td><td>Championnat mondial avec qualifications régionales.</td></tr>
+    <tr><td><strong>Inter-clubs</strong></td><td>Semestriel</td><td>Clubs s'affrontent par équipes.</td></tr>
+  </table>
+
+  <h3 class="sub-title">7.3 Système de ligues</h3>
+  <table>
+    <tr><th>Ligue</th><th>Icône</th><th>Promotion</th></tr>
+    <tr><td>Bois</td><td>🪵</td><td>Tous les nouveaux joueurs</td></tr>
+    <tr><td>Bronze</td><td>🥉</td><td>Top 50% de Bois</td></tr>
+    <tr><td>Argent</td><td>🥈</td><td>Top 30% de Bronze</td></tr>
+    <tr><td>Or</td><td>🥇</td><td>Top 20% d'Argent</td></tr>
+    <tr><td>Diamant</td><td>💎</td><td>Top 10% d'Or</td></tr>
+    <tr><td>Légende</td><td>👑</td><td>Top 100 mondial</td></tr>
+  </table>
+
+  <!-- SECTION 8 -->
+  <h2 class="section-title" id="s8">8. Module 4 — Communauté et social (Connect)</h2>
+  <h3 class="sub-title">8.1 Clubs</h3>
+  <ul>
+    <li>Création et gestion de clubs (nom, description, logo, admission). <span class="badge badge-must">MUST</span></li>
+    <li>Forum interne au club. <span class="badge badge-should">SHOULD</span></li>
+    <li>Matchs inter-clubs par équipes. <span class="badge badge-v2">V2+</span></li>
+    <li>Classement des clubs. <span class="badge badge-v2">V2+</span></li>
+  </ul>
+  <h3 class="sub-title">8.2 Social</h3>
+  <ul>
+    <li><strong>Liste d'amis :</strong> Ajouter, voir statut (en ligne, en partie, hors ligne). <span class="badge badge-must">MUST</span></li>
+    <li><strong>Messagerie directe :</strong> Chat 1-to-1 entre amis. <span class="badge badge-should">SHOULD</span></li>
+    <li><strong>Défis :</strong> Défi direct à un joueur pour une partie. <span class="badge badge-must">MUST</span></li>
+    <li><strong>Forums publics.</strong> <span class="badge badge-v2">V2+</span></li>
+    <li><strong>Blogs joueurs.</strong> <span class="badge badge-v2">V2+</span></li>
+  </ul>
+  <h3 class="sub-title">8.3 Présence en ligne</h3>
+  <ul>
+    <li>Compteur de joueurs en ligne sur la page d'accueil. <span class="badge badge-must">MUST</span></li>
+    <li>Liste des parties en cours observables. <span class="badge badge-must">MUST</span></li>
+    <li>Filtre par ELO, cadence, pays. <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+
+  <!-- SECTION 9 -->
+  <h2 class="section-title" id="s9">9. Module 5 — Profil, progression et classement (Profile)</h2>
+  <h3 class="sub-title">9.1 Profil joueur</h3>
+  <ul>
+    <li>Avatar, pseudo, pays, bio, date d'inscription. <span class="badge badge-must">MUST</span></li>
+    <li>ELO par cadence (Bullet, Blitz, Rapide, Classique, Puzzle). <span class="badge badge-must">MUST</span></li>
+    <li>Graphique d'évolution du rating. <span class="badge badge-must">MUST</span></li>
+    <li>Historique des parties. <span class="badge badge-must">MUST</span></li>
+    <li>Statistiques : W/L/D, meilleure série, total parties. <span class="badge badge-must">MUST</span></li>
+    <li>Badges et accomplissements. <span class="badge badge-should">SHOULD</span></li>
+    <li>Titres : Apprenti Semeur, Semeur, Maître Semeur, Grand Maître, Légende. <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+  <h3 class="sub-title">9.2 Système Glicko-2</h3>
+  <table>
+    <tr><th>Paramètre</th><th>Détail</th></tr>
+    <tr><td>Algorithme</td><td>Glicko-2 (standard Chess.com/Lichess)</td></tr>
+    <tr><td>Rating initial</td><td>1200 (forte déviation initiale)</td></tr>
+    <tr><td>Cadences séparées</td><td>Bullet, Blitz, Rapide, Classique, Puzzle</td></tr>
+    <tr><td>Provisoire</td><td>Affiché « ? » pendant les 20 premières parties</td></tr>
+    <tr><td>Titres</td><td>Apprenti (&lt;1000), Semeur (1000-1400), Maître Semeur (1400-1800), Grand Maître (1800+), Légende (2200+)</td></tr>
+  </table>
+  <h3 class="sub-title">9.3 Classements</h3>
+  <ul>
+    <li>Mondial par cadence. <span class="badge badge-must">MUST</span></li>
+    <li>Par pays. <span class="badge badge-must">MUST</span></li>
+    <li>Par club. <span class="badge badge-v2">V2+</span></li>
+    <li>Hebdomadaire (plus forte progression). <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+
+  <!-- SECTION 10 -->
+  <h2 class="section-title" id="s10">10. Module 6 — Spectacle et retransmission (Watch)</h2>
+  <h3 class="sub-title">10.1 Spectateur en direct</h3>
+  <ul>
+    <li>Observer toute partie en cours (sauf privées). <span class="badge badge-must">MUST</span></li>
+    <li>Page « En direct » : parties les plus intéressantes. <span class="badge badge-must">MUST</span></li>
+    <li>Barre d'évaluation IA en temps réel. <span class="badge badge-should">SHOULD</span></li>
+    <li>Chat spectateurs. <span class="badge badge-should">SHOULD</span></li>
+  </ul>
+  <h3 class="sub-title">10.2 Archives</h3>
+  <ul>
+    <li>Base de données de toutes les parties. <span class="badge badge-must">MUST</span></li>
+    <li>Replay animé. <span class="badge badge-should">SHOULD</span></li>
+    <li>Parties annotées par experts. <span class="badge badge-v2">V2+</span></li>
+    <li>Songo TV : retransmission commentée. <span class="badge badge-v2">V2+</span></li>
+  </ul>
+
+  <!-- SECTION 11 -->
+  <h2 class="section-title" id="s11">11. Règles du Songo — Spécification logique</h2>
+  <div class="infobox"><strong>Source :</strong> Document « Les règles du jeu de songo » et ouvrages de Serge Mbarga Owona et Bonaventure Mvé Ondo.</div>
+
+  <h3 class="sub-title">11.1 Configuration initiale</h3>
+  <table>
+    <tr><th>Élément</th><th>Valeur</th></tr>
+    <tr><td>Cases</td><td>14 (2×7) : N0-N6 (Nord), S0-S6 (Sud)</td></tr>
+    <tr><td>Graines</td><td>70 (5 par case)</td></tr>
+    <tr><td>Victoire</td><td>Capturer ≥ 40 graines</td></tr>
+    <tr><td>Sens</td><td>Horaire (droite → gauche) — différent de l'Awalé</td></tr>
+  </table>
+
+  <h3 class="sub-title">11.2 Distribution (RADIMESE)</h3>
+  <ul>
+    <li>Ramasser toutes les graines d'une case non vide de son camp.</li>
+    <li>Distribuer une par une dans le sens horaire.</li>
+  </ul>
+
+  <h3 class="sub-title">11.3 Le Grenier (ndà) — plus de 13 graines</h3>
+  <ul>
+    <li>13 graines distribuées (un tour complet).</li>
+    <li>Si 1 reste = prise directe. Si plus = distribution dans le camp adverse uniquement.</li>
+  </ul>
+
+  <h3 class="sub-title">11.4 Captures (DITOTO)</h3>
+  <ul>
+    <li>Dernière graine dans une case adverse avec total 2, 3 ou 4 = capture.</li>
+    <li>Extension aux cases contiguës (remontée) tant que le total est 2-4.</li>
+    <li>Interruption dès qu'une case ne remplit pas la condition.</li>
+  </ul>
+
+  <h3 class="sub-title">11.5 Interdits</h3>
+  <table>
+    <tr><th>Interdit</th><th>Détail</th></tr>
+    <tr><td>1 graine depuis N6/S0</td><td>Distribution d'une seule graine vers le camp adverse interdite.</td></tr>
+    <tr><td>2 graines depuis N6/S0</td><td>Interdit sauf si capture résultante.</td></tr>
+    <tr><td>Capture unique en N0/S6</td><td>Interdit de capturer exclusivement dans la case extrême.</td></tr>
+    <tr><td>Asséchement</td><td>Interdit de vider entièrement le camp adverse.</td></tr>
+    <tr><td>Solidarité</td><td>Si camp adverse vide, jouer la case avec le plus de graines.</td></tr>
+  </table>
+
+  <h3 class="sub-title">11.6 Fin de partie</h3>
+  <ul>
+    <li><strong>Victoire :</strong> ≥ 40 graines capturées.</li>
+    <li><strong>Nul :</strong> Position bloquée ou aucun joueur n'atteint 40.</li>
+    <li><strong>Abandon / Temps écoulé.</strong></li>
+  </ul>
+
+  <!-- SECTION 12 -->
+  <h2 class="section-title" id="s12">12. Écrans clés et parcours utilisateur</h2>
+
+  <h3 class="sub-title">12.1 Parcours d'onboarding</h3>
+  <ol>
+    <li>Arrivée sur la page d'accueil → compteur de joueurs en ligne, parties en cours, « Jouer maintenant ».</li>
+    <li>Partie vs IA sans inscription (mode invité).</li>
+    <li>Invitation à créer un compte (email, Google, Apple).</li>
+    <li>Tutoriel interactif des règles.</li>
+    <li>Première partie classée → rating provisoire.</li>
+  </ol>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 01</span> Page d'accueil</h4>
+  <ul>
+    <li>Hero banner + « Jouer maintenant » + compteur joueurs en ligne.</li>
+    <li>Accès rapide : vs humain, vs IA, Puzzle du jour, Tournoi en cours.</li>
+    <li>Feed : parties remarquables, résultats tournois, articles récents.</li>
+    <li>Section « Parties en direct » avec miniatures.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 02</span> Lobby de jeu</h4>
+  <ul>
+    <li>Sélection mode + cadence + recherche d'adversaire.</li>
+    <li>Pour IA : sélection du bot (fiche : nom, avatar, ELO, style).</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 03</span> Plateau de jeu</h4>
+  <ul>
+    <li>Plateau 14 cases avec graines animées et labels N0-N6 / S0-S6.</li>
+    <li>Cartes joueurs (avatar, pseudo, ELO, timer, graines capturées + barre vers 40).</li>
+    <li>Historique des coups + boutons (abandonner, nul, paramètres).</li>
+    <li>Surbrillance des coups valides. Mode spectateur : évaluation IA + chat.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 04</span> Analyse post-partie</h4>
+  <ul>
+    <li>Replay avec contrôles. Évaluation couleur par coup. Score d'exactitude.</li>
+    <li>Meilleur coup + « Rejouer depuis cette position ».</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 05</span> Tableau de bord</h4>
+  <ul>
+    <li>Rating, ligue, streak. Parties récentes. Progression jour/semaine. Accès rapide.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 06</span> Profil public</h4>
+  <ul>
+    <li>Avatar, pseudo, pays, titre, bio. Graphique rating. Stats. Badges. Historique. Boutons défi/ami.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 07</span> Classements</h4>
+  <ul>
+    <li>Onglets par cadence. Filtre pays/club. Top 100 + position du joueur.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 08</span> Tournois</h4>
+  <ul>
+    <li>À venir (countdown, format, inscrits). En cours (bracket/classement live). Historique.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 09</span> Apprentissage</h4>
+  <ul>
+    <li>Parcours structuré avec progression visuelle. Puzzles. Exercices. Premium : accès complet.</li>
+  </ul>
+
+  <h4 class="item-title"><span class="screen-label">ÉCRAN 10</span> En direct (Watch)</h4>
+  <ul>
+    <li>Grille de parties en cours. Clic = mode spectateur. Événements : partie principale + commentaires.</li>
+  </ul>
+
+  <!-- SECTION 13 -->
+  <h2 class="section-title" id="s13">13. Exigences techniques</h2>
+
+  <h3 class="sub-title">13.1 Architecture</h3>
+  <table>
+    <tr><th>Composant</th><th>Recommandation</th><th>Justification</th></tr>
+    <tr><td>Frontend</td><td>Next.js + TypeScript</td><td>SSR/SEO, composants réactifs</td></tr>
+    <tr><td>Backend</td><td>Node.js + NestJS (ou Go pour services critiques)</td><td>WebSockets natifs, haute perf</td></tr>
+    <tr><td>Temps réel</td><td>WebSockets (Socket.IO)</td><td>Jeu en ligne, spectateur, chat</td></tr>
+    <tr><td>Moteur de jeu</td><td>TypeScript/Rust (WASM)</td><td>Logique pure, testable, réutilisable client+serveur</td></tr>
+    <tr><td>IA</td><td>Minimax + alpha-bêta (puis MCTS/NN V2)</td><td>Qualité suffisante, évolutif</td></tr>
+    <tr><td>Base de données</td><td>PostgreSQL + Redis</td><td>Persistance + cache/sessions/matchmaking</td></tr>
+    <tr><td>Auth</td><td>JWT + OAuth2 (Google, Apple)</td><td>Standard, mobile-friendly</td></tr>
+    <tr><td>Stockage</td><td>AWS S3 / Cloudflare R2</td><td>Avatars, images, assets</td></tr>
+    <tr><td>CDN</td><td>Cloudflare</td><td>Performance mondiale, anti-DDoS</td></tr>
+    <tr><td>Hébergement</td><td>AWS / Fly.io / Railway</td><td>Scalable, multi-régions</td></tr>
+    <tr><td>CI/CD</td><td>GitHub Actions</td><td>Déploiement auto, tests continus</td></tr>
+    <tr><td>Monitoring</td><td>Sentry + Grafana</td><td>Erreurs + performance</td></tr>
+  </table>
+
+  <h3 class="sub-title">13.2 Exigences non-fonctionnelles</h3>
+  <ul>
+    <li><strong>Performance :</strong> Latence coup &lt; 100ms. Chargement &lt; 3s en 3G.</li>
+    <li><strong>Responsive :</strong> Mobile-first (marché africain). Fluide sur tout appareil.</li>
+    <li><strong>Accessibilité :</strong> WCAG 2.1 AA. Mode daltonien.</li>
+    <li><strong>Sécurité :</strong> XSS, CSRF, injection SQL. bcrypt. Rate limiting.</li>
+    <li><strong>Anti-triche :</strong> Détection patterns suspects, signalement, sanctions.</li>
+    <li><strong>Disponibilité :</strong> 99,5% uptime.</li>
+    <li><strong>Scalabilité :</strong> 100 → 100 000 joueurs simultanés.</li>
+    <li><strong>i18n :</strong> Structure prête dès le MVP.</li>
+  </ul>
+
+  <h3 class="sub-title">13.3 Modèle de données</h3>
+  <table>
+    <tr><th>Entité</th><th>Champs principaux</th></tr>
+    <tr><td><strong>User</strong></td><td>id, pseudo, email, password_hash, pays, avatar_url, bio, rôle, titre, créé_le</td></tr>
+    <tr><td><strong>Rating</strong></td><td>id, user_id, cadence, rating, rd, volatilité, nb_parties</td></tr>
+    <tr><td><strong>Game</strong></td><td>id, joueur_nord_id, joueur_sud_id, cadence, temps, résultat, raison_fin, coups (JSON)</td></tr>
+    <tr><td><strong>Tournament</strong></td><td>id, nom, format, cadence, dates, max_joueurs, statut, organisateur_id</td></tr>
+    <tr><td><strong>Club</strong></td><td>id, nom, description, logo_url, fondateur_id</td></tr>
+    <tr><td><strong>Puzzle</strong></td><td>id, position (JSON), solution (JSON), rating, thème</td></tr>
+    <tr><td><strong>Lesson</strong></td><td>id, parcours_id, titre, contenu, ordre, type</td></tr>
+    <tr><td><strong>Friendship</strong></td><td>id, user_id, friend_id, statut</td></tr>
+    <tr><td><strong>Achievement</strong></td><td>id, code, nom, description, icône, condition</td></tr>
+  </table>
+
+  <!-- SECTION 14 -->
+  <h2 class="section-title" id="s14">14. Monétisation et modèle économique</h2>
+  <h3 class="sub-title">14.1 Freemium</h3>
+  <table>
+    <tr><th>Fonctionnalité</th><th>Gratuit</th><th>Premium (Semeur+)</th></tr>
+    <tr><td>Jouer en ligne</td><td>✅ Illimité</td><td>✅ Illimité</td></tr>
+    <tr><td>Bots</td><td>✅ 10</td><td>✅ Tous (50+)</td></tr>
+    <tr><td>Analyse post-partie</td><td>✅ 1/jour</td><td>✅ Illimité</td></tr>
+    <tr><td>Puzzles classés</td><td>✅ 5/jour</td><td>✅ Illimité</td></tr>
+    <tr><td>Cours</td><td>✅ Bases</td><td>✅ Tous</td></tr>
+    <tr><td>Thèmes visuels</td><td>1</td><td>✅ Tous</td></tr>
+    <tr><td>Insights / Stats avancées</td><td>❌</td><td>✅</td></tr>
+    <tr><td>Coach IA</td><td>❌</td><td>✅</td></tr>
+    <tr><td>Sans pub</td><td>❌</td><td>✅</td></tr>
+  </table>
+  <h3 class="sub-title">14.2 Tarification</h3>
+  <table>
+    <tr><th>Plan</th><th>Prix</th><th>Cible</th></tr>
+    <tr><td>Gratuit</td><td>0</td><td>Acquisition</td></tr>
+    <tr><td>Semeur+ Mensuel</td><td>~3-5 USD/mois</td><td>Joueurs réguliers (prix adapté Afrique)</td></tr>
+    <tr><td>Semeur+ Annuel</td><td>~25-40 USD/an</td><td>Engagés (~30% réduction)</td></tr>
+    <tr><td>Écoles / Clubs</td><td>Sur devis</td><td>Licences groupées</td></tr>
+  </table>
+
+  <!-- SECTION 15 -->
+  <h2 class="section-title" id="s15">15. Roadmap et phasage</h2>
+  <h3 class="sub-title">Phase 1 — MVP (Mois 1-4)</h3>
+  <table>
+    <tr><th>Livrable</th><th>Détail</th></tr>
+    <tr><td>Moteur de jeu</td><td>100% des règles, 50+ tests unitaires</td></tr>
+    <tr><td>Jouer vs IA</td><td>5 niveaux de bots (Minimax)</td></tr>
+    <tr><td>Jouer en ligne</td><td>Matchmaking ELO, WebSocket, Blitz + Rapide</td></tr>
+    <tr><td>Auth</td><td>Email + OAuth Google</td></tr>
+    <tr><td>Profil</td><td>Rating, historique, stats de base</td></tr>
+    <tr><td>Classement</td><td>Top 100 par cadence</td></tr>
+    <tr><td>Cours de base</td><td>3 leçons interactives</td></tr>
+    <tr><td>Puzzle du jour</td><td>1 puzzle/jour + 5 classés gratuits</td></tr>
+    <tr><td>Spectateur</td><td>Observer des parties en cours</td></tr>
+    <tr><td>Mobile</td><td>Interface responsive</td></tr>
+  </table>
+  <h3 class="sub-title">Phase 2 — Croissance (Mois 5-8)</h3>
+  <table>
+    <tr><th>Livrable</th><th>Détail</th></tr>
+    <tr><td>Tournois</td><td>Arène + suisse</td></tr>
+    <tr><td>Ligues</td><td>Système mensuel Bois → Légende</td></tr>
+    <tr><td>Clubs + Amis</td><td>Création, membres, défis, statut</td></tr>
+    <tr><td>Analyse avancée</td><td>Revue IA par coup</td></tr>
+    <tr><td>Puzzles+</td><td>Rush, thématiques, rating puzzle</td></tr>
+    <tr><td>Cours intermédiaires</td><td>Yinda, bidoua, greniers, menaces</td></tr>
+    <tr><td>Premium</td><td>Lancement Semeur+</td></tr>
+    <tr><td>App mobile</td><td>PWA ou React Native</td></tr>
+  </table>
+  <h3 class="sub-title">Phase 3 — Expansion (Mois 9-14)</h3>
+  <table>
+    <tr><th>Livrable</th><th>Détail</th></tr>
+    <tr><td>Championnats</td><td>Nationaux + premier World Championship</td></tr>
+    <tr><td>Coach IA</td><td>Analyse personnalisée</td></tr>
+    <tr><td>Songo TV</td><td>Retransmission commentée</td></tr>
+    <tr><td>Anti-triche IA</td><td>Détection avancée</td></tr>
+    <tr><td>API publique</td><td>Intégrations tierces</td></tr>
+    <tr><td>Partenariats</td><td>Fédérations, écoles, sponsors esport</td></tr>
+    <tr><td>Langues</td><td>Espagnol, Portugais</td></tr>
+  </table>
+
+  <!-- SECTION 16 -->
+  <h2 class="section-title" id="s16">16. Hors périmètre MVP</h2>
+  <div class="warnbox">Fonctionnalités exclues du MVP (Phase 1) pour concentrer les efforts sur le cœur du produit. Planifiées en Phase 2 ou 3.</div>
+  <ul>
+    <li>Paiement et abonnements premium</li>
+    <li>Application mobile native</li>
+    <li>Tournois organisés (arène, suisse, élimination)</li>
+    <li>Ligues et système de promotion</li>
+    <li>Clubs et forums</li>
+    <li>Messagerie directe</li>
+    <li>Coach IA personnalisé</li>
+    <li>Songo TV et retransmission</li>
+    <li>Anti-triche avancé par IA</li>
+    <li>API publique</li>
+    <li>Blogs et contenu communautaire</li>
+    <li>Mode offline / PWA</li>
+    <li>Traduction au-delà FR/EN</li>
+    <li>Handicap et simultanées</li>
+  </ul>
+
+  <!-- SECTION 17 -->
+  <h2 class="section-title" id="s17">17. Critères d'acceptation du MVP</h2>
+  <table>
+    <tr><th>#</th><th>Critère</th><th>Vérification</th></tr>
+    <tr><td>1</td><td>Moteur = 100% des règles (distribution, greniers, captures, interdits, solidarité)</td><td>50+ tests unitaires issus du document de règles</td></tr>
+    <tr><td>2</td><td>Un joueur peut s'inscrire et jouer une partie classée en ligne en &lt; 60s</td><td>Test E2E chronométré</td></tr>
+    <tr><td>3</td><td>IA jouable à 5 niveaux ; le bot fort bat 90% des débutants</td><td>Tests IA vs IA + tests utilisateurs</td></tr>
+    <tr><td>4</td><td>Glicko-2 calcule et met à jour les ELO correctement</td><td>Vérification sur 20 parties + convergence</td></tr>
+    <tr><td>5</td><td>Classement mondial Top 100 par cadence</td><td>Données simulées</td></tr>
+    <tr><td>6</td><td>3 leçons interactives complétables avec quiz</td><td>Test utilisateur complet</td></tr>
+    <tr><td>7</td><td>Puzzle du jour résolvable avec feedback</td><td>Test quotidien sur 7 jours</td></tr>
+    <tr><td>8</td><td>Spectateur en direct avec mise à jour temps réel</td><td>Test 2 parties + 3 spectateurs</td></tr>
+    <tr><td>9</td><td>Interface fonctionnelle sur mobile Android (tactile)</td><td>Test sur 3 appareils Android</td></tr>
+    <tr><td>10</td><td>Latence coup en ligne &lt; 200ms</td><td>Mesure sur 100 coups en conditions réelles</td></tr>
+  </table>
+
+  <!-- SECTION 18 -->
+  <h2 class="section-title" id="s18">18. Indicateurs de succès (KPI)</h2>
+  <h3 class="sub-title">Phase 1 — MVP (4 mois)</h3>
+  <table>
+    <tr><th>Indicateur</th><th>Objectif</th></tr>
+    <tr><td>Inscriptions</td><td>5 000</td></tr>
+    <tr><td>MAU</td><td>1 500</td></tr>
+    <tr><td>Parties / mois</td><td>10 000</td></tr>
+    <tr><td>Rétention J7</td><td>&gt; 30%</td></tr>
+    <tr><td>Rétention J30</td><td>&gt; 15%</td></tr>
+    <tr><td>NPS</td><td>&gt; 40</td></tr>
+  </table>
+  <h3 class="sub-title">Phase 2 (Mois 5-8)</h3>
+  <table>
+    <tr><th>Indicateur</th><th>Objectif</th></tr>
+    <tr><td>Inscriptions cumulées</td><td>25 000</td></tr>
+    <tr><td>MAU</td><td>8 000</td></tr>
+    <tr><td>Conversion Premium</td><td>&gt; 3%</td></tr>
+    <tr><td>Clubs créés</td><td>100+</td></tr>
+    <tr><td>Parties / mois</td><td>50 000</td></tr>
+  </table>
+  <h3 class="sub-title">Vision 18 mois</h3>
+  <table>
+    <tr><th>Indicateur</th><th>Objectif</th></tr>
+    <tr><td>Inscriptions</td><td>100 000</td></tr>
+    <tr><td>MAU</td><td>30 000</td></tr>
+    <tr><td>MRR</td><td>5 000-10 000 USD</td></tr>
+    <tr><td>Pays représentés</td><td>30+</td></tr>
+    <tr><td>World Championship</td><td>500+ participants</td></tr>
+  </table>
+
+  <div class="greenbox" style="margin-top: 40px;">
+    <strong>Note finale :</strong> Ce cahier des charges constitue la vision complète du projet Songo Online. Il est structuré pour un développement itératif : le MVP (Phase 1) est clairement délimité et chaque fonctionnalité priorisée. Ce document est vivant — révision V1.1 planifiée après 4 semaines de développement.
+  </div>
+
+  <p style="text-align: center; color: #8B5E3C; font-size: 11px; margin-top: 32px; letter-spacing: 2px;">
+    — SONGO ONLINE — Sème. Réfléchis. Conquiers. —
+  </p>
+
+</div>
+</body>
+</html>

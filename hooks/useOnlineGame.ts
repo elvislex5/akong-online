@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { onlineManager } from '../services/onlineManager';
-import { createGameRoom, joinGameRoom, getRoomByCode, updateGameState as saveGameState, finishGame, abandonGame } from '../services/roomService';
+import { createGameRoomWithFormat, joinGameRoom, getRoomByCode, updateGameState as saveGameState, finishGame, abandonGame } from '../services/roomService';
 import { GameState, GameMode, Player, OnlineMessage } from '../types';
-import { GameRoom, Profile } from '../services/supabase';
+import { GameRoom, Profile, MatchFormat } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 interface UseOnlineGameProps {
@@ -23,6 +23,10 @@ interface UseOnlineGameProps {
   onRestartGame?: () => void;
   onChatMessage?: (message: any) => void;
   onChatTyping?: (userId: string, userName: string, isTyping: boolean) => void;
+  onMatchComplete?: (payload: any) => void;
+  onMatchScoreUpdate?: () => void;
+  onDrawOffer?: (fromName: string) => void;
+  onDrawAccepted?: () => void;
 }
 
 export function useOnlineGame({
@@ -37,7 +41,11 @@ export function useOnlineGame({
   onRestart,
   onRestartGame,
   onChatMessage,
-  onChatTyping
+  onChatTyping,
+  onMatchComplete,
+  onMatchScoreUpdate,
+  onDrawOffer,
+  onDrawAccepted,
 }: UseOnlineGameProps) {
   // Online State
   const [roomId, setRoomId] = useState<string>(''); // Room code (6 chars)
@@ -57,7 +65,11 @@ export function useOnlineGame({
     onRestart,
     onRestartGame,
     onChatMessage,
-    onChatTyping
+    onChatTyping,
+    onMatchComplete,
+    onMatchScoreUpdate,
+    onDrawOffer,
+    onDrawAccepted,
   });
 
   // Update callbacks ref when props change
@@ -69,9 +81,13 @@ export function useOnlineGame({
       onRestart,
       onRestartGame,
       onChatMessage,
-      onChatTyping
+      onChatTyping,
+      onMatchComplete,
+      onMatchScoreUpdate,
+      onDrawOffer,
+      onDrawAccepted,
     };
-  }, [onGameStateUpdate, onGameModeUpdate, onGameEnded, onRestart, onRestartGame, onChatMessage, onChatTyping]);
+  }, [onGameStateUpdate, onGameModeUpdate, onGameEnded, onRestart, onRestartGame, onChatMessage, onChatTyping, onMatchComplete, onMatchScoreUpdate, onDrawOffer, onDrawAccepted]);
 
   // Handle reconnection and state restoration
   useEffect(() => {
@@ -80,7 +96,6 @@ export function useOnlineGame({
       onlineManager.onReconnect((restoredState) => {
         setIsConnected(true);
         if (restoredState) {
-          console.log('[useOnlineGame] Game state restored after reconnection');
           setOnlineStatus('Connecté - Partie en cours');
           toast.success('Connexion rétablie ! État du jeu restauré.');
         } else {
@@ -103,7 +118,11 @@ export function useOnlineGame({
   }, [gameMode]);
 
   // Create Room Handler
-  const handleCreateRoom = async () => {
+  const handleCreateRoom = async (
+    matchFormat: MatchFormat = 'infinite',
+    matchTarget?: number,
+    tournamentId?: string,
+  ) => {
     if (!user?.id) {
       setOnlineStatus("Erreur: Utilisateur non connecté");
       toast.error("Vous devez être connecté pour créer une partie");
@@ -125,16 +144,14 @@ export function useOnlineGame({
           }
         }
         else if (msg.type === 'GUEST_PROFILE_SHARE') {
-          console.log('[useOnlineGame] Host received guest profile:', msg.payload);
           setRoom(prevRoom => {
             if (prevRoom) {
-              return { ...prevRoom, guest: msg.payload };
+              return { ...prevRoom, guest: msg.payload, guest_id: msg.payload.id };
             }
             return null;
           });
         }
         else if (msg.type === 'REMATCH_REQUEST') {
-          console.log('[useOnlineGame] Host received rematch request');
           if (callbacksRef.current.onRestartGame) {
             callbacksRef.current.onRestartGame();
           } else {
@@ -154,14 +171,44 @@ export function useOnlineGame({
           const { userId, userName, isTyping } = msg.payload;
           callbacksRef.current.onChatTyping?.(userId, userName, isTyping);
         }
+        else if (msg.type === 'MATCH_SCORE_UPDATE') {
+          // Update local room state with match scores
+          setRoom(prevRoom => {
+            if (!prevRoom) return null;
+            return {
+              ...prevRoom,
+              match_score_host: msg.payload.matchScoreHost,
+              match_score_guest: msg.payload.matchScoreGuest,
+              game_count: msg.payload.gameNumber,
+              match_status: msg.payload.matchComplete ? 'completed' : 'in_progress',
+              match_winner_id: msg.payload.matchWinnerId
+            };
+          });
+
+          // Notify that match scores updated (for MatchScoreDisplay to re-render)
+          callbacksRef.current.onMatchScoreUpdate?.();
+
+          // If match is complete, trigger match over callback
+          if (msg.payload.matchComplete) {
+            callbacksRef.current.onMatchComplete?.(msg.payload);
+          }
+        }
+        else if (msg.type === 'DRAW_OFFER') {
+          callbacksRef.current.onDrawOffer?.(msg.payload.fromName);
+        }
+        else if (msg.type === 'DRAW_RESPONSE') {
+          if (msg.payload.accepted) {
+            callbacksRef.current.onDrawAccepted?.();
+          }
+        }
       });
 
       // Create room in Socket.io and get room code
       const roomCode = onlineManager.createRoom(user.id);
       setRoomId(roomCode);
 
-      // Persist room in database
-      const dbRoom = await createGameRoom(user.id, roomCode);
+      // Persist room in database with match format (and tournament tag if any)
+      const dbRoom = await createGameRoomWithFormat(user.id, roomCode, matchFormat, matchTarget, tournamentId);
       setRoomDbId(dbRoom.id);
       setRoom(dbRoom);
 
@@ -235,6 +282,36 @@ export function useOnlineGame({
         else if (msg.type === 'CHAT_TYPING') {
           const { userId, userName, isTyping } = msg.payload;
           callbacksRef.current.onChatTyping?.(userId, userName, isTyping);
+        }
+        else if (msg.type === 'MATCH_SCORE_UPDATE') {
+          // Update local room state with match scores
+          setRoom(prevRoom => {
+            if (!prevRoom) return null;
+            return {
+              ...prevRoom,
+              match_score_host: msg.payload.matchScoreHost,
+              match_score_guest: msg.payload.matchScoreGuest,
+              game_count: msg.payload.gameNumber,
+              match_status: msg.payload.matchComplete ? 'completed' : 'in_progress',
+              match_winner_id: msg.payload.matchWinnerId
+            };
+          });
+
+          // Notify that match scores updated (for MatchScoreDisplay to re-render)
+          callbacksRef.current.onMatchScoreUpdate?.();
+
+          // If match is complete, trigger match over callback
+          if (msg.payload.matchComplete) {
+            callbacksRef.current.onMatchComplete?.(msg.payload);
+          }
+        }
+        else if (msg.type === 'DRAW_OFFER') {
+          callbacksRef.current.onDrawOffer?.(msg.payload.fromName);
+        }
+        else if (msg.type === 'DRAW_RESPONSE') {
+          if (msg.payload.accepted) {
+            callbacksRef.current.onDrawAccepted?.();
+          }
         }
       });
 
@@ -322,7 +399,6 @@ export function useOnlineGame({
     if (roomDbId) {
       try {
         await finishGame(roomDbId, winnerId);
-        console.log('[useOnlineGame] Game finished in database');
       } catch (err) {
         console.error('[useOnlineGame] Error finishing game:', err);
       }
@@ -334,7 +410,6 @@ export function useOnlineGame({
     if (roomDbId && user?.id) {
       try {
         await abandonGame(roomDbId, abandonerId);
-        console.log('[useOnlineGame] Game abandoned in database');
       } catch (err) {
         console.error('[useOnlineGame] Error abandoning game:', err);
       }

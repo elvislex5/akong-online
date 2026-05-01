@@ -33,7 +33,6 @@ export default function InvitationSystem() {
 
     getPendingInvitations(user.id)
       .then((invitations) => {
-        console.log('[InvitationSystem] Loaded pending invitations:', invitations.length);
         setPendingInvitations(invitations);
 
         // Show first invitation if any
@@ -52,7 +51,6 @@ export default function InvitationSystem() {
     if (!user) return;
 
     const unsubscribe = subscribeToInvitations(user.id, (invitation) => {
-      console.log('[InvitationSystem] New invitation received:', invitation);
 
       // If this is a new invitation (INSERT event)
       if (invitation.status === 'pending') {
@@ -83,7 +81,6 @@ export default function InvitationSystem() {
 
     // When we receive an invitation via Socket.io
     onlineManager.onInvitationReceived((data) => {
-      console.log('[InvitationSystem] Invitation received via Socket.io:', data);
       toast.success('Vous avez reçu une invitation !');
 
       // Reload pending invitations
@@ -102,19 +99,16 @@ export default function InvitationSystem() {
 
     // When our invitation is accepted
     onlineManager.onInvitationAccepted((data) => {
-      console.log('[InvitationSystem] Invitation accepted:', data);
       toast.success('Votre invitation a été acceptée !');
     });
 
     // When our invitation is declined
     onlineManager.onInvitationDeclined((data) => {
-      console.log('[InvitationSystem] Invitation declined:', data);
       toast.error('Votre invitation a été refusée');
     });
 
     // When an invitation is cancelled
     onlineManager.onInvitationCancelled((data) => {
-      console.log('[InvitationSystem] Invitation cancelled:', data);
       toast('L\'invitation a été annulée', { icon: 'ℹ️' });
 
       // Remove from pending
@@ -230,66 +224,78 @@ export default function InvitationSystem() {
     return null;
   }
 
+  const senderName =
+    currentInvitation.from_display_name || currentInvitation.from_username;
+  const remainingCount = pendingInvitations.length - 1;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="bg-gray-800 border-2 border-amber-500 rounded-lg p-6 max-w-md w-full">
-        {/* Header */}
-        <div className="mb-4">
-          <h2 className="text-2xl font-bold text-amber-400 mb-2">
-            Invitation reçue !
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="invitation-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/80 backdrop-blur-sm"
+    >
+      <div className="bg-surface border border-rule shadow-lg w-full max-w-md">
+        <div className="p-8">
+          <p className="kicker mb-4 text-accent">Invitation reçue</p>
+          <h2
+            id="invitation-title"
+            className="font-display text-ink leading-[1.05] tracking-[-0.03em] mb-3"
+            style={{
+              fontVariationSettings: '"opsz" 60, "SOFT" 40',
+              fontSize: 'clamp(1.875rem, 4vw, 2.5rem)',
+            }}
+          >
+            {senderName} vous invite.
           </h2>
-          <p className="text-gray-300">
-            <span className="font-bold text-white">
-              {currentInvitation.from_display_name || currentInvitation.from_username}
-            </span>{' '}
-            vous invite à jouer une partie !
+          <p className="text-sm text-ink-muted leading-relaxed mb-2">
+            Une partie en ligne vous attend. Acceptez pour rejoindre la salle.
           </p>
           {currentInvitation.from_display_name && (
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="text-xs text-ink-subtle italic font-display">
               @{currentInvitation.from_username}
             </p>
           )}
+
+          <div className="mt-8 flex flex-col sm:flex-row-reverse gap-2">
+            <button
+              type="button"
+              onClick={handleAccept}
+              disabled={accepting || declining}
+              className="h-11 inline-flex items-center justify-center px-5 rounded-md text-sm font-medium bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+            >
+              {accepting ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Acceptation…
+                </span>
+              ) : (
+                'Accepter'
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDecline}
+              disabled={accepting || declining}
+              className="h-11 inline-flex items-center justify-center px-5 rounded-md text-sm font-medium border border-rule-strong text-ink hover:border-danger hover:text-danger disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+            >
+              {declining ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  Refus…
+                </span>
+              ) : (
+                'Refuser'
+              )}
+            </button>
+          </div>
+
+          {remainingCount > 0 && (
+            <p className="mt-6 pt-4 border-t border-rule text-center text-xs text-ink-subtle">
+              {remainingCount} autre{remainingCount > 1 ? 's' : ''} invitation{remainingCount > 1 ? 's' : ''} en attente
+            </p>
+          )}
         </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleAccept}
-            disabled={accepting || declining}
-            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-          >
-            {accepting ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Acceptation...
-              </span>
-            ) : (
-              'Accepter'
-            )}
-          </button>
-
-          <button
-            onClick={handleDecline}
-            disabled={accepting || declining}
-            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-          >
-            {declining ? (
-              <span className="flex items-center justify-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Refus...
-              </span>
-            ) : (
-              'Refuser'
-            )}
-          </button>
-        </div>
-
-        {/* Pending count */}
-        {pendingInvitations.length > 1 && (
-          <p className="text-center text-sm text-gray-400 mt-4">
-            {pendingInvitations.length - 1} autre(s) invitation(s) en attente
-          </p>
-        )}
       </div>
     </div>
   );

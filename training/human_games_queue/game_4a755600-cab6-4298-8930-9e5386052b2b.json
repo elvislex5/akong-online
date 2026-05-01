@@ -1,0 +1,31 @@
+{
+  "id": "4a755600-cab6-4298-8930-9e5386052b2b",
+  "date": "2026-04-30T11:22:06.243Z",
+  "mode": "Simulation",
+  "player1": "AI (legend)",
+  "player2": "AI (neural)",
+  "moves": [],
+  "initialBoard": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "winner": -1,
+  "finalScores": [
+    35,
+    35
+  ],
+  "totalMoves": 0,
+  "durationMs": 1532
+}

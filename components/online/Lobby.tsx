@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Circle, LogIn } from 'lucide-react';
-import { getOnlineUsers, subscribeToUserPresence } from '../../services/presenceService';
+import { RefreshCw, UserPlus, Users } from 'lucide-react';
+import { getOnlineUsers } from '../../services/presenceService';
 import { sendInvitation } from '../../services/invitationService';
 import { createGameRoom } from '../../services/roomService';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,170 +10,181 @@ import { onlineManager } from '../../services/onlineManager';
 import toast from 'react-hot-toast';
 
 interface LobbyProps {
-    onJoinRoom: (roomId: string) => void;
-    onClose: () => void;
-    existingRoomId?: string;
-    existingRoomCode?: string;
+  onJoinRoom: (roomId: string) => void;
+  onClose: () => void;
+  existingRoomId?: string;
+  existingRoomCode?: string;
 }
 
-export function Lobby({ onJoinRoom, onClose, existingRoomId, existingRoomCode }: LobbyProps) {
-    const { user, profile } = useAuth();
-    const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
+export function Lobby({ onJoinRoom, existingRoomId, existingRoomCode }: LobbyProps) {
+  const { user } = useAuth();
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
 
-    // Initial load
-    useEffect(() => {
-        loadOnlineUsers();
-    }, [user]);
+  useEffect(() => {
+    loadOnlineUsers(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-    const loadOnlineUsers = async () => {
-        if (!user) return;
-        try {
-            setLoading(true);
-            const users = await getOnlineUsers(user.id);
-            setOnlineUsers(users);
-        } catch (error) {
-            console.error('Error loading online users:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const loadOnlineUsers = async (initial = false) => {
+    if (!user) return;
+    if (initial) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const users = await getOnlineUsers(user.id);
+      setOnlineUsers(users);
+    } catch (error) {
+      console.error('[Lobby] Error loading online users:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    const handleInvite = async (targetUser: OnlineUser) => {
-        if (!user || invitingUserId) return;
+  const handleInvite = async (targetUser: OnlineUser) => {
+    if (!user || invitingUserId) return;
 
-        try {
-            setInvitingUserId(targetUser.user_id);
-            let roomIdToUse = existingRoomId;
-            let codeToUse = existingRoomCode;
+    try {
+      setInvitingUserId(targetUser.user_id);
+      let roomIdToUse = existingRoomId;
+      let codeToUse = existingRoomCode;
 
-            // If no existing room, create one (Old Flow)
-            if (!roomIdToUse) {
-                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const room = await createGameRoom(user.id, code);
-                if (!room) throw new Error("Failed to create room");
-                roomIdToUse = room.id;
-                codeToUse = code;
-            }
+      // If no existing room, create one (old flow)
+      if (!roomIdToUse) {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const room = await createGameRoom(user.id, code);
+        if (!room) throw new Error('Failed to create room');
+        roomIdToUse = room.id;
+        codeToUse = code;
+      }
 
-            // Send invitation
-            const invite = await sendInvitation(user.id, targetUser.user_id, roomIdToUse);
+      const invite = await sendInvitation(user.id, targetUser.user_id, roomIdToUse);
+      if (invite) {
+        onlineManager.sendInvitation(invite.id, targetUser.user_id, user.id);
+      }
 
-            // Send via Socket for immediate notification
-            if (invite) {
-                onlineManager.sendInvitation(invite.id, targetUser.user_id, user.id);
-            }
+      toast.success(`Invitation envoyée à ${targetUser.username}.`);
 
-            toast.success(`Invitation envoyée à ${targetUser.username} !`);
+      // Only join if we created a NEW room (old flow)
+      if (!existingRoomId && codeToUse) {
+        onJoinRoom(codeToUse);
+      }
+    } catch (error) {
+      console.error('[Lobby] Error sending invitation:', error);
+      toast.error("Erreur lors de l'envoi de l'invitation");
+    } finally {
+      setInvitingUserId(null);
+    }
+  };
 
-            // Only join if we created a NEW room (Old Flow)
-            if (!existingRoomId && codeToUse) {
-                onJoinRoom(codeToUse);
-            }
-
-        } catch (error) {
-            console.error('Error sending invitation:', error);
-            toast.error("Erreur lors de l'envoi de l'invitation");
-        } finally {
-            setInvitingUserId(null);
-        }
-    };
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col gap-4 w-full h-full"
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18 }}
+      className="flex flex-col w-full h-full bg-surface border border-rule"
+    >
+      {/* Header */}
+      <div className="flex items-end justify-between gap-4 px-4 py-3 border-b border-rule">
+        <div>
+          <p className="kicker">
+            Joueurs en ligne · {onlineUsers.length}
+          </p>
+          <p className="text-xs text-ink-subtle mt-0.5">
+            Cliquez « Inviter » pour proposer une partie
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => loadOnlineUsers(false)}
+          aria-label="Rafraîchir la liste"
+          className="inline-flex items-center justify-center w-9 h-9 rounded-md text-ink-muted hover:text-ink hover:bg-canvas border border-rule transition-colors duration-150"
         >
-            <div className="flex items-center justify-between mb-2">
-                <div>
-                    <h3 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-500">
-                        Joueurs en ligne
-                    </h3>
-                    <p className="text-gray-400 text-sm">
-                        {onlineUsers.length} joueur{onlineUsers.length !== 1 ? 's' : ''} connecté{onlineUsers.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
-                <button
-                    onClick={loadOnlineUsers}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                    title="Actualiser"
+          <RefreshCw size={14} strokeWidth={1.75} className={refreshing ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto min-h-[260px]">
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-sm text-ink-subtle">
+            Chargement…
+          </div>
+        ) : onlineUsers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-ink-subtle gap-3 px-6 py-12 text-center">
+            <Users size={24} strokeWidth={1.5} />
+            <p className="text-sm leading-relaxed">
+              Aucun autre joueur en ligne pour le moment.
+            </p>
+          </div>
+        ) : (
+          <ul role="list" className="divide-y divide-rule">
+            {onlineUsers.map((player) => {
+              const inGame = player.status === 'in_game';
+              const isPending = invitingUserId === player.user_id;
+              return (
+                <li
+                  key={player.user_id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 bg-canvas hover:bg-surface transition-colors duration-150"
                 >
-                    <Users className="w-5 h-5 text-emerald-400" />
-                </button>
-            </div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative shrink-0">
+                      <img
+                        src={
+                          player.avatar_url ||
+                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.username}`
+                        }
+                        alt=""
+                        className="w-9 h-9 rounded-full border border-rule object-cover bg-surface"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className={
+                          'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-canvas ' +
+                          (inGame ? 'bg-warning' : 'bg-success')
+                        }
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm text-ink font-medium truncate">
+                        {player.display_name || player.username}
+                      </p>
+                      <p className="text-xs text-ink-subtle">
+                        {inGame ? 'En partie' : 'Disponible'}
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="flex-1 overflow-y-auto bg-black/20 rounded-xl p-2 border border-white/10 min-h-[300px] custom-scrollbar">
-                {loading ? (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                        Chargement...
-                    </div>
-                ) : onlineUsers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500 gap-2">
-                        <Users className="w-12 h-12 opacity-20" />
-                        <p>Aucun autre joueur en ligne.</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-2">
-                        {onlineUsers.map((player) => (
-                            <div
-                                key={player.user_id}
-                                className="flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors group"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <img
-                                            src={player.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.username}`}
-                                            alt={player.username}
-                                            className="w-10 h-10 rounded-full bg-gray-700"
-                                        />
-                                        <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-[#1a1a2e] rounded-full ${player.status === 'in_game' ? 'bg-amber-500' : 'bg-emerald-500'
-                                            }`} />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-200">{player.display_name || player.username}</h4>
-                                        <p className="text-xs text-gray-500 flex items-center gap-1">
-                                            {player.status === 'in_game' ? (
-                                                <>
-                                                    <Circle className="w-2 h-2 fill-amber-500 text-amber-500" />
-                                                    En partie
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500" />
-                                                    Disponible
-                                                </>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => handleInvite(player)}
-                                    disabled={player.status === 'in_game' || invitingUserId === player.user_id}
-                                    className={`
-                    px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all
-                    ${player.status === 'in_game'
-                                            ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-                                            : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
-                                        }
-                  `}
-                                >
-                                    {invitingUserId === player.user_id ? (
-                                        <span className="animate-pulse">Envoi...</span>
-                                    ) : (
-                                        <>
-                                            <UserPlus className="w-4 h-4" />
-                                            Inviter
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </motion.div>
-    );
+                  <button
+                    type="button"
+                    onClick={() => handleInvite(player)}
+                    disabled={inGame || isPending}
+                    className={
+                      'inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium transition-colors duration-150 ' +
+                      (inGame
+                        ? 'border border-rule text-ink-subtle cursor-not-allowed'
+                        : isPending
+                          ? 'bg-accent text-accent-ink opacity-70 cursor-wait'
+                          : 'border border-rule-strong text-ink hover:border-accent hover:text-accent')
+                    }
+                  >
+                    {isPending ? (
+                      'Envoi…'
+                    ) : (
+                      <>
+                        <UserPlus size={12} strokeWidth={1.75} />
+                        Inviter
+                      </>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </motion.div>
+  );
 }

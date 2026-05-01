@@ -1,110 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- Primary Meta Tags -->
-    <title>Akông Online - Jeu de Songo Traditionnel Africain | Stratégie en Ligne</title>
-    <meta name="title" content="Akông Online - Jeu de Songo Traditionnel Africain | Stratégie en Ligne" />
-    <meta name="description" content="Jouez à l'Akông (Songo MPEM) en ligne gratuitement. Jeu de stratégie traditionnel du Gabon et d'Afrique Centrale. Défiez vos amis en ligne ou affrontez l'IA dans ce jeu de réflexion ancestral." />
-    <meta name="keywords" content="Akông, Songo, Mancala, jeu africain, jeu gabonais, stratégie, jeu en ligne, jeu traditionnel, Gabon, Afrique Centrale, MPEM, jeu de graines" />
-    <meta name="author" content="Akông Online" />
+    <!-- Primary meta -->
+    <title>Songo — Mancala africain en ligne</title>
+    <meta name="description" content="Jouez au Songo, jeu de stratégie traditionnel d'Afrique centrale. Affrontez des joueurs en ligne, l'IA, ou apprenez les variantes Mpem, Beti et Ngonn." />
+    <meta name="keywords" content="Songo, Mpem, Beti, Mancala, jeu africain, jeu gabonais, stratégie, jeu en ligne, jeu traditionnel, Afrique centrale" />
+    <meta name="author" content="Songo" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://akong-online.com" />
+    <meta name="theme-color" content="#2D3B73" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#13110E" media="(prefers-color-scheme: dark)" />
 
-    <!-- Open Graph / Facebook -->
+    <!-- PWA: iOS Safari -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Songo" />
+
+    <!-- PWA: Android Chrome -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://akong-online.com" />
-    <meta property="og:title" content="Akông Online - Jeu de Songo Traditionnel Africain" />
-    <meta property="og:description" content="Jouez à l'Akông (Songo MPEM) en ligne gratuitement. Jeu de stratégie traditionnel du Gabon et d'Afrique Centrale." />
+    <meta property="og:title" content="Songo — Mancala africain en ligne" />
+    <meta property="og:description" content="Jouez au Songo, jeu de stratégie traditionnel d'Afrique centrale. Multijoueur en ligne, IA, leçons et puzzles." />
     <meta property="og:image" content="https://akong-online.com/og-image.png" />
     <meta property="og:locale" content="fr_FR" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://akong-online.com" />
-    <meta property="twitter:title" content="Akông Online - Jeu de Songo Traditionnel Africain" />
-    <meta property="twitter:description" content="Jouez à l'Akông (Songo MPEM) en ligne gratuitement. Jeu de stratégie traditionnel du Gabon." />
+    <meta property="twitter:title" content="Songo — Mancala africain en ligne" />
+    <meta property="twitter:description" content="Jouez au Songo, jeu de stratégie traditionnel d'Afrique centrale." />
     <meta property="twitter:image" content="https://akong-online.com/og-image.png" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
-    <!-- Design System CSS -->
-    <link rel="stylesheet" href="/styles/design-tokens.css">
-    <link rel="stylesheet" href="/styles/glassmorphism.css">
-    <link rel="stylesheet" href="/styles/glow-effects.css">
-    <link rel="stylesheet" href="/styles/3d-transforms.css">
-    <link rel="stylesheet" href="/styles/animations.css">
-    <link rel="stylesheet" href="/styles/immersive-effects.css">
-    <link rel="stylesheet" href="/styles/utilities.css">
-    
-    <style>
-      /* Base Styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
 
-      html {
-        /* Prevent text size adjustment on mobile */
-        -webkit-text-size-adjust: 100%;
-        -moz-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
-        text-size-adjust: 100%;
-        /* Responsive font scaling - starts smaller */
-        font-size: 14px;
-      }
-      
-      /* Scale up font size on larger screens */
-      @media (min-width: 640px) {
-        html {
-          font-size: 15px;
-        }
-      }
-      
-      @media (min-width: 1024px) {
-        html {
-          font-size: 16px;
-        }
-      }
+    <!-- Fonts: Fraunces (display) + Geist (UI). Preconnect to avoid FOIT. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Geist:wght@300..700&display=swap"
+      rel="stylesheet"
+    />
 
-      body {
-        font-family: 'Inter', sans-serif;
-        background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #000000 100%);
-        background-attachment: fixed;
-        min-height: 100vh;
-        overflow-x: hidden;
-        /* Prevent zoom on double-tap */
-        touch-action: manipulation;
-      }
-      
-      /* Animated background particles */
-      body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: 
-          radial-gradient(circle at 20% 50%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
-          radial-gradient(circle at 80% 80%, rgba(255, 140, 0, 0.03) 0%, transparent 50%),
-          radial-gradient(circle at 40% 20%, rgba(0, 255, 127, 0.02) 0%, transparent 50%);
-        pointer-events: none;
-        z-index: 0;
-      }
-      
-      #root {
-        position: relative;
-        z-index: 1;
-      }
-    </style>
-</head>
+    <!-- Theme bootstrap: applies persisted/system theme before paint to avoid flash -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('songo:theme');
+          var pref = stored === 'light' || stored === 'dark' ? stored : 'system';
+          var dark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (_) {}
+      })();
+    </script>
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>

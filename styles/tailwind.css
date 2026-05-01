@@ -1,0 +1,279 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Songo — Design System
+   ----------------------------------------------------------------
+   Editorial restraint. Indigo as the sole accent. Print-quality
+   typography (Fraunces display + Geist body). Two modes:
+   parchment (light) and ink (dark).
+   ============================================================ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ----------------------------------------------------------------
+   Static tokens — same value in both modes
+   ---------------------------------------------------------------- */
+@theme {
+  /* Typography */
+  --font-display: "Fraunces", "EB Garamond", Georgia, serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "JetBrains Mono", monospace;
+
+  /* Brand: indigo (West African textile dye) */
+  --color-indigo-50:  #EEF0FA;
+  --color-indigo-100: #DCE0F2;
+  --color-indigo-200: #B6BEDF;
+  --color-indigo-300: #8C99CB;
+  --color-indigo-400: #5F6FB1;
+  --color-indigo-500: #3D4A8C;
+  --color-indigo-600: #2D3B73;
+  --color-indigo-700: #1F2A6E;
+  --color-indigo-800: #161E55;
+  --color-indigo-900: #0E143A;
+
+  /* Earth: parchment + clay (warm neutrals) */
+  --color-clay-50:  #FAF6EE;
+  --color-clay-100: #F4EFE6;
+  --color-clay-200: #E4D9C5;
+  --color-clay-300: #C9B999;
+  --color-clay-400: #A78F6A;
+  --color-clay-500: #7E6843;
+  --color-clay-600: #5F4E32;
+  --color-clay-700: #44382A;
+  --color-clay-800: #2A251F;
+  --color-clay-900: #13110E;
+
+  /* Modular type scale — 1.2 ratio, optimized for editorial reading */
+  --text-xs:    0.75rem;     /* 12 */
+  --text-sm:    0.8125rem;   /* 13 */
+  --text-base:  0.9375rem;   /* 15 — UI default */
+  --text-md:    1.0625rem;   /* 17 — body editorial */
+  --text-lg:    1.25rem;     /* 20 */
+  --text-xl:    1.5rem;      /* 24 */
+  --text-2xl:   1.875rem;    /* 30 */
+  --text-3xl:   2.375rem;    /* 38 */
+  --text-4xl:   3rem;        /* 48 */
+  --text-5xl:   3.875rem;    /* 62 */
+  --text-6xl:   5rem;        /* 80 */
+  --text-7xl:   6.5rem;      /* 104 — display only */
+
+  /* Radii — restrained, editorial (no big rounded balloons) */
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   10px;
+  --radius-xl:   16px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* Shadows — subtle, no glow */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 30px -5px rgb(0 0 0 / 0.12), 0 4px 12px -2px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 50px -10px rgb(0 0 0 / 0.18), 0 8px 16px -4px rgb(0 0 0 / 0.08);
+
+  /* Motion — short, restrained, no bouncy elastic */
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-out-expo:  cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* ----------------------------------------------------------------
+   Semantic tokens — flip with theme
+   Names are deliberately editorial: canvas / surface / ink / rule
+   ---------------------------------------------------------------- */
+@theme inline {
+  --color-canvas:        var(--canvas);
+  --color-surface:       var(--surface);
+  --color-surface-2:     var(--surface-2);
+  --color-rule:          var(--rule);
+  --color-rule-strong:   var(--rule-strong);
+  --color-ink:           var(--ink);
+  --color-ink-muted:     var(--ink-muted);
+  --color-ink-subtle:    var(--ink-subtle);
+  --color-accent:        var(--accent);
+  --color-accent-hover:  var(--accent-hover);
+  --color-accent-ink:    var(--accent-ink);
+  --color-success:       var(--success);
+  --color-warning:       var(--warning);
+  --color-danger:        var(--danger);
+}
+
+/* Light — parchment */
+:root {
+  --canvas:       #F4EFE6;
+  --surface:      #FBF7EE;
+  --surface-2:    #FFFFFF;
+  --rule:         #E4D9C5;
+  --rule-strong:  #C9B999;
+  --ink:          #1A1612;
+  --ink-muted:    #665D52;
+  --ink-subtle:   #9A9285;
+  --accent:       #2D3B73;
+  --accent-hover: #1F2A6E;
+  --accent-ink:   #FBF7EE;
+  --success:      #447D5A;
+  --warning:      #B8791D;
+  --danger:       #A23F2C;
+  color-scheme: light;
+}
+
+/* Dark — ink */
+:root.dark {
+  --canvas:       #13110E;
+  --surface:      #1F1B16;
+  --surface-2:    #2A251F;
+  --rule:         #2A251F;
+  --rule-strong:  #44382A;
+  --ink:          #F2EDDE;
+  --ink-muted:    #A5998A;
+  --ink-subtle:   #6B6359;
+  --accent:       #8C99CB;
+  --accent-hover: #B6BEDF;
+  --accent-ink:   #13110E;
+  --success:      #6BB48B;
+  --warning:      #D9A24E;
+  --danger:       #C66856;
+  color-scheme: dark;
+}
+
+/* ----------------------------------------------------------------
+   Base
+   ---------------------------------------------------------------- */
+@layer base {
+  *, *::before, *::after {
+    border-color: var(--rule);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-feature-settings: "ss01" 1, "cv11" 1;
+    min-height: 100vh;
+    transition:
+      background-color 320ms var(--ease-out-quart),
+      color 320ms var(--ease-out-quart);
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  /* Fraunces optical-size + soft axis dialed up for the right "warmth" */
+  .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 0;
+  }
+
+  /* Smaller display for headings — sharper optical size */
+  h3, h4, h5, h6 {
+    font-variation-settings: "opsz" 14, "SOFT" 30;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Scrollbar — quiet */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--rule-strong);
+    border-radius: var(--radius-full);
+    border: 2px solid var(--canvas);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-subtle); }
+}
+
+/* ----------------------------------------------------------------
+   Editorial primitives — small set of repeating patterns
+   ---------------------------------------------------------------- */
+@layer components {
+  /* Section dividers: a thin rule with optional kicker */
+  .rule-line {
+    height: 1px;
+    background: var(--rule);
+    border: none;
+  }
+
+  /* Eyebrow / kicker — small caps over a heading */
+  .kicker {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-subtle);
+  }
+
+  /* Lead paragraph (after a hero/title) */
+  .lead {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    line-height: 1.5;
+    font-weight: 400;
+    color: var(--ink-muted);
+    font-variation-settings: "opsz" 24, "SOFT" 40;
+  }
+
+  /* Editorial body text */
+  .prose-body {
+    font-size: var(--text-md);
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .prose-body p + p { margin-top: 1em; }
+}
+
+/* ----------------------------------------------------------------
+   Utilities
+   ---------------------------------------------------------------- */
+@layer utilities {
+  /* Visually hide but keep accessible */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Safe area insets (PWA / notch) */
+  .safe-top    { padding-top:    env(safe-area-inset-top, 0px); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .safe-left   { padding-left:   env(safe-area-inset-left, 0px); }
+  .safe-right  { padding-right:  env(safe-area-inset-right, 0px); }
+}

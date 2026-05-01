@@ -1,6 +1,6 @@
 import { OnlineMessage } from '../types';
 import { io, Socket } from 'socket.io-client';
-import { supabase } from './supabase';
+import { getAccessToken } from './auth/tokenStore';
 import type { GameState } from '../types';
 
 export class SocketManager {
@@ -32,29 +32,28 @@ export class SocketManager {
         // Get server URL from environment
         const serverUrl = (import.meta as any).env?.VITE_SOCKET_SERVER_URL || 'http://localhost:3002';
 
-        // Get authentication token if user is logged in
-        let authToken: string | undefined;
-        if (userId) {
-          this.currentUserId = userId;
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            authToken = session.access_token;
-            console.log('[onlineManager] Authenticating with JWT token');
-          }
-        }
+        // The token comes from our own auth store. We pass `auth` as a
+        // callback so socket.io re-evaluates it on every (re)connection —
+        // critical because access tokens expire after 15 min, and a stale
+        // initial token would cause reconnect handshakes to be rejected
+        // for the rest of the session. The callback always reads from the
+        // tokenStore, which has been updated by AuthContext's proactive
+        // refresh by then.
+        if (userId) this.currentUserId = userId;
 
-        // Connect with authentication
         this.socket = io(serverUrl, {
           transports: ['websocket', 'polling'],
           reconnection: true,
           reconnectionDelay: 1000,
-          reconnectionAttempts: 10, // Increased for better reliability
+          reconnectionAttempts: 10,
           reconnectionDelayMax: 5000,
-          auth: authToken ? { token: authToken } : undefined,
+          auth: (cb) => {
+            const t = userId ? getAccessToken() : null;
+            cb(t ? { token: t } : {});
+          },
         });
 
         this.socket.on('connect', () => {
-          console.log('[onlineManager] Connected to server:', this.socket?.id);
           this.myId = this.socket?.id || '';
 
           // Set up event listeners
@@ -73,14 +72,12 @@ export class SocketManager {
 
         // Handle reconnection
         this.socket.on('reconnect', (attemptNumber) => {
-          console.log('[onlineManager] Reconnected after', attemptNumber, 'attempts');
           if (this.currentRoomId && this.currentUserId) {
             this.reconnectToRoom(this.currentRoomId, this.currentUserId);
           }
         });
 
         this.socket.on('authenticated', (data: { userId: string }) => {
-          console.log('[onlineManager] Authenticated as user:', data.userId);
         });
 
       } catch (e) {
@@ -103,15 +100,19 @@ export class SocketManager {
 
     // Player joined event
     this.socket.on('player_joined', (data: { connectionId: string, userId?: string }) => {
-      console.log('[onlineManager] Player joined:', data);
       if (this.onMessageCallback) {
         this.onMessageCallback({ type: 'PLAYER_JOINED', payload: data });
       }
     });
 
+    this.socket.on('AI_UPDATED', (payload: any) => {
+      if (this.onMessageCallback) {
+        this.onMessageCallback({ type: 'AI_UPDATED', payload });
+      }
+    });
+
     // Room creation confirmation
     this.socket.on('room_created', (roomCode: string) => {
-      console.log('[onlineManager] Room created:', roomCode);
       this.currentRoomId = roomCode;
     });
 
@@ -122,7 +123,6 @@ export class SocketManager {
 
     // Disconnect event
     this.socket.on('disconnect', (reason) => {
-      console.log('[onlineManager] Disconnected:', reason);
       this.stopHeartbeat();
       if (this.onDisconnectCallback) {
         this.onDisconnectCallback();
@@ -131,7 +131,6 @@ export class SocketManager {
 
     // Player disconnected (someone else)
     this.socket.on('player_disconnected', (data: { userId: string }) => {
-      console.log('[onlineManager] Player disconnected:', data.userId);
       if (this.onMessageCallback) {
         this.onMessageCallback({ type: 'PLAYER_DISCONNECTED', payload: data });
       }
@@ -139,7 +138,6 @@ export class SocketManager {
 
     // Player reconnected
     this.socket.on('player_reconnected', (data: { userId: string }) => {
-      console.log('[onlineManager] Player reconnected:', data.userId);
       if (this.onMessageCallback) {
         this.onMessageCallback({ type: 'PLAYER_RECONNECTED', payload: data });
       }
@@ -147,7 +145,6 @@ export class SocketManager {
 
     // Game state restored (after reconnection)
     this.socket.on('game_state_restored', (data: { gameState: GameState }) => {
-      console.log('[onlineManager] Game state restored');
       if (this.onReconnectCallback) {
         this.onReconnectCallback(data.gameState);
       }
@@ -155,14 +152,12 @@ export class SocketManager {
 
     // Spectator events
     this.socket.on('spectator_joined', (data: { userId: string }) => {
-      console.log('[onlineManager] Spectator joined:', data.userId);
       if (this.onMessageCallback) {
         this.onMessageCallback({ type: 'SPECTATOR_JOINED', payload: data });
       }
     });
 
     this.socket.on('spectator_left', (data: { userId: string }) => {
-      console.log('[onlineManager] Spectator left:', data.userId);
       if (this.onMessageCallback) {
         this.onMessageCallback({ type: 'SPECTATOR_LEFT', payload: data });
       }
@@ -175,35 +170,30 @@ export class SocketManager {
 
     // Phase 3: Invitation events
     this.socket.on('invitation_received', (data: { invitationId: string, fromUserId: string }) => {
-      console.log('[onlineManager] Invitation received:', data);
       if (this.onInvitationReceivedCallback) {
         this.onInvitationReceivedCallback(data);
       }
     });
 
     this.socket.on('invitation_accepted', (data: { invitationId: string, byUserId: string }) => {
-      console.log('[onlineManager] Invitation accepted:', data);
       if (this.onInvitationAcceptedCallback) {
         this.onInvitationAcceptedCallback(data);
       }
     });
 
     this.socket.on('invitation_declined', (data: { invitationId: string, byUserId: string }) => {
-      console.log('[onlineManager] Invitation declined:', data);
       if (this.onInvitationDeclinedCallback) {
         this.onInvitationDeclinedCallback(data);
       }
     });
 
     this.socket.on('invitation_cancelled', (data: { invitationId: string }) => {
-      console.log('[onlineManager] Invitation cancelled:', data);
       if (this.onInvitationCancelledCallback) {
         this.onInvitationCancelledCallback(data);
       }
     });
 
     this.socket.on('invitation_sent', (data: { invitationId: string }) => {
-      console.log('[onlineManager] Invitation sent confirmation:', data);
     });
   }
 
@@ -246,7 +236,6 @@ export class SocketManager {
     this.currentUserId = userId;
 
     this.socket.emit('create_room', { roomCode, userId });
-    console.log('[onlineManager] Creating room:', roomCode);
 
     return roomCode;
   }
@@ -265,7 +254,6 @@ export class SocketManager {
     this.currentRoomId = roomCode;
     this.currentUserId = userId;
     this.socket.emit('join_room', { roomCode, userId });
-    console.log('[onlineManager] Joining room:', roomCode);
   }
 
   /**
@@ -276,7 +264,6 @@ export class SocketManager {
   private reconnectToRoom(roomCode: string, userId: string) {
     if (!this.socket) return;
 
-    console.log('[onlineManager] Reconnecting to room:', roomCode);
     this.socket.emit('reconnect_to_room', { roomCode, userId });
   }
 
@@ -294,7 +281,6 @@ export class SocketManager {
     this.currentRoomId = roomCode;
     this.currentUserId = userId;
     this.socket.emit('spectate_room', { roomCode, userId });
-    console.log('[onlineManager] Spectating room:', roomCode);
   }
 
   /**
@@ -306,7 +292,6 @@ export class SocketManager {
     if (!this.socket) return;
 
     this.socket.emit('leave_spectating', { roomCode, userId });
-    console.log('[onlineManager] Leaving spectator mode');
   }
 
   /**
@@ -394,7 +379,6 @@ export class SocketManager {
     }
 
     this.socket.emit('send_invitation', { invitationId, toUserId, fromUserId });
-    console.log('[onlineManager] Sending invitation:', invitationId);
   }
 
   /**
@@ -410,7 +394,6 @@ export class SocketManager {
     }
 
     this.socket.emit('accept_invitation', { invitationId, fromUserId, toUserId });
-    console.log('[onlineManager] Accepting invitation:', invitationId);
   }
 
   /**
@@ -426,7 +409,6 @@ export class SocketManager {
     }
 
     this.socket.emit('decline_invitation', { invitationId, fromUserId, toUserId });
-    console.log('[onlineManager] Declining invitation:', invitationId);
   }
 
   /**
@@ -441,7 +423,6 @@ export class SocketManager {
     }
 
     this.socket.emit('cancel_invitation', { invitationId, toUserId });
-    console.log('[onlineManager] Cancelling invitation:', invitationId);
   }
 
   /**

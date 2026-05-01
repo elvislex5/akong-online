@@ -10,21 +10,23 @@ export class FastGameState {
     // [14]: Player 1 Score
     // [15]: Player 2 Score
     // [16]: Current Player (0=P1, 1=P2)
-    // [17]: Unused/Padding or Solidarity Flag
+    // [17]: Winning score (36=Gabon, 40=Cameroon)
     public data: Int8Array;
 
     constructor() {
         this.data = new Int8Array(18);
+        this.data[17] = 36;
     }
 
-    static fromGameState(state: any): FastGameState {
+    static fromGameState(state: any, winningScore: number = 36): FastGameState {
         const fast = new FastGameState();
         for (let i = 0; i < 14; i++) {
-            fast.data[i] = state.board[i] > 127 ? 127 : state.board[i]; // Clamp for Int8 safety
+            fast.data[i] = state.board[i] > 127 ? 127 : state.board[i];
         }
         fast.data[14] = state.scores[0];
         fast.data[15] = state.scores[1];
         fast.data[16] = state.currentPlayer === 0 ? 0 : 1;
+        fast.data[17] = winningScore;
         return fast;
     }
 
@@ -117,11 +119,8 @@ export function fastExecuteMove(state: FastGameState, pitIndex: number): void {
     if (ownerOfLastPit !== currentPlayer) {
         const count = data[currentIdx];
         if (count >= 2 && count <= 4) {
-            // Check for "Assèchement" (Starvation) Protection
 
-            // 1. Identify all potential captures inline
-            let capturedIndicesBuffer = 0; // Bitmask for indices 0-13 
-
+            let capturedIndicesBuffer = 0;
             let checkIdx = currentIdx;
             while (true) {
                 const checkOwner = (checkIdx >= 0 && checkIdx <= 6) ? 0 : 1;
@@ -245,25 +244,115 @@ export function getFastValidMoves(state: FastGameState): Uint8Array {
 
 
 /**
- * Fast evaluation of the state for AI
+ * Fast evaluation of the state for AI.
+ *
+ * Heuristiques intégrées (inspirées des stratégies du PDF Songo) :
+ *  1. Score différentiel          — avantage matériel
+ *  2. Menaces (capture potential) — cases pouvant capturer au prochain coup
+ *  3. Menace double               — bonus si ≥ 2 cases menaçantes simultanément
+ *  4. Grenier (ndà)               — bonus pour les cases > 13 graines
+ *  5. Bidoua                      — mobilité : graines "libres" sans offrir de capture
+ *  6. Vulnérabilité               — pénalité pour les cases exposées (2-4 graines) adverses
  */
 export function fastEvaluate(state: FastGameState, maximizingPlayer: number): number {
     const { data } = state;
     const p1Score = data[14];
     const p2Score = data[15];
 
-    // Game Over Check
-    if (p1Score > 35) return maximizingPlayer === 0 ? 100000 : -100000;
-    if (p2Score > 35) return maximizingPlayer === 1 ? 100000 : -100000;
+    const winScore = data[17] === 40 ? 40 : 36;
+    if (p1Score >= winScore) return maximizingPlayer === 0 ? 100000 : -100000;
+    if (p2Score >= winScore) return maximizingPlayer === 1 ? 100000 : -100000;
 
-    // Score Diff
-    let scoreDiff = (p1Score - p2Score);
-    if (maximizingPlayer === 1) scoreDiff = -scoreDiff;
+    const cp = maximizingPlayer;
+    const op = 1 - cp;
+    const cpStart = cp === 0 ? 0 : 7;
+    const opStart = cp === 0 ? 7 : 0;
 
-    // Heuristics
-    // 1. Mobility (Count moves)
-    // 2. Vulnerability (Opponent can capture) -> Requires lookahead (expensive in eval)
-    // 3. Setup (Seeds in 10-12 range for big moves)
+    // 1. Score différentiel (poids fort)
+    let score = (data[14 + cp] - data[14 + op]) * 100;
 
-    return scoreDiff * 100; // Simple baseline for testing
+    // 2-3. Menaces et menace double
+    let myThreats = 0, myThreatValue = 0;
+    let opThreats = 0, opThreatValue = 0;
+
+    for (let i = 0; i < 7; i++) {
+        // Mes menaces
+        const s = data[cpStart + i];
+        if (s > 0 && s < 14) {
+            const lastDrop = (cpStart + i + s) % 14;
+            if ((lastDrop < 7 ? 0 : 1) === op) {
+                const post = data[lastDrop] + 1;
+                if (post >= 2 && post <= 4) {
+                    myThreats++;
+                    let cap = post;
+                    let check = (lastDrop - 1 + 14) % 14;
+                    while ((check < 7 ? 0 : 1) === op && data[check] >= 2 && data[check] <= 4) {
+                        cap += data[check];
+                        check = (check - 1 + 14) % 14;
+                    }
+                    myThreatValue += cap;
+                }
+            }
+        }
+        // Menaces adverses (ma vulnérabilité)
+        const t = data[opStart + i];
+        if (t > 0 && t < 14) {
+            const lastDrop = (opStart + i + t) % 14;
+            if ((lastDrop < 7 ? 0 : 1) === cp) {
+                const post = data[lastDrop] + 1;
+                if (post >= 2 && post <= 4) {
+                    opThreats++;
+                    let cap = post;
+                    let check = (lastDrop - 1 + 14) % 14;
+                    while ((check < 7 ? 0 : 1) === cp && data[check] >= 2 && data[check] <= 4) {
+                        cap += data[check];
+                        check = (check - 1 + 14) % 14;
+                    }
+                    opThreatValue += cap;
+                }
+            }
+        }
+    }
+
+    score += (myThreatValue - opThreatValue) * 15;
+    if (myThreats >= 2) score += 40;   // Menace double
+    if (opThreats >= 2) score -= 40;
+
+    // 4. Greniers (ndà) : cases > 13 graines = atout stratégique majeur
+    let myGreniers = 0, opGreniers = 0;
+    for (let i = 0; i < 7; i++) {
+        if (data[cpStart + i] >= 14) myGreniers++;
+        if (data[opStart + i] >= 14) opGreniers++;
+    }
+    score += (myGreniers - opGreniers) * 60;
+
+    // 5. Bidoua : graines mobiles sans offrir de capture immédiate à l'adversaire
+    let myBidoua = 0, opBidoua = 0;
+    for (let i = 0; i < 7; i++) {
+        const s = data[cpStart + i];
+        if (s > 0) {
+            if (s >= 14) { myBidoua += s; }
+            else {
+                const lastDrop = (cpStart + i + s) % 14;
+                if ((lastDrop < 7 ? 0 : 1) === op) {
+                    const post = data[lastDrop] + 1;
+                    if (post < 2 || post > 4) myBidoua += s;
+                } else { myBidoua += s; }
+            }
+        }
+        const t = data[opStart + i];
+        if (t > 0) {
+            if (t >= 14) { opBidoua += t; }
+            else {
+                const lastDrop = (opStart + i + t) % 14;
+                if ((lastDrop < 7 ? 0 : 1) === cp) {
+                    const post = data[lastDrop] + 1;
+                    if (post < 2 || post > 4) opBidoua += t;
+                } else { opBidoua += t; }
+            }
+        }
+    }
+    score += (myBidoua - opBidoua) * 5;
+
+    return score;
 }

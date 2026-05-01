@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Minus, Plus } from 'lucide-react';
 import { Player } from '../../types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardNavigation';
@@ -21,21 +22,29 @@ export function EditSimulationModal({
   editValue,
   onSetEditValue,
   onConfirm,
-  onCancel
+  onCancel,
 }: EditSimulationModalProps) {
-  // Accessibility: Focus trap
   const modalRef = useFocusTrap<HTMLDivElement>(isOpen);
 
-  // Accessibility: Keyboard shortcuts
-  useKeyboardShortcuts([
-    { key: 'Escape', handler: onCancel, description: 'Annuler' },
-    { key: 'Enter', handler: onConfirm, description: 'Valider' }
-  ], isOpen);
+  useKeyboardShortcuts(
+    [
+      { key: 'Escape', handler: onCancel, description: 'Annuler' },
+      { key: 'Enter', handler: onConfirm, description: 'Valider' },
+    ],
+    isOpen
+  );
 
   if (!isOpen) return null;
 
   const increment = () => onSetEditValue(Math.min(editValue + 1, 99));
   const decrement = () => onSetEditValue(Math.max(editValue - 1, 0));
+
+  const subtitle =
+    editPitIndex !== null
+      ? `Case ${editPitIndex + 1}`
+      : editScorePlayer !== null
+        ? `Score Joueur ${editScorePlayer === Player.One ? '1' : '2'}`
+        : '';
 
   return (
     <AnimatePresence>
@@ -43,71 +52,76 @@ export function EditSimulationModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 backdrop-blur-sm p-4"
       >
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.2 }}
           ref={modalRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="edit-modal-title"
-          className="modal-container border-emerald-500/30 text-center max-w-sm"
+          className="bg-surface border border-rule shadow-lg w-full max-w-sm"
         >
-          {/* Subtle glow effect */}
-          <div className="glow-overlay-emerald"></div>
-
-          {/* Content */}
-          <div className="relative z-10 p-6 sm:p-8">
-            {/* Title */}
-            <h2 id="edit-modal-title" className="title-section text-gradient-emerald mb-2">
+          <div className="p-6">
+            <p className="kicker mb-2">Simulation · édition</p>
+            <h2
+              id="edit-modal-title"
+              className="font-display text-2xl text-ink mb-1"
+              style={{ fontVariationSettings: '"opsz" 24, "SOFT" 30' }}
+            >
               Modifier
             </h2>
+            <p className="text-sm text-ink-muted mb-8">{subtitle}</p>
 
-            {/* Subtitle */}
-            <p className="text-gray-400 mb-6 text-sm">
-              {editPitIndex !== null ? `Case ${editPitIndex + 1}` :
-                editScorePlayer !== null ? `Score Joueur ${editScorePlayer === Player.One ? '1' : '2'}` : ''}
-            </p>
-
-            {/* Value editor */}
-            <div className="flex items-center justify-center gap-4 mb-8">
+            {/* Stepper */}
+            <div className="flex items-center justify-center gap-3 mb-8">
               <button
+                type="button"
                 onClick={decrement}
-                className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-2xl text-white transition-all duration-300 focus-visible-ring"
                 aria-label="Diminuer la valeur"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-rule-strong text-ink-muted hover:text-ink hover:border-accent hover:bg-canvas transition-colors duration-150"
               >
-                −
+                <Minus size={16} strokeWidth={1.75} />
               </button>
 
-              <div className="glass-card border-2 border-emerald-500/30 px-6 py-4 rounded-2xl min-w-[100px]" role="status" aria-live="polite">
-                <span className="text-4xl font-black text-emerald-400">
+              <div
+                className="border border-rule-strong px-6 h-14 flex items-center justify-center min-w-[120px]"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  className="font-display tabular-nums text-ink"
+                  style={{ fontVariationSettings: '"opsz" 60, "SOFT" 30', fontSize: '2.5rem' }}
+                >
                   {editValue}
                 </span>
               </div>
 
               <button
+                type="button"
                 onClick={increment}
-                className="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-2xl font-bold text-2xl text-white transition-all duration-300 focus-visible-ring"
                 aria-label="Augmenter la valeur"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-rule-strong text-ink-muted hover:text-ink hover:border-accent hover:bg-canvas transition-colors duration-150"
               >
-                +
+                <Plus size={16} strokeWidth={1.75} />
               </button>
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-col sm:flex-row-reverse gap-2">
               <button
+                type="button"
                 onClick={onConfirm}
-                className="btn-emerald flex-1 focus-visible-ring"
+                className="h-11 inline-flex items-center justify-center px-5 rounded-md text-sm font-medium bg-accent text-accent-ink hover:bg-accent-hover transition-colors duration-150"
               >
                 Valider
               </button>
               <button
+                type="button"
                 onClick={onCancel}
-                className="btn-secondary flex-1 focus-visible-ring"
+                className="h-11 inline-flex items-center justify-center px-5 rounded-md text-sm font-medium text-ink-muted hover:text-ink hover:bg-canvas transition-colors duration-150"
               >
                 Annuler
               </button>

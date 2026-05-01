@@ -145,6 +145,71 @@ export class AudioService {
     });
   }
 
+  // Sound: "Seed Drop" - Realistic seed-in-PVC-bowl sound (higher pitch variety)
+  public playSeedDrop(pitIndex: number) {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const noise = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    const noiseGain = this.ctx.createGain();
+    const filter = this.ctx.createBiquadFilter();
+
+    // Pitch varies by pit position for realism
+    const basePitch = 180 + (pitIndex % 7) * 15;
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(basePitch, t);
+    osc.frequency.exponentialRampToValueAtTime(basePitch * 0.5, t + 0.08);
+
+    // Brief noise burst for click/rattle
+    noise.type = 'sawtooth';
+    noise.frequency.value = 3000 + Math.random() * 1000;
+    filter.type = 'bandpass';
+    filter.frequency.value = 2000;
+    filter.Q.value = 2;
+
+    gain.gain.setValueAtTime(0.6, t);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+
+    noiseGain.gain.setValueAtTime(0.15, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.04);
+
+    osc.connect(gain);
+    noise.connect(filter);
+    filter.connect(noiseGain);
+    gain.connect(this.masterGain!);
+    noiseGain.connect(this.masterGain!);
+
+    osc.start(t);
+    osc.stop(t + 0.1);
+    noise.start(t);
+    noise.stop(t + 0.05);
+  }
+
+  // Sound: opponent move notification
+  public playOpponentMove() {
+    if (this.isMuted || !this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.linearRampToValueAtTime(520, t + 0.08);
+
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.2, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
   // Sound: "Chat Notification" - Two-tone ping
   public playChatNotification() {
     if (this.isMuted || !this.ctx || !this.masterGain) return;

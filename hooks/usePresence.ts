@@ -25,16 +25,13 @@ export function usePresence(userId: string | null, isAuthenticated: boolean) {
       return;
     }
 
-    console.log('[usePresence] Setting user online:', userId);
 
     // Initialize Socket.io connection (required for invitations)
     const initSocket = async () => {
       try {
         if (!onlineManager.isConnected()) {
-          console.log('[usePresence] Initializing Socket.io connection...');
           await onlineManager.init(userId);
           setSocketConnected(true);
-          console.log('[usePresence] Socket.io connected successfully');
         } else {
           setSocketConnected(true);
         }
@@ -49,7 +46,6 @@ export function usePresence(userId: string | null, isAuthenticated: boolean) {
     // Set user online in database
     setUserOnline(userId)
       .then(() => {
-        console.log('[usePresence] User set online successfully');
         setLoading(false);
       })
       .catch((error) => {
@@ -59,13 +55,11 @@ export function usePresence(userId: string | null, isAuthenticated: boolean) {
 
     // Subscribe to online users changes
     const unsubscribe = subscribeToOnlineUsers((users) => {
-      console.log('[usePresence] Online users updated:', users.length);
       setOnlineUsers(users);
     });
 
     // Set user offline on unmount
     return () => {
-      console.log('[usePresence] Setting user offline:', userId);
       setUserOffline(userId).catch((error) => {
         console.error('[usePresence] Error setting user offline:', error);
       });
@@ -73,7 +67,6 @@ export function usePresence(userId: string | null, isAuthenticated: boolean) {
 
       // Disconnect socket
       if (socketConnected && onlineManager.isConnected()) {
-        console.log('[usePresence] Disconnecting socket...');
         onlineManager.destroy();
       }
     };

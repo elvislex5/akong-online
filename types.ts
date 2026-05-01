@@ -19,6 +19,9 @@ export enum GameMode {
   OnlineSpectator // New mode for watchers
 }
 
+export type GameVariant = 'gabon' | 'cameroon';
+export type GameSystem = 'mgpwem' | 'angbwe';
+
 export interface GameState {
   board: number[]; // Array of 14 integers (pits)
   scores: {
@@ -52,7 +55,7 @@ export interface AnimationStep {
 }
 
 // Online Messages
-export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE' | 'GUEST_PROFILE_SHARE' | 'REMATCH_REQUEST' | 'GAME_ENDED' | 'PLAYER_DISCONNECTED' | 'PLAYER_RECONNECTED' | 'SPECTATOR_JOINED' | 'SPECTATOR_LEFT' | 'CHAT_MESSAGE' | 'CHAT_TYPING';
+export type OnlineMessageType = 'SYNC_STATE' | 'MOVE_INTENT' | 'REMOTE_MOVE' | 'RESTART' | 'PLAYER_JOINED' | 'ASSIGN_ROLE' | 'GUEST_PROFILE_SHARE' | 'REMATCH_REQUEST' | 'GAME_ENDED' | 'PLAYER_DISCONNECTED' | 'PLAYER_RECONNECTED' | 'SPECTATOR_JOINED' | 'SPECTATOR_LEFT' | 'CHAT_MESSAGE' | 'CHAT_TYPING' | 'AI_UPDATED' | 'MATCH_SCORE_UPDATE' | 'DRAW_OFFER' | 'DRAW_RESPONSE';
 
 export interface OnlineMessage {
   type: OnlineMessageType;
@@ -76,4 +79,4 @@ export interface ChatTypingPayload {
 }
 
 // AI Difficulty Levels
-export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'legend';
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'legend' | 'neural';

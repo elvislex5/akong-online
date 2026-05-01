@@ -11,7 +11,6 @@ import type { UserPresence, OnlineUser, PresenceStatus } from './supabase';
  * Set user status to online
  */
 export async function setUserOnline(userId: string): Promise<void> {
-  console.log('[presenceService] Setting user online:', userId);
 
   const { error } = await supabase.rpc('set_user_online', {
     p_user_id: userId
@@ -27,7 +26,6 @@ export async function setUserOnline(userId: string): Promise<void> {
  * Set user status to offline
  */
 export async function setUserOffline(userId: string): Promise<void> {
-  console.log('[presenceService] Setting user offline:', userId);
 
   const { error } = await supabase.rpc('set_user_offline', {
     p_user_id: userId
@@ -43,7 +41,6 @@ export async function setUserOffline(userId: string): Promise<void> {
  * Set user status to in_game
  */
 export async function setUserInGame(userId: string, roomId: string): Promise<void> {
-  console.log('[presenceService] Setting user in game:', userId, roomId);
 
   const { error } = await supabase.rpc('set_user_in_game', {
     p_user_id: userId,
@@ -101,7 +98,6 @@ export function subscribeToUserPresence(
   userId: string,
   callback: (presence: UserPresence | null) => void
 ) {
-  console.log('[presenceService] Subscribing to presence for user:', userId);
 
   const channel = supabase
     .channel(`presence:${userId}`)
@@ -114,7 +110,6 @@ export function subscribeToUserPresence(
         filter: `user_id=eq.${userId}`
       },
       (payload) => {
-        console.log('[presenceService] Presence change:', payload);
         if (payload.eventType === 'DELETE') {
           callback(null);
         } else {
@@ -125,7 +120,6 @@ export function subscribeToUserPresence(
     .subscribe();
 
   return () => {
-    console.log('[presenceService] Unsubscribing from presence for user:', userId);
     supabase.removeChannel(channel);
   };
 }
@@ -136,7 +130,6 @@ export function subscribeToUserPresence(
 export function subscribeToOnlineUsers(
   callback: (users: OnlineUser[]) => void
 ) {
-  console.log('[presenceService] Subscribing to online users');
 
   const channel = supabase
     .channel('online_users')
@@ -160,9 +153,34 @@ export function subscribeToOnlineUsers(
     .subscribe();
 
   return () => {
-    console.log('[presenceService] Unsubscribing from online users');
     supabase.removeChannel(channel);
   };
+}
+
+/**
+ * Aggregate count of currently online users by status. Used by the navbar
+ * "247 en ligne · 18 en partie" indicator.
+ */
+export interface PresenceCounts {
+  online: number;   // status = 'online' (idle on the platform)
+  inGame: number;   // status = 'in_game'
+  total: number;    // online + inGame
+}
+
+export async function getPresenceCounts(): Promise<PresenceCounts> {
+  const { data, error } = await supabase
+    .from('user_presence')
+    .select('status')
+    .in('status', ['online', 'in_game']);
+
+  if (error) {
+    console.error('[presenceService] getPresenceCounts error:', error);
+    return { online: 0, inGame: 0, total: 0 };
+  }
+  const rows = (data as { status: PresenceStatus }[]) || [];
+  const online = rows.filter((r) => r.status === 'online').length;
+  const inGame = rows.filter((r) => r.status === 'in_game').length;
+  return { online, inGame, total: online + inGame };
 }
 
 /**

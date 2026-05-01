@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Résumé structuré — Le Songo, un jeu de stratégie du peuple Ékang</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; font-size: 14px; color: #1a1a1a; background: #FDFAF6; line-height: 1.8; }
+  .page { max-width: 860px; margin: 0 auto; padding: 48px 52px; }
+
+  /* Cover */
+  .cover { text-align: center; padding: 50px 0 40px; margin-bottom: 48px; position: relative; border-bottom: 3px solid #5D4037; }
+  .cover-icon { font-size: 56px; margin-bottom: 12px; }
+  .cover h1 { font-family: 'Source Serif 4', Georgia, serif; font-size: 26px; color: #3E2723; font-weight: 800; margin-bottom: 6px; }
+  .cover .subtitle { font-size: 15px; color: #5D4037; margin-bottom: 4px; font-weight: 600; }
+  .cover .author { font-size: 13px; color: #8D6E63; margin-bottom: 4px; }
+  .cover .meta { font-size: 12px; color: #A1887F; font-style: italic; margin-bottom: 20px; }
+  .cover .purpose { display: inline-block; background: #EFEBE9; border: 1px solid #D7CCC8; border-radius: 8px; padding: 12px 20px; font-size: 13px; color: #4E342E; text-align: left; max-width: 520px; line-height: 1.7; margin-top: 8px; }
+
+  /* TOC */
+  .toc { background: #EFEBE9; border-radius: 8px; padding: 20px 28px; margin-bottom: 40px; }
+  .toc h2 { font-family: 'Source Serif 4', serif; font-size: 15px; font-weight: 700; color: #5D4037; margin-bottom: 12px; }
+  .toc ol { padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 4px; font-size: 13px; break-inside: avoid; }
+  .toc li a { color: #5D4037; text-decoration: none; }
+  .toc li a:hover { text-decoration: underline; }
+
+  /* Sections */
+  h2.section-title { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 800; color: #3E2723; border-left: 4px solid #8D6E63; padding-left: 14px; margin: 44px 0 16px; }
+  h3.sub-title { font-size: 15px; font-weight: 700; color: #5D4037; margin: 24px 0 8px; }
+  h4.item-title { font-size: 13px; font-weight: 700; color: #795548; margin: 16px 0 6px; }
+
+  p { margin-bottom: 10px; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; margin-bottom: 18px; font-size: 13px; }
+  th { background: #5D4037; color: #fff; padding: 9px 12px; text-align: left; font-weight: 700; }
+  td { padding: 8px 12px; border-bottom: 1px solid #E0D5CC; vertical-align: top; }
+  tr:nth-child(even) td { background: #FAF5F0; }
+
+  /* Quote */
+  blockquote { border-left: 3px solid #8D6E63; margin: 14px 0; padding: 10px 16px; background: #EFEBE9; border-radius: 0 6px 6px 0; font-style: italic; color: #4E342E; font-size: 13px; }
+  blockquote .source { font-style: normal; font-size: 11px; color: #8D6E63; margin-top: 6px; display: block; }
+
+  /* Badges */
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+  .tag-new { background: #C8E6C9; color: #1B5E20; }
+  .tag-enrich { background: #FFF9C4; color: #F57F17; }
+  .tag-key { background: #FFCCBC; color: #BF360C; }
+  .tag-platform { background: #D1C4E9; color: #4527A0; }
+
+  /* Infobox */
+  .infobox { background: #E8F5E9; border-left: 4px solid #43A047; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #1B5E20; }
+  .warnbox { background: #FFF3E0; border-left: 4px solid #FB8C00; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #E65100; }
+  .platformbox { background: #EDE7F6; border-left: 4px solid #7E57C2; padding: 12px 16px; border-radius: 4px; margin: 14px 0; font-size: 13px; color: #4527A0; }
+
+  .vocab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; margin-bottom: 14px; }
+  .vocab-item { display: flex; gap: 8px; font-size: 13px; padding: 4px 0; border-bottom: 1px dotted #D7CCC8; }
+  .vocab-term { font-weight: 700; color: #5D4037; min-width: 110px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .vocab-def { color: #4E342E; }
+
+  @media (max-width: 600px) { .page { padding: 24px 20px; } .toc ol { columns: 1; } .vocab-grid { grid-template-columns: 1fr; } }
+  @media print { .page { padding: 28px 36px; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- COVER -->
+  <div class="cover">
+    <div class="cover-icon">📖</div>
+    <h1>Résumé structuré du livre</h1>
+    <div class="subtitle">« Le Songo — Un jeu de stratégie du peuple Ékang »</div>
+    <div class="author">Venant Debomame Zue Ntougou · Éditions Atramenta, 2021 · 182 pages</div>
+    <div class="meta">Livre de poche · Première édition · © 2020</div>
+    <div class="purpose">
+      <strong>🎯 Objectif de ce résumé :</strong> Extraire de ce livre de référence tout ce qui est utile pour construire la plateforme Songo Online — nouvelles règles, variantes de jeu, terminologie authentique, contexte historique, infrastructure compétitive existante, et implications pour le cahier des charges.
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>Sommaire du résumé</h2>
+    <ol>
+      <li><a href="#s1">Le livre en un coup d'œil</a></li>
+      <li><a href="#s2">Origines et signification profonde du Songo</a></li>
+      <li><a href="#s3">Le vocabulaire authentique du jeu</a></li>
+      <li><a href="#s4">Le système Mgpwém — Règles détaillées</a></li>
+      <li><a href="#s5">Les 3 autres systèmes de jeu</a></li>
+      <li><a href="#s6">Les finitions et le cognage (Bikuruya)</a></li>
+      <li><a href="#s7">Le champion légendaire : Vivi</a></li>
+      <li><a href="#s8">L'écosystème compétitif existant</a></li>
+      <li><a href="#s9">Les mathématiques du Songo</a></li>
+      <li><a href="#s10">Les 111 joueurs référencés</a></li>
+      <li><a href="#s11">Ce que ça change pour la plateforme</a></li>
+    </ol>
+  </div>
+
+  <!-- SECTION 1 -->
+  <h2 class="section-title" id="s1">1. Le livre en un coup d'œil</h2>
+
+  <p>L'auteur, <strong>Venant Debomame Zue Ntougou</strong>, est un membre de l'ONG Génération Ékang basée à Libreville (Gabon). Son livre est le premier ouvrage de référence en français qui couvre à la fois l'histoire, les règles, les variantes, l'écosystème compétitif et les mathématiques du Songo. Ce n'est pas un simple manuel de règles — c'est un manifeste culturel et scientifique.</p>
+
+  <h3 class="sub-title">Structure du livre</h3>
+  <table>
+    <tr><th>Chapitre</th><th>Pages</th><th>Contenu</th></tr>
+    <tr><td>I. Présentation et intérêt</td><td>11-19</td><td>Pourquoi le Songo est important pour le peuple Ékang et pour l'Afrique</td></tr>
+    <tr><td>II. Genèse du Songo</td><td>20-49</td><td>Origines égyptiennes, technique de guerre, outil de mesure du temps, jeu de société</td></tr>
+    <tr><td>III. Le langage du jeu</td><td>50-64</td><td>Vocabulaire complet en langue Ékang, composants, musique, culture autour du jeu</td></tr>
+    <tr><td>IV. Le système Mgpwém</td><td>65-85</td><td>Règles détaillées du système principal (70 pions, 5/case)</td></tr>
+    <tr><td>V. Autres systèmes</td><td>86-99</td><td>Angbwé, Angounou, Nya Songo, Bikom — 4 variantes avec règles complètes</td></tr>
+    <tr><td>VI. Meilleurs clubs du Gabon</td><td>100-106</td><td>Clubs, ligues, structure sociale autour du jeu</td></tr>
+    <tr><td>VII. La Fédération nationale</td><td>107-115</td><td>FEGASONGO, fonctionnement, ambitions, défis</td></tr>
+    <tr><td>VIII. Organisation d'un tournoi</td><td>116-125</td><td>3 modèles de tournois détaillés (individuel, par équipes, stade dédié)</td></tr>
+    <tr><td>IX. Vivi : l'éternel champion</td><td>126-150</td><td>Biographie, parcours, inventions, palmarès 1995-2020</td></tr>
+    <tr><td>X. Les mathématiques</td><td>151-166</td><td>Équations affines, nombre de dispositions, partie complète annotée</td></tr>
+    <tr><td>Annexes</td><td>171-179</td><td>Liste de 111 joueurs, photos de clubs, bibliographie</td></tr>
+  </table>
+
+  <!-- SECTION 2 -->
+  <h2 class="section-title" id="s2">2. Origines et signification profonde du Songo</h2>
+
+  <p>Le livre dévoile que le Songo est bien plus qu'un jeu. C'est un objet culturel à multiples dimensions que l'auteur rattache à l'histoire millénaire du peuple Ékang (Fang-Bulu-Beti).</p>
+
+  <h3 class="sub-title">2.1 Une origine égyptienne</h3>
+  <p>L'auteur établit un lien entre le Songo et les sciences de l'Égypte antique. Le tablier de Songo mesure <strong>2 coudées royales</strong> (2 × 52,36 cm ≈ 105 cm). Chaque rangée de 7 cases correspond à 7 paumes dans le système métrique égyptien. Le Musée du Louvre conserverait une représentation similaire datant de 1 700 ans avant notre ère. Le peuple Ékang, dans sa migration depuis la zone égypto-nubienne vers l'Afrique centrale (vers le XIIIe siècle), aurait transporté ce savoir avec lui.</p>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> La section « Découverte du Songo » dans le module Learn devrait intégrer cette dimension historique fascinante. Un récit d'introduction connectant le Songo à l'Égypte ancienne donnera au jeu une aura comparable à celle des échecs (dont on raconte aussi les origines mythiques en Inde).
+  </div>
+
+  <h3 class="sub-title">2.2 Une technique de guerre</h3>
+  <p>Le Songo a été utilisé comme <strong>stratégie militaire</strong> par le peuple Ékang. Les trous creusés dans le sol servaient de postes de surveillance et de pièges pour les assaillants. La technique : « nourrir l'assaillant, le fatiguer et le prendre en otage ». Le tablier et les graines symbolisent respectivement « l'arme et les munitions, les pistes et les soldats, le village et ses occupants ». Cette stratégie a été utilisée contre les colonisateurs allemands et français au Cameroun (1884-1901).</p>
+
+  <h3 class="sub-title">2.3 Un outil d'organisation du temps</h3>
+  <p>Les <strong>7 cases</strong> de chaque rangée correspondent aux 7 jours de la création dans la cosmogonie Ékang :</p>
+  <table>
+    <tr><th>Case</th><th>Jour</th><th>Signification</th></tr>
+    <tr><td>1</td><td>Jour de la Terre</td><td>Premier dieu, source d'abondance</td></tr>
+    <tr><td>2</td><td>Jour du Soleil</td><td>Énergie, initiation à la vie</td></tr>
+    <tr><td>3</td><td>Jour de la Lune</td><td>Clarté, charité, naissance des mois</td></tr>
+    <tr><td>4</td><td>Jour de la Mère</td><td>Berceau de la création</td></tr>
+    <tr><td>5</td><td>Jour du Père</td><td>Courage, lutte pour l'humanité</td></tr>
+    <tr><td>6</td><td>Jour du Peuple</td><td>Transmission des connaissances</td></tr>
+    <tr><td>7</td><td>Jour de Dieu</td><td>Repos, la nature s'exprime</td></tr>
+  </table>
+  <p>C'est cette cosmogonie qui explique le passage des tabliers à 2×6 cases (comme l'Awalé) aux tabliers à <strong>2×7 cases</strong> chez le peuple Ékang. Le Songo est donc aussi un <strong>calendrier symbolique</strong>.</p>
+
+  <h3 class="sub-title">2.4 L'évolution du tablier — 4 ères</h3>
+  <ol>
+    <li><strong>Trous dans le sol</strong> — ère de l'agriculture</li>
+    <li><strong>Bronze, cuivre, zinc</strong> — ère de la métallurgie</li>
+    <li><strong>Bois, roseaux, raphia</strong> — contact avec la forêt d'Afrique centrale</li>
+    <li><strong>PVC (plastique)</strong> — ère moderne, tabliers transportables de 90 cm à 105 cm</li>
+  </ol>
+
+  <!-- SECTION 3 -->
+  <h2 class="section-title" id="s3">3. Le vocabulaire authentique du jeu</h2>
+
+  <p>Le livre fournit un lexique complet en langue <strong>Madzô Nna</strong> (la langue sacrée Ékang, appelée aussi Medzo Ntare ou Medu Netjer). Voici les termes essentiels :</p>
+
+  <h3 class="sub-title">3.1 Les composants</h3>
+  <div class="vocab-grid">
+    <div class="vocab-item"><span class="vocab-term">Mbekh Songo</span><span class="vocab-def">Le tablier (2×7 cases, 105 cm ou 90 cm)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Menda</span><span class="vocab-def">Les cases (dispositifs pour les pions)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Mimbekh</span><span class="vocab-def">Les nasses / cache-pions (greniers pour les captures)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Ôgɔkh / Mbang</span><span class="vocab-def">Le pion / la graine (graine d'ézang, diam. 1 cm)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Ézang</span><span class="vocab-def">L'arbre dont la graine sert de pion</span></div>
+    <div class="vocab-item"><span class="vocab-term">Nle Songo</span><span class="vocab-def">Le joueur</span></div>
+  </div>
+
+  <h3 class="sub-title">3.2 Les actions de jeu</h3>
+  <div class="vocab-grid">
+    <div class="vocab-item"><span class="vocab-term">Aleh</span><span class="vocab-def">Jouer (avec une seule main, jamais les deux)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Atén-NDA</span><span class="vocab-def">Passer un coup / semer</span></div>
+    <div class="vocab-item"><span class="vocab-term">Awua angɔkh</span><span class="vocab-def">Jeter les pions (l'action du coup)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Adzi</span><span class="vocab-def">Bouffer / capturer les graines</span></div>
+    <div class="vocab-item"><span class="vocab-term">Awolo mengokh</span><span class="vocab-def">Ramasser les pions (capture en série)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Atchiê</span><span class="vocab-def">Prendre 2, 3 ou 4 pions dans une case</span></div>
+    <div class="vocab-item"><span class="vocab-term">Alang</span><span class="vocab-def">Compter les pions (à haute voix ou silencieux)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Adzâ nda</span><span class="vocab-def">Engranger / accumuler dans une case</span></div>
+  </div>
+
+  <h3 class="sub-title">3.3 Les concepts stratégiques</h3>
+  <div class="vocab-grid">
+    <div class="vocab-item"><span class="vocab-term">Bikuruya</span><span class="vocab-def">Le cognage (déplacement pion par pion en fin de partie)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Bik</span><span class="vocab-def">Unité du cognage (contrôle des positions pas-à-pas)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Yini</span><span class="vocab-def">Case bloquée / case mère (5 pions = invulnérable après un coup)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Akuru</span><span class="vocab-def">Grande case (≥19 pions, équiv. du grenier/ndà)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Olôa</span><span class="vocab-def">Case vigile (14 pions = ne capture pas mais donne 1 pion bonus)</span></div>
+    <div class="vocab-item"><span class="vocab-term">AbØ Songo</span><span class="vocab-def">Le classement / l'ouverture du jeu</span></div>
+    <div class="vocab-item"><span class="vocab-term">Awin</span><span class="vocab-def">Tuer / gagner (passer des pions à l'adversaire en fin de partie)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Asalan</span><span class="vocab-def">Match nul (35-35)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Éki-ndâ</span><span class="vocab-def">Mort sévère (capturer moins de 5 pions)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Éki-mbang</span><span class="vocab-def">Mort totale (0 pion capturé = éliminé, vaut 7 défaites)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Azik</span><span class="vocab-def">La musique du jeu (sons des graines + chants des joueurs)</span></div>
+    <div class="vocab-item"><span class="vocab-term">Awun</span><span class="vocab-def">Ouverture classique 6-5-3-4 (la plus courante)</span></div>
+  </div>
+
+  <h3 class="sub-title">3.4 Le comptage traditionnel (par 5)</h3>
+  <table>
+    <tr><th>Nombre</th><th>Méthode 1</th><th>Méthode 2</th></tr>
+    <tr><td>1</td><td>Fô</td><td>Fô</td></tr>
+    <tr><td>2</td><td>Ogokh</td><td>Bèñ</td></tr>
+    <tr><td>3</td><td>Fô</td><td>Lã</td></tr>
+    <tr><td>4</td><td>Ogokh</td><td>Nyiñ</td></tr>
+    <tr><td>5</td><td>Ezang</td><td>Tàn</td></tr>
+  </table>
+  <p>On compte de 5 en 5, puis on recommence. Le chiffre 5 représente les 5 doigts de la main, les 5 sens, et les 5 graines initiales par case.</p>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Ce vocabulaire devrait être intégré dans l'interface (option de langue Ékang), dans les bots (qui parlent en Ékang), et dans le module Learn. Le comptage par 5 et les termes Yini, Akuru, Olôa, Bikuruya sont des concepts stratégiques que le premier document de règles ne mentionnait pas du tout.
+  </div>
+
+  <!-- SECTION 4 -->
+  <h2 class="section-title" id="s4">4. Le système Mgpwém — Règles détaillées</h2>
+
+  <p>Le Mgpwém est le système principal, celui qui « s'universalise petit à petit ». C'est le système développé par les Ntumu du Woleu-Ntem (nord du Gabon). Les règles du premier PDF correspondent à ce système, mais le livre ajoute des précisions importantes.</p>
+
+  <h3 class="sub-title">4.1 Nouvelles précisions</h3>
+  <ul>
+    <li><strong>Le gagnant remplit toutes ses cases ET passe des pions à l'adversaire.</strong> Ce n'est pas juste « capturer 40 » — le vainqueur doit reconstituer ses 35 pions dans ses cases et donner le surplus. <span class="tag tag-new">NOUVEAU</span></li>
+    <li><strong>On joue avec une seule main</strong> (droite si droitier, gauche si gaucher), jamais les deux. <span class="tag tag-new">NOUVEAU</span></li>
+    <li><strong>La case de départ est sautée</strong> lors de la distribution (on ne remet pas de pion dedans). <span class="tag tag-enrich">ENRICHI</span></li>
+    <li><strong>On ne passe qu'une seule fois dans sa propre rangée</strong> lors d'un coup (sauf grenier). <span class="tag tag-new">NOUVEAU</span></li>
+    <li><strong>Le Yini (case mère)</strong> — une case qui se retrouve avec exactement 5 pions après un coup est invulnérable. C'est un concept stratégique majeur non mentionné dans le premier document. <span class="tag tag-key">CLÉ</span></li>
+    <li><strong>L'Olôa (case vigile)</strong> — une case de 14 pions ne permet pas de capture mais donne 1 pion bonus au joueur. <span class="tag tag-key">CLÉ</span></li>
+    <li><strong>L'Akuru (grande case)</strong> — case de 19 pions ou plus. Elle peut ne pas capturer si des Yinis se sont formés entre les cases 1 et 6. <span class="tag tag-key">CLÉ</span></li>
+    <li><strong>Éki-mbang</strong> — capturer 0 pion = élimination immédiate en compétition (vaut 7 défaites). <span class="tag tag-new">NOUVEAU</span></li>
+    <li><strong>Éki-ndâ</strong> — capturer moins de 5 pions = « mort sévère ». <span class="tag tag-new">NOUVEAU</span></li>
+    <li><strong>L'arbitre peut constater la fin</strong> quand un joueur dépasse 35 pions. <span class="tag tag-new">NOUVEAU</span></li>
+  </ul>
+
+  <h3 class="sub-title">4.2 Les 3 étapes d'une partie</h3>
+  <table>
+    <tr><th>Étape</th><th>Nom</th><th>Description</th></tr>
+    <tr><td>1</td><td><strong>L'ouverture (AbØ Songo)</strong></td><td>Dévoiler son classement, poser les pièges initiaux. L'ouverture classique est le « Awun » (cases 6, 5, 3, 4).</td></tr>
+    <tr><td>2</td><td><strong>L'entre-jeu</strong></td><td>Phase de captures massives. Chaque joueur tente de piéger ou de réparer ses erreurs. Finit quand la dernière des 14 cases originales est jouée.</td></tr>
+    <tr><td>3</td><td><strong>Les finitions (Bikuruya)</strong></td><td>Phase de cognage pion par pion. Partie décisive selon les grands maîtres. Requiert la maîtrise des « biks » (unités de déplacement).</td></tr>
+  </table>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Le moteur de jeu doit implémenter le Yini, l'Olôa et l'Akuru. Le module Learn doit enseigner les 3 phases (ouverture/entre-jeu/finitions). Le système d'analyse post-partie devrait identifier dans quelle phase chaque erreur s'est produite.
+  </div>
+
+  <h3 class="sub-title">4.3 Les interdictions complètes (livre)</h3>
+  <ol>
+    <li>Les cases A1 et B1 (premières cases) ne sont pas capturables.</li>
+    <li>Une case de 5 pions ou plus n'est pas capturable.</li>
+    <li>Pas plus de 2 joueurs sur un tablier.</li>
+    <li>Interdit de jouer pendant que l'autre joue (mais on peut compter).</li>
+    <li>Interdit de prendre les pions des 7 cases adverses d'un seul coup (si c'est le seul choix, on ne récolte rien).</li>
+    <li>Interdit de passer plus d'une fois dans ses propres cases lors d'un coup.</li>
+    <li>Interdit de remettre un pion dans la case de départ.</li>
+    <li>Interdit de se battre physiquement (la moquerie est admise).</li>
+    <li>Interdit d'empêcher l'adversaire de compter ses pions.</li>
+    <li>Interdit aux spectateurs et arbitres de s'ingérer dans une partie.</li>
+    <li>Interdit de jouer sous la pluie.</li>
+  </ol>
+
+  <div class="warnbox">
+    <strong>⚠️ Différences avec le premier PDF :</strong> Certaines règles diffèrent entre les deux sources. Le premier PDF (Serge Mbarga Owona) mentionne la condition de victoire à 40 pions, tandis que ce livre parle de reconstituer ses 35 pions + passer le surplus. Aussi, ce livre dit que 5+ pions = non capturable (pas juste 2-4 capturable). Ces différences reflètent probablement des variantes régionales (Cameroun vs Gabon). Il faudra choisir un système de référence ou permettre de configurer les règles.
+  </div>
+
+  <!-- SECTION 5 -->
+  <h2 class="section-title" id="s5">5. Les 3 autres systèmes de jeu</h2>
+
+  <p>C'est la révélation majeure du livre : le Songo n'est pas un seul jeu mais une <strong>famille de 4+ systèmes</strong> partageant le même tablier 2×7.</p>
+
+  <h3 class="sub-title">5.1 Angbwé (le perchoir) <span class="tag tag-new">NOUVEAU</span></h3>
+  <table>
+    <tr><th>Caractéristique</th><th>Détail</th></tr>
+    <tr><td>Pions de départ</td><td>56 (4 par case)</td></tr>
+    <tr><td>Objectif</td><td>Remplir toutes ses cases ET celles de l'adversaire</td></tr>
+    <tr><td>Capture</td><td>Quand une case atteint 4 pions après un coup, on capture uniquement cette case (pas en série)</td></tr>
+    <tr><td>Fin de coup</td><td>Quand le dernier pion tombe dans une case vide</td></tr>
+    <tr><td>Particularité</td><td>Parité conservée jusqu'à la fin. Interdit de compter les pions adverses. <strong>Premier jeu enseigné aux enfants dès 5 ans</strong></td></tr>
+    <tr><td>Public</td><td>Débutants, enfants, initiation</td></tr>
+  </table>
+
+  <h3 class="sub-title">5.2 Angounou (l'entassement) <span class="tag tag-new">NOUVEAU</span></h3>
+  <table>
+    <tr><th>Caractéristique</th><th>Détail</th></tr>
+    <tr><td>Pions de départ</td><td>70 (35 dans la 7e case uniquement !)</td></tr>
+    <tr><td>Objectif</td><td>Remplir sa 7e case avec les 70 pions</td></tr>
+    <tr><td>Capture</td><td>Quand le coup tombe dans une case de 15 à 19 pions. Si 20 pions = pas de capture (l'adversaire récupère)</td></tr>
+    <tr><td>Fin de coup</td><td>Quand le dernier pion tombe dans une case vide ou une case de 14 pions</td></tr>
+    <tr><td>Particularité</td><td>Interdit de compter ! Il faut jouer vite. Pas de nasses. Pas de bikuruya</td></tr>
+    <tr><td>Public</td><td>Jeu rapide, spectaculaire</td></tr>
+  </table>
+
+  <h3 class="sub-title">5.3 Nya Songo (le vrai songo / loi de neuf) <span class="tag tag-new">NOUVEAU</span></h3>
+  <table>
+    <tr><th>Caractéristique</th><th>Détail</th></tr>
+    <tr><td>Pions de départ</td><td>70 (5 par case, comme Mgpwém)</td></tr>
+    <tr><td>Objectif</td><td>Capturer ≥ 40 pions. Fin quand &lt; 9 pions restent en jeu</td></tr>
+    <tr><td>Match nul</td><td>Si chaque joueur a entre 31 et 39 pions</td></tr>
+    <tr><td>Particularité</td><td>Basé sur la <strong>solidarité</strong>. Interdit d'affamer l'adversaire. Variante « Engamba » : 19 ou 26 pions = capture des 7 cases si on en prend 6</td></tr>
+    <tr><td>Philosophie</td><td>Reflète les valeurs communautaires Ékang : « celui qui a donne à celui qui n'a pas »</td></tr>
+  </table>
+
+  <h3 class="sub-title">5.4 Bikom / Nkogh Judo <span class="tag tag-new">NOUVEAU</span></h3>
+  <table>
+    <tr><th>Caractéristique</th><th>Détail</th></tr>
+    <tr><td>Pions de départ</td><td>70 (5 par case)</td></tr>
+    <tr><td>Objectif</td><td>Remplir ses 7 cases de 35 pions et passer le reste</td></tr>
+    <tr><td>Capture</td><td>Quand le coup finit dans une case vide, on capture la case d'en face, quel que soit le camp</td></tr>
+    <tr><td>Particularité</td><td>Considéré comme le <strong>plus ancien système</strong>. Pas de bikuruya. « Peu de vieux se souviennent encore des règles »</td></tr>
+    <tr><td>Fin</td><td>Quand un joueur ne peut plus faire traverser de graines</td></tr>
+  </table>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme majeur :</strong> La plateforme ne devrait pas proposer un seul jeu mais <strong>4 systèmes de Songo</strong>. C'est un avantage concurrentiel énorme — comme si Chess.com proposait échecs classiques + bullet + Fischer Random dans un même écosystème. Le Angbwé est parfait pour le mode « Apprendre » et les enfants. L'Angounou est idéal pour un mode « Rapide/Fun ». Le Mgpwém est le mode compétitif principal. Le Bikom est un mode « Héritage/Classique ».
+  </div>
+
+  <!-- SECTION 6 -->
+  <h2 class="section-title" id="s6">6. Les finitions et le cognage (Bikuruya)</h2>
+
+  <p>Le livre développe en détail les <strong>théorèmes de finition</strong> — des configurations de fin de partie avec des résultats prévisibles. C'est l'équivalent des « tablebases » aux échecs.</p>
+
+  <h3 class="sub-title">Configurations documentées</h3>
+  <table>
+    <tr><th>Position</th><th>Résultat</th><th>Note</th></tr>
+    <tr><td>4 contre 3</td><td>Finit en 6 contre 1 → match nul (35-35)</td><td>Théorème de biks</td></tr>
+    <tr><td>6 contre 4</td><td>3 variantes (Kamtsit, Jules, Vivi). Premier joueur prend 6 sur 10</td><td>Évolution récente des techniques</td></tr>
+    <tr><td>6 contre 5</td><td>Par symétrie, celui qui joue en premier perd</td><td>Comparaison des biks</td></tr>
+    <tr><td>5 contre 4</td><td>Découverte de Vivi : celui qui a 4 reste avec 2 (pas 1)</td><td>Révolutionnaire</td></tr>
+    <tr><td>5 contre 3</td><td>Découverte de Vivi : celui qui a 3 reste avec 1</td><td>Technique spécifique requise</td></tr>
+    <tr><td>4 contre 4</td><td>Chacun garde ses 4, sauf si un pion est piégé</td><td>Secret : ne pas se faire capturer à −4, −3, −2 biks</td></tr>
+    <tr><td>3 contre 1</td><td>Chacun garde les siens (sauf si 4+ pliages)</td><td>Finit en 2-2</td></tr>
+    <tr><td>3 contre 2</td><td>A prend tout si B ne plie pas. Sinon B peut garder 1</td><td>Technique de pliage</td></tr>
+  </table>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Ces « tablebases du Songo » sont du contenu premium pour le module Learn (cours avancés sur les finitions). L'IA devrait connaître ces théorèmes pour les finitions. Des puzzles spécifiques « Finitions » devraient être créés à partir de ces positions.
+  </div>
+
+  <!-- SECTION 7 -->
+  <h2 class="section-title" id="s7">7. Le champion légendaire : Vivi</h2>
+
+  <p><strong>Parfait Ekiki Metou</strong>, alias « Vivi » (doubles vies), né le 30 juin 1978 à Bitam (Woleu-Ntem, Gabon). Ntumu de la nation Ékang, clan Nkodjèn du village Essone.</p>
+
+  <h3 class="sub-title">7.1 Parcours</h3>
+  <ul>
+    <li>Commence à jouer en cachette à <strong>8 ans</strong> (interdit par sa famille).</li>
+    <li>Bat ses enseignants à l'école → interdit de jouer dans sa contrée.</li>
+    <li>Sa mère lui donne le surnom « Vivi » (doubles vies) et l'encourage.</li>
+    <li><strong>1995 à Oyem</strong> : bat Dékono, l'ancien champion du Gabon (3-2, +1 pion sur la dernière partie). Début de sa légende.</li>
+    <li><strong>1995-2020</strong> : remporte TOUTES les compétitions individuelles auxquelles il participe.</li>
+    <li><strong>2015 à Ambam (Cameroun)</strong> : bat le meilleur joueur camerounais <strong>les yeux bandés</strong> en direct à la télévision.</li>
+    <li><strong>2015 à Libreville</strong> : seul ballottage de sa carrière (2-2, 2 nuls) contre Kamtsit.</li>
+    <li><strong>2019 à Bata (Guinée Équatoriale)</strong> : remporte le <strong>premier tournoi international officiel</strong>, prix de 40 millions FCFA (~60 690 €).</li>
+    <li><strong>2019 à Libreville</strong> : son club Ntseng Okele devient champion du Gabon.</li>
+  </ul>
+
+  <h3 class="sub-title">7.2 Ses inventions</h3>
+  <ul>
+    <li><strong>Le cahier :</strong> Premier document technique écrit des stratégies du Songo (cases-gènes, notation des cases A1-A7/B1-B7, formules).</li>
+    <li><strong>Jeu les yeux bandés :</strong> Prouve qu'un aveugle peut jouer au Songo (mains + mémoire + sons des graines).</li>
+    <li><strong>Jeu par téléphone :</strong> Joue à distance en dictant les coups.</li>
+    <li><strong>Jeu par procuration :</strong> Se fait remplacer par quelqu'un devant le tablier tout en dirigeant à distance.</li>
+    <li><strong>Tabliers raccourcis (90 cm)</strong> pour la maniabilité et l'accessibilité aux personnes aveugles.</li>
+    <li><strong>Nouvelles découvertes sur les finitions</strong> (5 vs 4, 5 vs 3, etc.).</li>
+  </ul>
+
+  <blockquote>
+    « Le prochain objectif est de créer des applications numériques pour consigner les techniques du songo afin que ce dernier accède à des compétitions internationales à côté des autres jeux de société. »
+    <span class="source">— Le livre, p.148</span>
+  </blockquote>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Vivi est LA figure du Songo. Il devrait être le « Magnus Carlsen » de la plateforme. Son histoire peut alimenter le storytelling, un bot « Vivi » de niveau légendaire, et potentiellement un partenariat. Le jeu les yeux bandés pourrait devenir un mode spécial. Le jeu par téléphone / à distance EST littéralement ce que la plateforme construit.
+  </div>
+
+  <!-- SECTION 8 -->
+  <h2 class="section-title" id="s8">8. L'écosystème compétitif existant</h2>
+
+  <h3 class="sub-title">8.1 La FEGASONGO</h3>
+  <p>La <strong>Fédération Gabonaise de Songo</strong>, créée en mai 2012, est l'institution de référence. Elle comprend 4 ligues provinciales (Estuaire/Libreville, Haut-Ogooué/Franceville, Ogooué-Maritime/Port-Gentil, Woleu-Ntem/Oyem) et de nombreux clubs. Elle organise des championnats nationaux, gère les licences de joueurs, et rémunère les joueurs sous contrat.</p>
+
+  <h3 class="sub-title">8.2 Les clubs de référence (Libreville)</h3>
+  <table>
+    <tr><th>#</th><th>Club</th><th>Note</th></tr>
+    <tr><td>1</td><td>Cocotiers</td><td>Club historique</td></tr>
+    <tr><td>2</td><td>Akamayong</td><td></td></tr>
+    <tr><td>3</td><td>Akanda (ASCA)</td><td></td></tr>
+    <tr><td>4</td><td>Engong des Pk</td><td>Multiple champion, rival de Ntseng Okele</td></tr>
+    <tr><td>5</td><td>Kamank Club</td><td></td></tr>
+    <tr><td>6</td><td>Ntseng Okele</td><td>Club formé par Vivi, champion 2019</td></tr>
+    <tr><td>7</td><td>Nzeng Ayong Mairie</td><td></td></tr>
+    <tr><td>8</td><td>Nzeng Ayong Dragages</td><td></td></tr>
+    <tr><td>9</td><td>Sotega</td><td></td></tr>
+    <tr><td>10</td><td>Owendo</td><td></td></tr>
+  </table>
+
+  <h3 class="sub-title">8.3 L'économie du Songo</h3>
+  <p>Le livre révèle un écosystème économique déjà existant :</p>
+  <ul>
+    <li>Les joueurs <strong>jouent pour de l'argent</strong> (mises sur le tablier) dans les clubs de Libreville.</li>
+    <li>Certains joueurs <strong>vivent du Songo</strong> en faisant le tour des lieux de jeu payants.</li>
+    <li>Les clubs de D1 et D2 ont des <strong>joueurs sous contrat</strong> avec rémunération.</li>
+    <li>Les tournois offrent des <strong>prix individuels et collectifs en millions de FCFA</strong>.</li>
+    <li>Le tournoi international de Guinée Équatoriale 2019 a offert <strong>40 millions FCFA</strong> au vainqueur.</li>
+  </ul>
+
+  <h3 class="sub-title">8.4 Les 3 modèles de tournois proposés</h3>
+  <table>
+    <tr><th>Modèle</th><th>Format</th><th>Détails</th></tr>
+    <tr><td><strong>Individuel</strong></td><td>4 poules de 4, puis 8, puis finale à 4</td><td>2 catégories : Élites + Espoirs. Finale croisée Élite vs Espoir. Durée : 2 jours.</td></tr>
+    <tr><td><strong>Par équipes</strong></td><td>12 joueurs/équipe, 4 équipes</td><td>Tous contre tous au 1er tour, 3 qualifiés au 2e, finale à 2. Durée : 6 jours. 24 tabliers simultanés.</td></tr>
+    <tr><td><strong>Stade dédié</strong></td><td>Infrastructure permanente</td><td>Gradins, caméras, diffusion en ligne, espace pour joueurs et spectateurs séparés. Vision futuriste.</td></tr>
+  </table>
+
+  <h3 class="sub-title">8.5 La durée recommandée</h3>
+  <p>Le livre propose : <strong>2 heures par partie, 6 matchs de 20 minutes</strong>, avec maximum 1 minute de réflexion par coup. C'est une proposition formelle de l'auteur pour standardiser le temps de jeu en vue de la mondialisation.</p>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> L'infrastructure compétitive existante (fédération, clubs, ligues, tournois payants) est un atout majeur. La plateforme devrait s'intégrer avec cet écosystème réel — pas le remplacer. Proposer aux clubs existants de créer leur club en ligne, à la FEGASONGO d'organiser ses tournois officiels sur la plateforme, etc.
+  </div>
+
+  <!-- SECTION 9 -->
+  <h2 class="section-title" id="s9">9. Les mathématiques du Songo</h2>
+
+  <h3 class="sub-title">9.1 Opérations fondamentales</h3>
+  <p>Jouer au Songo = calculer. Deux opérations de base : <strong>l'addition</strong> (semer = ajouter des graines) et la <strong>soustraction</strong> (capturer = retirer des graines). L'auteur fait le lien avec les papyrus mathématiques égyptiens (papyrus d'Ahmès, −1500 av. J.-C.).</p>
+
+  <h3 class="sub-title">9.2 Équations affines</h3>
+  <p>Le livre formalise 5 types d'équations pour calculer la case finale d'un coup en fonction de la case initiale (j) et du nombre de graines (x) :</p>
+  <table>
+    <tr><th>Type</th><th>Condition</th><th>Formule</th></tr>
+    <tr><td>Type 1</td><td>Transfert dans son propre territoire</td><td>g(x) = x + j</td></tr>
+    <tr><td>Type 2</td><td>Depuis A3/B3 vers le territoire adverse</td><td>g(x) = x − j − 1</td></tr>
+    <tr><td>Type 3</td><td>Depuis A4/B4 vers le territoire adverse</td><td>g(x) = x − j + 1</td></tr>
+    <tr><td>Type 4</td><td>Depuis A5/B5 retour vers territoire initial</td><td>g(x) = x − 2j + 1</td></tr>
+    <tr><td>Type 5</td><td>Depuis A5/B5 vers territoire adverse (double transfert)</td><td>g(x) = x − 2j − 3</td></tr>
+  </table>
+
+  <h3 class="sub-title">9.3 Le nombre astronomique</h3>
+  <p>Selon les travaux de <strong>M. Mizony</strong> (Université du Cameroun, 1971), le nombre de dispositions possibles au Songo est de :</p>
+  <blockquote style="text-align: center; font-size: 18px; font-weight: 700; font-style: normal;">
+    3 173 734 438 530 120
+  </blockquote>
+  <p>Soit plus de <strong>3 quadrillions</strong> de positions. À titre de comparaison, les échecs ont environ 10^44 positions légales. Cela confirme la profondeur combinatoire extraordinaire du Songo.</p>
+
+  <h3 class="sub-title">9.4 Une partie complète annotée</h3>
+  <p>Le livre contient une partie complète entre ZUE et BITEGHE, annotée coup par coup sur 3 pages, avec les positions intermédiaires à l'ouverture, l'entre-jeu et les finitions. Score final : BITEGHE 41 — ZUE 29.</p>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Les équations affines pourraient alimenter un mode « Exercices mathématiques » dans le module Learn. La partie annotée est un modèle pour le format de notation SGN (Songo Game Notation) à créer. Le nombre astronomique de positions est un argument marketing puissant (« plus complexe que vous ne le pensez »).
+  </div>
+
+  <!-- SECTION 10 -->
+  <h2 class="section-title" id="s10">10. Les 111 joueurs référencés</h2>
+
+  <p>Le livre contient en annexe une liste de <strong>111 meilleurs joueurs du Gabon (1995-2020)</strong> avec leurs surnoms/alias. Voici quelques-uns des plus marquants :</p>
+
+  <table>
+    <tr><th>#</th><th>Alias</th><th>Note</th></tr>
+    <tr><td>1</td><td>Seigneur VIVI</td><td>Champion éternel, n°1 mondial</td></tr>
+    <tr><td>2</td><td>Kamtsit (Akuè Mvé)</td><td>2e meilleur joueur, seul à avoir tenu Vivi en ballottage</td></tr>
+    <tr><td>3</td><td>Jules</td><td>Un des meilleurs cogneurs</td></tr>
+    <tr><td>4</td><td>Agatta</td><td>Pronostiqué à 80% en finale 2019</td></tr>
+    <tr><td>5</td><td>Gatuzo</td><td>Pronostiqué à 80%</td></tr>
+    <tr><td>13</td><td>Malabouré</td><td>Une femme joueuse (décédée, hommage)</td></tr>
+    <tr><td>84</td><td>Ordinateur</td><td>Surnom parlant !</td></tr>
+    <tr><td>93</td><td>Piongologue</td><td></td></tr>
+    <tr><td>109</td><td>Virus</td><td></td></tr>
+  </table>
+
+  <div class="platformbox">
+    <strong>→ Impact plateforme :</strong> Ces 111 surnoms sont une mine d'or pour les noms de bots, les badges, et l'univers culturel de la plateforme. Certains joueurs vivants pourraient devenir des ambassadeurs ou partenaires. La tradition du « nom de songo » (alias de provocateur/tueur) devrait être encouragée sur la plateforme.
+  </div>
+
+  <!-- SECTION 11 -->
+  <h2 class="section-title" id="s11">11. Ce que ça change pour la plateforme — Synthèse</h2>
+
+  <h3 class="sub-title">11.1 Ajouts majeurs au CDC</h3>
+  <table>
+    <tr><th>Domaine</th><th>Avant (CDC v1.0)</th><th>Après (avec le livre)</th></tr>
+    <tr><td>Systèmes de jeu</td><td>1 seul (Mgpwém)</td><td><strong>4 systèmes</strong> : Mgpwém, Angbwé, Angounou, Nya Songo (+ Bikom en bonus)</td></tr>
+    <tr><td>Concepts stratégiques</td><td>Grenier, Yinda, Bidoua</td><td>+ <strong>Yini</strong> (case mère), <strong>Olôa</strong> (case vigile), <strong>Akuru</strong>, <strong>Bikuruya/Biks</strong>, Éki-mbang, Éki-ndâ</td></tr>
+    <tr><td>Vocabulaire</td><td>Français uniquement</td><td>+ <strong>Lexique complet Ékang</strong> (30+ termes)</td></tr>
+    <tr><td>Histoire</td><td>Mention superficielle</td><td><strong>Récit épique</strong> : Égypte → migration → guerre → modernité</td></tr>
+    <tr><td>Finitions</td><td>Non couvertes</td><td><strong>8 théorèmes de finition</strong> documentés (4v3, 6v4, 5v4, etc.)</td></tr>
+    <tr><td>Champion de référence</td><td>Aucun</td><td><strong>Vivi</strong> : biographie, palmarès, inventions, philosophie</td></tr>
+    <tr><td>Infrastructure réelle</td><td>Non mentionnée</td><td><strong>FEGASONGO</strong>, 4 ligues, 10 clubs, tournois avec prix en millions FCFA</td></tr>
+    <tr><td>Tournois</td><td>Modèles génériques</td><td><strong>3 modèles concrets</strong> (individuel, équipes, stade) avec logistique détaillée</td></tr>
+    <tr><td>Mathématiques</td><td>Non couvertes</td><td><strong>5 types d'équations</strong>, 3+ quadrillions de positions, partie annotée complète</td></tr>
+    <tr><td>Bots</td><td>Noms génériques inventés</td><td><strong>111 vrais surnoms</strong> de joueurs pour inspiration</td></tr>
+    <tr><td>Aspect culturel</td><td>Léger</td><td><strong>Musique du jeu (Azik)</strong>, chants, proverbes, plumes sur la tête du perdant, moquerie rituelle</td></tr>
+    <tr><td>Accessibilité</td><td>Basique</td><td>Jeu pour <strong>aveugles</strong> (Vivi joue les yeux bandés), tabliers adaptés</td></tr>
+    <tr><td>Durée de jeu</td><td>Cadences arbitraires</td><td>Proposition formelle : <strong>2h = 6 matchs × 20 min</strong>, 1 min/coup max</td></tr>
+  </table>
+
+  <h3 class="sub-title">11.2 Recommandations pour le CDC v1.1</h3>
+
+  <div class="infobox">
+    <strong>1. Ajouter les 4 systèmes de jeu</strong> — Mgpwém (compétitif), Angbwé (débutant/enfant), Angounou (rapide/fun), Nya Songo (solidarité). Chacun avec ses propres règles, son propre matchmaking, et potentiellement son propre rating.
+  </div>
+
+  <div class="infobox">
+    <strong>2. Enrichir le moteur de jeu</strong> — Implémenter le Yini, l'Olôa, l'Akuru, et les théorèmes de finition. Configurer les règles (variante camerounaise vs gabonaise) pour permettre aux joueurs de choisir.
+  </div>
+
+  <div class="infobox">
+    <strong>3. Intégrer le vocabulaire Ékang</strong> — Option de langue dans l'interface, termes Ékang dans les cours, bots qui parlent en Ékang, comptage traditionnel par 5.
+  </div>
+
+  <div class="infobox">
+    <strong>4. Créer un récit d'histoire immersif</strong> — Module « Découverte » enrichi : Égypte antique → migration Ékang → technique de guerre → les 7 jours de la création → modernité → Vivi.
+  </div>
+
+  <div class="infobox">
+    <strong>5. Partenariat avec l'écosystème réel</strong> — Contacter la FEGASONGO, les clubs existants, potentiellement Vivi lui-même. Proposer la plateforme comme outil officiel pour les compétitions.
+  </div>
+
+  <div class="infobox">
+    <strong>6. Mode accessibilité avancé</strong> — Mode « yeux bandés » (audio + haptic), inspiré directement de Vivi. Retour sonore des graines dans les cases.
+  </div>
+
+  <div class="infobox">
+    <strong>7. Module mathématique</strong> — Exercices de calcul basés sur les équations affines du Songo. Usage pédagogique pour les écoles (persona Mme Ondo).
+  </div>
+
+  <div class="infobox">
+    <strong>8. Ambiance culturelle</strong> — Sons de graines d'ézang, musique de jeu (Azik), chants traditionnels en fond sonore optionnel, tradition des surnoms de joueur (alias), moquerie rituelle intégrée au chat.
+  </div>
+
+  <p style="text-align: center; color: #5D4037; font-size: 12px; margin-top: 40px; letter-spacing: 2px; border-top: 2px solid #D7CCC8; padding-top: 20px;">
+    — Résumé produit à partir de l'intégralité des 182 pages du livre —<br>
+    <span style="font-size: 11px; color: #8D6E63;">Pour le projet Songo Online · Avril 2026</span>
+  </p>
+
+</div>
+</body>
+</html>

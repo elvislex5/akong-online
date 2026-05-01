@@ -1,0 +1,31 @@
+{
+  "id": "0ccc0da5-d5ea-4fb9-b9b3-6a611fb6c3fa",
+  "date": "2026-04-30T11:12:41.350Z",
+  "mode": "Simulation",
+  "player1": "AI (easy)",
+  "player2": "AI (medium)",
+  "moves": [],
+  "initialBoard": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+  ],
+  "winner": -1,
+  "finalScores": [
+    28,
+    28
+  ],
+  "totalMoves": 0,
+  "durationMs": 143
+}

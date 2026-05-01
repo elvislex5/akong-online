@@ -1,0 +1,34 @@
+{
+  "id": "64ceaa0d-cb98-4911-ada8-0065de39f263",
+  "date": "2026-04-30T17:36:52.612Z",
+  "mode": "VsAI",
+  "player1": "Joueur 1",
+  "player2": "AI (medium)",
+  "aiDifficulty": "medium",
+  "moves": [
+    2
+  ],
+  "initialBoard": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+  ],
+  "winner": -1,
+  "finalScores": [
+    28,
+    28
+  ],
+  "totalMoves": 1,
+  "durationMs": 6675
+}

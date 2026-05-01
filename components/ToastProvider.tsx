@@ -2,8 +2,9 @@ import React from 'react';
 import { Toaster } from 'react-hot-toast';
 
 /**
- * Toast Provider - Wraps the app with toast notification support
- * Uses react-hot-toast for elegant notifications
+ * Toast notifications, themed via the design-system CSS vars.
+ * Background, ink, borders, and accent colors all flip automatically
+ * with light/dark mode (handled by `:root` / `:root.dark` in tailwind.css).
  */
 const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -12,45 +13,49 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <Toaster
         position="top-center"
         reverseOrder={false}
+        gutter={8}
         toastOptions={{
-          // Default options
           duration: 4000,
           style: {
-            background: '#1F2937', // gray-800
-            color: '#F3F4F6', // gray-100
-            borderRadius: '12px',
-            padding: '16px',
-            fontSize: '14px',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
-            border: '1px solid #374151', // gray-700
+            background: 'var(--surface)',
+            color: 'var(--ink)',
+            border: '1px solid var(--rule)',
+            borderRadius: '6px',
+            padding: '10px 14px',
+            fontSize: '13px',
+            fontWeight: 500,
+            fontFamily: 'var(--font-sans)',
+            boxShadow:
+              '0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -1px rgb(0 0 0 / 0.04)',
+            maxWidth: '420px',
           },
-          // Success
           success: {
             duration: 3000,
             iconTheme: {
-              primary: '#10B981', // green-500
-              secondary: '#F3F4F6',
+              primary: 'var(--success)',
+              secondary: 'var(--surface)',
             },
             style: {
-              border: '1px solid #10B981',
+              borderLeft: '3px solid var(--success)',
             },
           },
-          // Error
           error: {
             duration: 5000,
             iconTheme: {
-              primary: '#EF4444', // red-500
-              secondary: '#F3F4F6',
+              primary: 'var(--danger)',
+              secondary: 'var(--surface)',
             },
             style: {
-              border: '1px solid #EF4444',
+              borderLeft: '3px solid var(--danger)',
             },
           },
-          // Loading
           loading: {
             iconTheme: {
-              primary: '#F59E0B', // amber-500
-              secondary: '#F3F4F6',
+              primary: 'var(--accent)',
+              secondary: 'var(--surface)',
+            },
+            style: {
+              borderLeft: '3px solid var(--accent)',
             },
           },
         }}

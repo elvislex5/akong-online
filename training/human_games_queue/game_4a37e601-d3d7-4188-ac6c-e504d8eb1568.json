@@ -1,0 +1,31 @@
+{
+  "id": "4a37e601-d3d7-4188-ac6c-e504d8eb1568",
+  "date": "2026-04-30T16:02:19.970Z",
+  "mode": "OnlineHost",
+  "player1": "MOONG MEKÔNG",
+  "player2": "Joueur 2",
+  "moves": [],
+  "initialBoard": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "winner": 0,
+  "finalScores": [
+    0,
+    0
+  ],
+  "totalMoves": 0,
+  "durationMs": 13675
+}

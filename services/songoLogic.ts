@@ -1,9 +1,18 @@
-import { GameState, Player, GameStatus, AnimationStep } from '../types';
+import { GameState, Player, GameStatus, AnimationStep, GameVariant } from '../types';
 
 export const PITS_PER_PLAYER = 7;
 export const TOTAL_PITS = 14;
-export const INITIAL_SEEDS = 5; // Standard Songo often starts with 35 each (5 per pit)
-export const WINNING_SCORE = 36; // > 35 to win
+export const INITIAL_SEEDS = 5;
+export const WINNING_SCORE = 36; // Default (Gabon variant)
+
+export const VARIANT_WINNING_SCORES: Record<GameVariant, number> = {
+  gabon: 36,
+  cameroon: 40,
+};
+
+export function getWinningScore(variant?: GameVariant): number {
+  return variant ? VARIANT_WINNING_SCORES[variant] : WINNING_SCORE;
+}
 
 // Helper to get pit owner
 export const getPitOwner = (index: number): Player => {
@@ -346,7 +355,7 @@ export const getMoveSteps = (initialState: GameState, pitIndex: number): Animati
 
 
 // The Core Move Logic (Calculates final state directly)
-export const executeMove = (currentState: GameState, pitIndex: number): GameState => {
+export const executeMove = (currentState: GameState, pitIndex: number, variant?: GameVariant): GameState => {
   // Performance Optimization: Use spread instead of JSON.parse/stringify for AI speed
   const state: GameState = {
     ...currentState,
@@ -373,7 +382,7 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
     state.solidarityBeneficiary = currentPlayer;
 
     state.currentPlayer = currentPlayer === Player.One ? Player.Two : Player.One;
-    return checkWinCondition(state);
+    return checkWinCondition(state, false, variant);
   }
 
   // --- Normal Distribution Logic ---
@@ -402,9 +411,14 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
         opIdxPointer = (opIdxPointer + 1) % 7;
       }
 
-      scores[currentPlayer] += 1; // Capture the last seed
-      board[pitIndex] = 0; // Ensure start pit is 0 (it was skipped)
-      state.message = `Tour complet avec ${seeds + 13} pierres : Auto-capture !`;
+      scores[currentPlayer] += 1;
+      board[pitIndex] = 0;
+      const totalSeeds = seeds + 13;
+      state.message = totalSeeds === 14
+        ? `Olôa (case vigile) : ${totalSeeds} pierres, auto-capture !`
+        : totalSeeds >= 19
+          ? `Akuru (grande case) : ${totalSeeds} pierres, auto-capture !`
+          : `Tour complet avec ${totalSeeds} pierres : Auto-capture !`;
 
     } else {
       // Standard behavior: Distribute until exhausted in opponent side
@@ -469,7 +483,12 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
             board[idx] = 0;
           });
           scores[currentPlayer] += capturedAmount;
-          state.message = `Prise ! ${capturedAmount} pierres capturées.`;
+          const chainStoppedByYini = checkIdx >= 0 && checkIdx < TOTAL_PITS &&
+            getPitOwner(checkIdx) !== currentPlayer &&
+            board[checkIdx] === 5;
+          state.message = chainStoppedByYini
+            ? `Ditoto ! ${capturedAmount} pierres capturées (chaîne bloquée par Yini).`
+            : `Ditoto ! ${capturedAmount} pierres capturées.`;
         } else {
           state.message = "Coup joué. Prise annulée (Protection contre l'assèchement).";
         }
@@ -504,7 +523,7 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
       });
       scores[currentPlayer] += remaining;
       state.message = "Impossible de nourrir l'adversaire. Fin de partie.";
-      return checkWinCondition(state, true); // Force end
+      return checkWinCondition(state, true, variant);
     }
   }
 
@@ -526,7 +545,7 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
     });
     scores[currentPlayer] += remaining;
     state.message = "L'adversaire n'a plus de graines. Fin de partie.";
-    return checkWinCondition(state, true); // Force end
+    return checkWinCondition(state, true, variant);
   }
 
   // Second: Check if next player has any VALID moves
@@ -535,23 +554,23 @@ export const executeMove = (currentState: GameState, pitIndex: number): GameStat
   if (!nextPlayerHasMoves) {
     // Next player has seeds but no valid moves (forbidden by rules)
     // This is a stalemate - collect remaining seeds for owners
-    return resolveGameStalemate(state);
+    return resolveGameStalemate(state, variant);
   }
 
   state.currentPlayer = nextPlayer;
-  return checkWinCondition(state);
+  return checkWinCondition(state, false, variant);
 };
 
 // Helper to resolve stalemate (No valid moves available for current player)
-export const resolveGameStalemate = (state: GameState): GameState => {
+export const resolveGameStalemate = (state: GameState, variant?: GameVariant): GameState => {
   const newState: GameState = {
     ...state,
     board: [...state.board],
     scores: { ...state.scores }
   };
   const { scores, board } = newState;
+  const winScore = getWinningScore(variant);
 
-  // Collect remaining seeds for respective owners
   for (let i = 0; i < TOTAL_PITS; i++) {
     if (board[i] > 0) {
       const owner = getPitOwner(i);
@@ -561,8 +580,8 @@ export const resolveGameStalemate = (state: GameState): GameState => {
   }
 
   newState.status = GameStatus.Finished;
-  if (scores[Player.One] > 35) newState.winner = Player.One;
-  else if (scores[Player.Two] > 35) newState.winner = Player.Two;
+  if (scores[Player.One] >= winScore) newState.winner = Player.One;
+  else if (scores[Player.Two] >= winScore) newState.winner = Player.Two;
   else newState.winner = 'Draw';
 
   newState.message = "Plus de coups possibles. Fin de partie (Pat).";
@@ -570,16 +589,17 @@ export const resolveGameStalemate = (state: GameState): GameState => {
 };
 
 // Check for Game Over
-function checkWinCondition(state: GameState, forceEnd: boolean = false): GameState {
+function checkWinCondition(state: GameState, forceEnd: boolean = false, variant?: GameVariant): GameState {
   const { scores, board } = state;
+  const winScore = getWinningScore(variant);
 
-  if (scores[Player.One] > WINNING_SCORE) {
+  if (scores[Player.One] >= winScore) {
     state.status = GameStatus.Finished;
     state.winner = Player.One;
     state.message = "Le Joueur 1 a gagné par score !";
     return state;
   }
-  if (scores[Player.Two] > WINNING_SCORE) {
+  if (scores[Player.Two] >= winScore) {
     state.status = GameStatus.Finished;
     state.winner = Player.Two;
     state.message = "Le Joueur 2 a gagné par score !";
@@ -593,11 +613,9 @@ function checkWinCondition(state: GameState, forceEnd: boolean = false): GameSta
   }
 
   const currentIndices = getPlayerIndices(state.currentPlayer);
-  // Vérifier si le joueur a des coups VALIDES (pas juste des graines)
   const canPlay = currentIndices.some((idx: number) => isValidMove(state, idx).valid);
 
   if (!canPlay) {
-    // Game Over: Collect remaining seeds for respective owners
     for (let i = 0; i < TOTAL_PITS; i++) {
       if (board[i] > 0) {
         const owner = getPitOwner(i);
@@ -607,8 +625,8 @@ function checkWinCondition(state: GameState, forceEnd: boolean = false): GameSta
     }
 
     state.status = GameStatus.Finished;
-    if (scores[Player.One] > 35) state.winner = Player.One;
-    else if (scores[Player.Two] > 35) state.winner = Player.Two;
+    if (scores[Player.One] >= winScore) state.winner = Player.One;
+    else if (scores[Player.Two] >= winScore) state.winner = Player.Two;
     else state.winner = 'Draw';
 
     state.message = "Plus de coups possibles. Fin de partie.";

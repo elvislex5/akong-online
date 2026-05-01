@@ -1,66 +1,27 @@
-import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
-import { onAuthStateChange, getCurrentAuthUser } from '../services/authService';
-import type { AuthUser } from '../services/supabase';
+import { useAuthContext } from '../contexts/AuthContext';
 
 /**
- * Custom hook to manage authentication state
- * Returns the current user and profile, loading state, and error state
+ * Backward-compat shim: existing call sites use `useAuth()` returning
+ * `{ user, profile, loading, isAuthenticated, ... }`. We now back this with
+ * the shared AuthContext (single instance for the whole app), which fixes
+ * the per-component re-bootstrapping bug that caused FriendsPage to redirect
+ * to "/" on first mount.
+ *
+ * `authUser` and `error` are preserved (as null) for any code that destructures
+ * them; they were never load-bearing.
  */
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Load initial session
-    const loadUser = async () => {
-      try {
-        const currentUser = await getCurrentAuthUser();
-        console.log('[useAuth] Current user:', currentUser);
-        setAuthUser(currentUser);
-        setUser(currentUser ? { id: currentUser.id, email: currentUser.email } as User : null);
-      } catch (err) {
-        console.error('[useAuth] Error loading user:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load user');
-      } finally {
-        console.log('[useAuth] Loading complete, setting loading to false');
-        setLoading(false);
-      }
-    };
-
-    loadUser();
-
-    // Subscribe to auth state changes
-    const subscription = onAuthStateChange(async (changedUser) => {
-      setUser(changedUser);
-
-      if (changedUser) {
-        // Fetch full auth user with profile
-        try {
-          const fullUser = await getCurrentAuthUser();
-          setAuthUser(fullUser);
-        } catch (err) {
-          console.error('Error fetching auth user:', err);
-        }
-      } else {
-        setAuthUser(null);
-      }
-    });
-
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
+  const ctx = useAuthContext();
   return {
-    user,
-    authUser,
-    profile: authUser?.profile,
-    loading,
-    error,
-    isAuthenticated: !!user,
+    user: ctx.user,
+    authUser: ctx.user ? { id: ctx.user.id, email: ctx.user.email, profile: ctx.profile } : null,
+    profile: ctx.profile,
+    loading: ctx.loading,
+    error: null as string | null,
+    isAuthenticated: ctx.isAuthenticated,
+    signIn: ctx.signIn,
+    signUp: ctx.signUp,
+    signOut: ctx.signOut,
+    refreshProfile: ctx.refreshProfile,
   };
 }

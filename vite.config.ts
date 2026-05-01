@@ -1,6 +1,7 @@
 import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
@@ -12,15 +13,16 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [
         react(),
+        tailwindcss(),
         VitePWA({
           registerType: 'autoUpdate',
-          includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'akong.png'],
+          includeAssets: ['favicon.ico', 'apple-touch-icon.png'],
           manifest: {
-            name: 'Akông - Le Jeu du Songo',
-            short_name: 'Akông',
-            description: 'Jeu de stratégie africain traditionnel (variante Songo MPEM) avec multijoueur en ligne',
-            theme_color: '#FFD700',
-            background_color: '#000000',
+            name: 'Songo — Mancala africain',
+            short_name: 'Songo',
+            description: 'Jouez au Songo, jeu de stratégie traditionnel d\'Afrique centrale. Multijoueur en ligne, IA, leçons et puzzles.',
+            theme_color: '#2D3B73',
+            background_color: '#F4EFE6',
             display: 'standalone',
             orientation: 'any',
             icons: [
@@ -52,6 +54,7 @@ export default defineConfig(({ mode }) => {
           },
           workbox: {
             globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+            globIgnores: ['**/*.wasm', '**/ort-*.js'],  // WASM 25MB — chargé à la demande, pas en précache
             runtimeCaching: [
               {
                 urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -64,17 +67,6 @@ export default defineConfig(({ mode }) => {
                   },
                   cacheableResponse: {
                     statuses: [0, 200]
-                  }
-                }
-              },
-              {
-                urlPattern: /^https:\/\/cdn\.tailwindcss\.com\/.*/i,
-                handler: 'CacheFirst',
-                options: {
-                  cacheName: 'tailwind-cdn-cache',
-                  expiration: {
-                    maxEntries: 10,
-                    maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
                   }
                 }
               },
@@ -101,6 +93,9 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
       },
+      optimizeDeps: {
+        exclude: ['onnxruntime-web'],
+      },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
@@ -112,8 +107,7 @@ export default defineConfig(({ mode }) => {
             manualChunks: {
               'react-vendor': ['react', 'react-dom', 'react-router-dom'],
               'game-logic': ['./services/songoLogic', './services/ai'],
-              'ui-components': ['framer-motion', 'react-hot-toast', 'lucide-react'],
-              'three-vendor': ['three', '@react-three/fiber', '@react-three/drei']
+              'ui-components': ['framer-motion', 'react-hot-toast', 'lucide-react']
             }
           }
         },

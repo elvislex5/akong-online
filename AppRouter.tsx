@@ -2,29 +2,46 @@ import React, { useState, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './hooks/useAuth';
+import { AuthProvider } from './contexts/AuthContext';
 import { usePresence } from './hooks/usePresence';
 import { GameProvider, useGameContext } from './contexts/GameContext';
-import UnifiedNavbar from './components/layout/UnifiedNavbar';
+import { Navbar } from './components/shell/Navbar';
+import { Footer } from './components/shell/Footer';
+import { EmailVerificationBanner } from './components/auth/EmailVerificationBanner';
 import { SkipLink } from './components/accessibility/SkipLink';
+import ErrorBoundary from './components/ErrorBoundary';
 import type { Profile } from './services/supabase';
 
 // Lazy load heavy components for better performance
-const LandingPageRevolutionary = lazy(() => import('./pages/LandingPageRevolutionary'));
-const RulesPageImmersive = lazy(() => import('./pages/RulesPageImmersive'));
-const LobbyComingSoon = lazy(() => import('./pages/LobbyComingSoon'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const RulesPage = lazy(() => import('./pages/RulesPage'));
+const LobbyPage = lazy(() => import('./pages/LobbyPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const TournamentsPage = lazy(() => import('./pages/TournamentsPage'));
+const TournamentDetailPage = lazy(() => import('./pages/TournamentDetailPage'));
+const FriendsPage = lazy(() => import('./pages/FriendsPage'));
+const GamesPage = lazy(() => import('./pages/GamesPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const ClaimAccountPage = lazy(() => import('./pages/ClaimAccountPage'));
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
+const PuzzlePage = lazy(() => import('./pages/PuzzlePage'));
+const WatchPage = lazy(() => import('./pages/WatchPage'));
+const GameHistoryPage = lazy(() => import('./pages/GameHistoryPage'));
+const LearnPage = lazy(() => import('./pages/LearnPage'));
 const App = lazy(() => import('./App')); // The game page
 const AuthScreen = lazy(() => import('./components/auth/AuthScreen'));
 const ProfilePage = lazy(() => import('./components/auth/ProfilePage'));
 const InvitationSystem = lazy(() => import('./components/InvitationSystem'));
-const CustomCursor = lazy(() => import('./components/effects/CustomCursor'));
 const PWAInstallPrompt = lazy(() => import('./components/PWAInstallPrompt'));
 
-// Loading component
+// Loading component — minimal, just a quiet hairline spinner
 const PageLoader: React.FC = () => (
-  <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-    <div className="text-center space-y-4">
-      <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-      <p className="text-gray-400">Chargement...</p>
+  <div className="min-h-screen bg-canvas flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-6 h-6 border-2 border-rule-strong border-t-accent rounded-full animate-spin" />
+      <p className="text-ink-subtle text-xs tracking-[0.16em] uppercase">Chargement</p>
     </div>
   </div>
 );
@@ -57,13 +74,11 @@ const pageVariants = {
 const AnimatedPage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <motion.div
-      id="main-content"
       initial="initial"
       animate="animate"
       exit="exit"
       variants={pageVariants}
-      tabIndex={-1}
-      className="outline-none"
+      className="flex-1 flex flex-col outline-none"
     >
       {children}
     </motion.div>
@@ -82,33 +97,129 @@ const AnimatedRoutes: React.FC<{
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Landing Page - Revolutionary Version */}
+        {/* Landing Page */}
         <Route
           path="/"
           element={
             <AnimatedPage>
-              <LandingPageRevolutionary />
+              <LandingPage />
             </AnimatedPage>
           }
         />
 
-        {/* Rules Page - Immersive Version */}
+        {/* Rules Page */}
         <Route
           path="/rules"
           element={
             <AnimatedPage>
-              <RulesPageImmersive />
+              <RulesPage />
             </AnimatedPage>
           }
         />
 
-        {/* Lobby Page - Coming Soon */}
+        {/* Lobby Page */}
         <Route
           path="/lobby"
           element={
             <AnimatedPage>
-              <LobbyComingSoon />
+              <LobbyPage />
             </AnimatedPage>
+          }
+        />
+
+        {/* Leaderboard Page */}
+        <Route
+          path="/leaderboard"
+          element={
+            <AnimatedPage>
+              <LeaderboardPage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Tournaments */}
+        <Route
+          path="/tournaments"
+          element={
+            <AnimatedPage>
+              <TournamentsPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/tournaments/:id"
+          element={
+            <AnimatedPage>
+              <TournamentDetailPage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Learn Page */}
+        <Route
+          path="/learn"
+          element={
+            <AnimatedPage>
+              <LearnPage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Puzzles Page */}
+        <Route
+          path="/puzzles"
+          element={
+            <AnimatedPage>
+              <PuzzlePage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Watch Live Games (Spectator) */}
+        <Route
+          path="/watch"
+          element={
+            <AnimatedPage>
+              <WatchPage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Games archive — public browser of all finished games */}
+        <Route
+          path="/games"
+          element={
+            <AnimatedPage>
+              <GamesPage />
+            </AnimatedPage>
+          }
+        />
+
+        {/* Game History Page */}
+        <Route
+          path="/history"
+          element={
+            isAuthenticated ? (
+              <AnimatedPage>
+                <GameHistoryPage />
+              </AnimatedPage>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+
+        {/* Friends Page - Requires Authentication */}
+        <Route
+          path="/friends"
+          element={
+            isAuthenticated ? (
+              <AnimatedPage>
+                <FriendsPage />
+              </AnimatedPage>
+            ) : (
+              <Navigate to="/" replace />
+            )
           }
         />
 
@@ -140,11 +251,52 @@ const AnimatedRoutes: React.FC<{
                 <App />
               </AnimatedPage>
             ) : (
-              // Redirect to auth if not authenticated
-              <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+              <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
                 <AuthScreen />
               </div>
             )
+          }
+        />
+
+        {/* Auth flows (verify email + password reset) — public */}
+        <Route
+          path="/auth/verify-email"
+          element={
+            <AnimatedPage>
+              <VerifyEmailPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/auth/forgot-password"
+          element={
+            <AnimatedPage>
+              <ForgotPasswordPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/auth/reset-password"
+          element={
+            <AnimatedPage>
+              <ResetPasswordPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/auth/claim"
+          element={
+            <AnimatedPage>
+              <ClaimAccountPage />
+            </AnimatedPage>
+          }
+        />
+        <Route
+          path="/auth/oauth/callback"
+          element={
+            <AnimatedPage>
+              <OAuthCallbackPage />
+            </AnimatedPage>
           }
         />
 
@@ -164,84 +316,72 @@ const AppRouterContent: React.FC<{
   const { isGameInProgress } = useGameContext();
 
   return (
-    <>
+    <ErrorBoundary>
       <SkipLink />
       <Suspense fallback={<PageLoader />}>
-        {/* Global Fixed Background - Akong Pattern */}
-        <div className="fixed inset-0 z-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: 'url(/akong.png)',
-              filter: 'brightness(0.3) blur(2px)',
-            }}
-          />
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/90" />
+        <div className="min-h-screen flex flex-col">
+          {!isGameInProgress && <EmailVerificationBanner />}
+          {!isGameInProgress && <Navbar isAuthenticated={isAuthenticated} />}
+
+          <main id="main-content" className="flex-1 flex flex-col">
+            <AnimatedRoutes
+              isAuthenticated={isAuthenticated}
+              userProfile={userProfile}
+              setUserProfile={setUserProfile}
+            />
+          </main>
+
+          {!isGameInProgress && <Footer />}
         </div>
 
-        {/* Global Effects */}
-        <CustomCursor />
-
-        {/* Unified Navbar - Hidden during active game */}
-        {!isGameInProgress && (
-          <UnifiedNavbar
-            isAuthenticated={isAuthenticated}
-          />
-        )}
-
-        {/* Animated Routes */}
-        <AnimatedRoutes
-          isAuthenticated={isAuthenticated}
-          userProfile={userProfile}
-          setUserProfile={setUserProfile}
-        />
-
-        {/* Global Invitation System (Phase 3) */}
         {isAuthenticated && <InvitationSystem />}
-
-        {/* PWA Install Prompt */}
         <PWAInstallPrompt />
       </Suspense>
-    </>
+    </ErrorBoundary>
+  );
+};
+
+/**
+ * Inner component — runs INSIDE AuthProvider so it can call useAuth().
+ * Owns presence wiring + the local userProfile mirror that legacy code
+ * still expects to be passed via prop.
+ */
+const AppShell: React.FC = () => {
+  const { user, profile, loading, isAuthenticated } = useAuth();
+  const [userProfile, setUserProfile] = useState<Profile | null>(profile);
+
+  // Initialize presence and socket connection for authenticated users
+  usePresence(user?.id || null, isAuthenticated);
+
+  // Mirror context profile into local state (legacy ProfilePage prop API)
+  React.useEffect(() => {
+    setUserProfile(profile);
+  }, [profile]);
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  return (
+    <GameProvider>
+      <AppRouterContent
+        isAuthenticated={isAuthenticated}
+        userProfile={userProfile}
+        setUserProfile={setUserProfile}
+      />
+    </GameProvider>
   );
 };
 
 const AppRouter: React.FC = () => {
-  const { user, authUser, profile, loading, isAuthenticated } = useAuth();
-  const [userProfile, setUserProfile] = useState<Profile | null>(profile);
-
-  // Initialize presence and socket connection for authenticated users (Phase 3)
-  usePresence(user?.id || null, isAuthenticated);
-
-  // Update profile when auth profile changes
-  React.useEffect(() => {
-    if (profile) {
-      setUserProfile(profile);
-    }
-  }, [profile]);
-
-  // Show loading screen while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-gray-400">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
-
+  // Order matters: BrowserRouter must wrap AuthProvider so AuthScreen's
+  // <Link> ("Mot de passe oublié ?") can render. AuthProvider must wrap
+  // GameProvider so the in-game UI can react to logout.
   return (
     <BrowserRouter>
-      <GameProvider>
-        <AppRouterContent
-          isAuthenticated={isAuthenticated}
-          userProfile={userProfile}
-          setUserProfile={setUserProfile}
-        />
-      </GameProvider>
+      <AuthProvider>
+        <AppShell />
+      </AuthProvider>
     </BrowserRouter>
   );
 };

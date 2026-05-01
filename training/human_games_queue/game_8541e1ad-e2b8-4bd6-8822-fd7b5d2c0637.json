@@ -1,0 +1,33 @@
+{
+  "id": "8541e1ad-e2b8-4bd6-8822-fd7b5d2c0637",
+  "date": "2026-04-30T11:00:29.423Z",
+  "mode": "LocalMultiplayer",
+  "player1": "Joueur 1",
+  "player2": "Joueur 2",
+  "moves": [
+    4
+  ],
+  "initialBoard": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "winner": 1,
+  "finalScores": [
+    0,
+    0
+  ],
+  "totalMoves": 1,
+  "durationMs": 10057
+}

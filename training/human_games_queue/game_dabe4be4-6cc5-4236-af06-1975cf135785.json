@@ -1,0 +1,53 @@
+{
+  "id": "dabe4be4-6cc5-4236-af06-1975cf135785",
+  "date": "2026-04-30T18:05:27.828Z",
+  "mode": "VsAI",
+  "player1": "Joueur 1",
+  "player2": "AI (hard)",
+  "aiDifficulty": "hard",
+  "moves": [
+    11,
+    0,
+    12,
+    2,
+    9,
+    1,
+    8,
+    5,
+    12,
+    3,
+    11,
+    4,
+    7,
+    5,
+    9,
+    1,
+    11,
+    0,
+    12,
+    0
+  ],
+  "initialBoard": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+  ],
+  "winner": 1,
+  "finalScores": [
+    20,
+    36
+  ],
+  "totalMoves": 20,
+  "durationMs": 123986
+}

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { GameState, GameStatus, GameMode, Player, AnimationStep } from '../types';
-import { executeMove, getMoveSteps, WINNING_SCORE } from '../services/songoLogic';
+import { GameState, GameStatus, GameMode, GameSystem, Player, AnimationStep } from '../types';
+import { executeMove, getMoveSteps } from '../services/gameEngine';
+import { WINNING_SCORE } from '../services/songoLogic';
 import { audioService } from '../services/audioService';
 import { onlineManager } from '../services/onlineManager';
 import { victoryConfetti } from '../utils/confetti';
@@ -10,10 +11,13 @@ interface UseGameAnimationProps {
   gameMode: GameMode | null;
   simSpeed: 'slow' | 'normal' | 'fast';
   gameStateRef: React.MutableRefObject<GameState>;
+  gameSystemRef: React.MutableRefObject<GameSystem>;
   user: { id: string } | null;
   profile: Profile | null;
+  guestId?: string | null;
   onGameStateUpdate: (state: GameState) => void;
   onFinishGameInDB?: (winnerId: string | null) => void;
+  onRecordMatchGame?: (winnerId: string | null, scoreHost: number, scoreGuest: number) => Promise<void>;
 }
 
 interface UseGameAnimationReturn {
@@ -28,10 +32,13 @@ export function useGameAnimation({
   gameMode,
   simSpeed,
   gameStateRef,
+  gameSystemRef,
   user,
   profile,
+  guestId,
   onGameStateUpdate,
-  onFinishGameInDB
+  onFinishGameInDB,
+  onRecordMatchGame
 }: UseGameAnimationProps): UseGameAnimationReturn {
   const [isAnimating, setIsAnimating] = useState(false);
   const [animHand, setAnimHand] = useState<{ pitIndex: number | null; seedCount: number }>({
@@ -49,8 +56,9 @@ export function useGameAnimation({
     try {
       const startState = gameStateRef.current;
 
-      const steps = explicitSteps || getMoveSteps(startState, pitIndex);
-      const finalState = targetState || executeMove(startState, pitIndex);
+      const gs = gameSystemRef.current;
+      const steps = explicitSteps || getMoveSteps(gs, startState, pitIndex);
+      const finalState = targetState || executeMove(gs, startState, pitIndex);
 
       let stepDelay = 250;
       const totalSteps = steps.length;
@@ -125,10 +133,24 @@ export function useGameAnimation({
           victoryConfetti();
         }
 
+        // Record match game (host only)
+        if (gameMode === GameMode.OnlineHost && user?.id && onRecordMatchGame) {
+          const winnerId =
+            finalState.winner === Player.One ? user.id
+            : finalState.winner === Player.Two ? (guestId || null)
+            : null;
+          const scoreHost = finalState.scores[Player.One];
+          const scoreGuest = finalState.scores[Player.Two];
+
+          await onRecordMatchGame(winnerId, scoreHost, scoreGuest);
+        }
+
         // Persist game result in database (host only)
         if (gameMode === GameMode.OnlineHost && user?.id && onFinishGameInDB) {
           const winnerId =
-            finalState.winner === Player.One ? user.id : profile?.id || null;
+            finalState.winner === Player.One ? user.id
+            : finalState.winner === Player.Two ? (guestId || null)
+            : null;
           onFinishGameInDB(winnerId || null);
         }
 
@@ -139,7 +161,7 @@ export function useGameAnimation({
       }
     } catch (error) {
       console.error('Animation error', error);
-      const finalState = executeMove(gameStateRef.current, pitIndex);
+      const finalState = executeMove(gameSystemRef.current, gameStateRef.current, pitIndex);
       onGameStateUpdate(finalState);
     } finally {
       setIsAnimating(false);

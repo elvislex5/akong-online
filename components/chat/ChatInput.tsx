@@ -118,7 +118,7 @@ export default function ChatInput({ onSendMessage, onTypingChange }: ChatInputPr
             onKeyDown={handleKeyDown}
             maxLength={MAX_CHARS}
             placeholder="Tapez un message..."
-            className="w-full px-4 py-2 pr-12 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            className="w-full px-4 py-2 pr-12 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500/50 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-1 transition-colors"
           />
 
           {/* Character counter */}

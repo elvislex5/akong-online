@@ -1,5 +1,6 @@
-import { GameState } from '../types';
+import { GameState, GameSystem } from '../types';
 import { FastGameState, fastExecuteMove, getFastValidMoves, fastEvaluate } from './fastSongo';
+import { FastAngbweState, fastAngbweExecuteMove, getFastAngbweValidMoves, fastAngbweEvaluate } from './fastAngbwe';
 
 // ============================================================================
 // CONFIGURATION
@@ -254,76 +255,274 @@ function minimax(
 
 
 // ============================================================================
+// ANGBWÉ MINIMAX (same structure, different state/eval)
+// ============================================================================
+
+function minimaxAngbwe(
+    state: FastAngbweState,
+    depth: number,
+    alpha: number,
+    beta: number,
+    maximizingPlayer: number
+): number {
+    nodesEvaluated++;
+
+    if ((nodesEvaluated & 2047) === 0) {
+        if (performance.now() > deadline) throw "TIMEOUT";
+    }
+
+    if (depth === 0) {
+        return fastAngbweEvaluate(state, maximizingPlayer);
+    }
+
+    const moves = getFastAngbweValidMoves(state);
+    if (moves.length === 0) {
+        return fastAngbweEvaluate(state, maximizingPlayer);
+    }
+
+    const isMaximizing = state.data[16] === maximizingPlayer;
+
+    if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (let i = 0; i < moves.length; i++) {
+            const next = state.clone();
+            fastAngbweExecuteMove(next, moves[i]);
+            const evalScore = minimaxAngbwe(next, depth - 1, alpha, beta, maximizingPlayer);
+            if (evalScore > maxEval) maxEval = evalScore;
+            alpha = Math.max(alpha, evalScore);
+            if (beta <= alpha) break;
+        }
+        return maxEval;
+    } else {
+        let minEval = Infinity;
+        for (let i = 0; i < moves.length; i++) {
+            const next = state.clone();
+            fastAngbweExecuteMove(next, moves[i]);
+            const evalScore = minimaxAngbwe(next, depth - 1, alpha, beta, maximizingPlayer);
+            if (evalScore < minEval) minEval = evalScore;
+            beta = Math.min(beta, evalScore);
+            if (beta <= alpha) break;
+        }
+        return minEval;
+    }
+}
+
+// ============================================================================
 // DRIVER
 // ============================================================================
 
 initZobrist();
 
-self.onmessage = (e: MessageEvent) => {
-    const { type, state, depth, timeLimit } = e.data;
+function computeMgpwem(state: any, depth: number, timeLimit: number): number {
+    const fastState = FastGameState.fromGameState(state);
+    const rootPlayer = fastState.data[16];
 
-    if (type === 'COMPUTE_MOVE') {
-        const fastState = FastGameState.fromGameState(state);
-        const rootPlayer = fastState.data[16];
+    const moves = getFastValidMoves(fastState);
+    if (moves.length === 0) return -1;
+    if (moves.length === 1) return moves[0];
 
-        const moves = getFastValidMoves(fastState);
-        if (moves.length === 0) {
-            self.postMessage({ type: 'BEST_MOVE', moveIndex: -1 });
-            return;
-        }
-        if (moves.length === 1) {
-            self.postMessage({ type: 'BEST_MOVE', moveIndex: moves[0] });
-            return;
-        }
+    deadline = performance.now() + timeLimit;
+    nodesEvaluated = 0;
+    tt.clear();
+    moveHistory.fill(0);
 
-        deadline = performance.now() + timeLimit;
-        nodesEvaluated = 0;
-        tt.clear();
-        moveHistory.fill(0);
+    let bestMove = moves[0];
+    let currentDepth = 1;
 
-        let bestMove = moves[0];
-        let currentDepth = 1;
+    while (currentDepth <= depth) {
+        try {
+            let alpha = -Infinity;
+            let bestVal = -Infinity;
+            let bestMoveThisDepth = -1;
 
-        while (currentDepth <= depth) { // Respect max allowed depth
-            try {
-                let alpha = -Infinity;
-                let beta = Infinity;
-                let bestVal = -Infinity;
-                let bestMoveThisDepth = -1;
+            const ordered = orderMoves(fastState, moves, currentDepth, undefined);
 
-                const ordered = orderMoves(fastState, moves, currentDepth, undefined);
-
-                for (const m of ordered) {
-                    const next = fastState.clone();
-                    fastExecuteMove(next, m);
-
-                    const val = minimax(next, currentDepth - 1, alpha, beta, rootPlayer);
-
-                    if (val > bestVal) {
-                        bestVal = val;
-                        bestMoveThisDepth = m;
-                    }
-                    alpha = Math.max(alpha, bestVal);
-
-                    if (performance.now() > deadline) throw "TIMEOUT";
-                }
-
-                if (bestMoveThisDepth !== -1) {
-                    bestMove = bestMoveThisDepth;
-                }
-
-                if (bestVal > 90000) break;
-
-            } catch (timeout) {
-                break;
+            for (const m of ordered) {
+                const next = fastState.clone();
+                fastExecuteMove(next, m);
+                const val = minimax(next, currentDepth - 1, alpha, Infinity, rootPlayer);
+                if (val > bestVal) { bestVal = val; bestMoveThisDepth = m; }
+                alpha = Math.max(alpha, bestVal);
+                if (performance.now() > deadline) throw "TIMEOUT";
             }
 
-            // If we are close to timeout, don't start next depth
-            if (performance.now() > deadline - 20) break;
-            currentDepth++;
+            if (bestMoveThisDepth !== -1) bestMove = bestMoveThisDepth;
+            if (bestVal > 90000) break;
+        } catch { break; }
+
+        if (performance.now() > deadline - 20) break;
+        currentDepth++;
+    }
+
+    return bestMove;
+}
+
+function computeAngbwe(state: any, depth: number, timeLimit: number): number {
+    const fastState = FastAngbweState.fromGameState(state);
+    const rootPlayer = fastState.data[16];
+
+    const moves = getFastAngbweValidMoves(fastState);
+    if (moves.length === 0) return -1;
+    if (moves.length === 1) return moves[0];
+
+    deadline = performance.now() + timeLimit;
+    nodesEvaluated = 0;
+
+    let bestMove = moves[0];
+    let currentDepth = 1;
+
+    while (currentDepth <= depth) {
+        try {
+            let bestVal = -Infinity;
+            let bestMoveThisDepth = -1;
+
+            for (let i = 0; i < moves.length; i++) {
+                const next = fastState.clone();
+                fastAngbweExecuteMove(next, moves[i]);
+                const val = minimaxAngbwe(next, currentDepth - 1, -Infinity, Infinity, rootPlayer);
+                if (val > bestVal) { bestVal = val; bestMoveThisDepth = moves[i]; }
+                if (performance.now() > deadline) throw "TIMEOUT";
+            }
+
+            if (bestMoveThisDepth !== -1) bestMove = bestMoveThisDepth;
+            if (bestVal > 90000) break;
+        } catch { break; }
+
+        if (performance.now() > deadline - 20) break;
+        currentDepth++;
+    }
+
+    return bestMove;
+}
+
+/**
+ * Evaluate the score of EVERY legal root move at a given depth, returning
+ * one score per move. Used by post-game analysis to grade each played move
+ * against the best alternative at that position.
+ *
+ * Returns: { scores: Record<move, score>, bestMove, bestScore }
+ * Score perspective: rootPlayer (the side to move). Higher = better.
+ */
+function evaluateAllMovesMgpwem(state: any, depth: number, timeLimit: number) {
+    const fastState = FastGameState.fromGameState(state);
+    const rootPlayer = fastState.data[16];
+    const moves = getFastValidMoves(fastState);
+
+    if (moves.length === 0) return { scores: {}, bestMove: -1, bestScore: 0 };
+
+    deadline = performance.now() + timeLimit;
+    nodesEvaluated = 0;
+    tt.clear();
+    moveHistory.fill(0);
+
+    const scores: Record<number, number> = {};
+    let bestMove = moves[0];
+    let bestScore = -Infinity;
+
+    // Iterative deepening: refine the score per move as depth grows. Stop
+    // when we run out of time (each move keeps its last completed depth).
+    let currentDepth = 1;
+    while (currentDepth <= depth) {
+        const partial: Record<number, number> = {};
+        let partialBest = -Infinity;
+        let partialBestMove = bestMove;
+        let completed = true;
+
+        try {
+            for (let i = 0; i < moves.length; i++) {
+                const m = moves[i];
+                const next = fastState.clone();
+                fastExecuteMove(next, m);
+                const val = minimax(next, currentDepth - 1, -Infinity, Infinity, rootPlayer);
+                partial[m] = val;
+                if (val > partialBest) {
+                    partialBest = val;
+                    partialBestMove = m;
+                }
+                if (performance.now() > deadline) throw "TIMEOUT";
+            }
+        } catch {
+            completed = false;
         }
 
-        console.log(`AI Fast: Depth=${currentDepth - 1} Nodes=${nodesEvaluated} TT=${tt['table'].size}`);
-        self.postMessage({ type: 'BEST_MOVE', moveIndex: bestMove });
+        if (completed) {
+            for (const m of moves) scores[m] = partial[m];
+            bestScore = partialBest;
+            bestMove = partialBestMove;
+        }
+
+        if (!completed || performance.now() > deadline - 20) break;
+        currentDepth++;
+    }
+
+    return { scores, bestMove, bestScore };
+}
+
+function evaluateAllMovesAngbwe(state: any, depth: number, timeLimit: number) {
+    const fastState = FastAngbweState.fromGameState(state);
+    const rootPlayer = fastState.data[16];
+    const moves = getFastAngbweValidMoves(fastState);
+
+    if (moves.length === 0) return { scores: {}, bestMove: -1, bestScore: 0 };
+
+    deadline = performance.now() + timeLimit;
+    nodesEvaluated = 0;
+
+    const scores: Record<number, number> = {};
+    let bestMove = moves[0];
+    let bestScore = -Infinity;
+    let currentDepth = 1;
+
+    while (currentDepth <= depth) {
+        const partial: Record<number, number> = {};
+        let partialBest = -Infinity;
+        let partialBestMove = bestMove;
+        let completed = true;
+
+        try {
+            for (let i = 0; i < moves.length; i++) {
+                const m = moves[i];
+                const next = fastState.clone();
+                fastAngbweExecuteMove(next, m);
+                const val = minimaxAngbwe(next, currentDepth - 1, -Infinity, Infinity, rootPlayer);
+                partial[m] = val;
+                if (val > partialBest) {
+                    partialBest = val;
+                    partialBestMove = m;
+                }
+                if (performance.now() > deadline) throw "TIMEOUT";
+            }
+        } catch {
+            completed = false;
+        }
+
+        if (completed) {
+            for (let i = 0; i < moves.length; i++) scores[moves[i]] = partial[moves[i]];
+            bestScore = partialBest;
+            bestMove = partialBestMove;
+        }
+
+        if (!completed || performance.now() > deadline - 20) break;
+        currentDepth++;
+    }
+
+    return { scores, bestMove, bestScore };
+}
+
+self.onmessage = (e: MessageEvent) => {
+    const { type, state, depth, timeLimit, gameSystem, requestId } = e.data;
+
+    if (type === 'COMPUTE_MOVE') {
+        const moveIndex = gameSystem === 'angbwe'
+            ? computeAngbwe(state, depth, timeLimit)
+            : computeMgpwem(state, depth, timeLimit);
+
+        self.postMessage({ type: 'BEST_MOVE', moveIndex });
+    } else if (type === 'EVALUATE_ALL_MOVES') {
+        const result = gameSystem === 'angbwe'
+            ? evaluateAllMovesAngbwe(state, depth, timeLimit)
+            : evaluateAllMovesMgpwem(state, depth, timeLimit);
+
+        self.postMessage({ type: 'ALL_MOVES_EVAL', requestId, ...result });
     }
 };

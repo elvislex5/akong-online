@@ -1,8 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Target, Clipboard, Sliders, Lightbulb, X } from 'lucide-react';
-import { getAllBoardConfigs, type BoardSkinConfig, type PitPosition } from '../config/boardSkinConfigs';
+import { Save, X, Loader2, Check } from 'lucide-react';
+import { type PitPosition, setCalibrationCache } from '../config/boardSkinConfigs';
+import {
+  getAllBoardSkinsWithCalibration,
+  saveCalibration,
+  type BoardSkin,
+  type BoardSkinCalibration,
+} from '../services/boardSkinService';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import toast from 'react-hot-toast';
 
 interface BoardCalibrationToolProps {
   onClose: () => void;
@@ -11,35 +18,58 @@ interface BoardCalibrationToolProps {
 type ElementType = 'pit' | 'granary';
 
 const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) => {
-  // État pour le tablier sélectionné
-  const [selectedConfig, setSelectedConfig] = useState<BoardSkinConfig>(getAllBoardConfigs()[0]);
+  const [boardSkins, setBoardSkins] = useState<BoardSkin[]>([]);
+  const [selectedSkin, setSelectedSkin] = useState<BoardSkin | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // État pour les positions des trous
-  const [pitPositions, setPitPositions] = useState<{ [key: string]: PitPosition }>(selectedConfig.pitPositions);
+  const [pitPositions, setPitPositions] = useState<{ [key: string]: PitPosition }>({});
+  const [granaryOne, setGranaryOne] = useState({ x: 25, y: 50, w: 15, h: 15 });
+  const [granaryTwo, setGranaryTwo] = useState({ x: 75, y: 50, w: 15, h: 15 });
 
-  // État pour les positions des greniers
-  const [granaryOne, setGranaryOne] = useState(selectedConfig.granaryPositions.playerOne);
-  const [granaryTwo, setGranaryTwo] = useState(selectedConfig.granaryPositions.playerTwo);
-
-  // État pour le drag & drop
   const [dragging, setDragging] = useState<{ type: ElementType; id: string | number } | null>(null);
-
-  // État pour l'élément sélectionné pour l'édition fine
   const [selectedElement, setSelectedElement] = useState<{ type: ElementType; id: string | number } | null>(null);
 
-  // Accessibility
   const modalRef = useFocusTrap<HTMLDivElement>(true);
 
-  // Changer de tablier
-  const handleBoardChange = (config: BoardSkinConfig) => {
-    setSelectedConfig(config);
-    setPitPositions(config.pitPositions);
-    setGranaryOne(config.granaryPositions.playerOne);
-    setGranaryTwo(config.granaryPositions.playerTwo);
+  useEffect(() => {
+    getAllBoardSkinsWithCalibration()
+      .then((skins) => {
+        setBoardSkins(skins);
+        if (skins.length > 0) {
+          handleBoardChange(skins[0]);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('[BoardCalibrationTool] Error loading skins:', err);
+        toast.error('Erreur de chargement des skins');
+        setLoading(false);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const getDefaultPitPositions = (): { [key: string]: PitPosition } => {
+    const positions: { [key: string]: PitPosition } = {};
+    for (let i = 0; i <= 6; i++) positions[String(i)] = { x: 80 - i * 10, y: 71, w: 8, h: 16 };
+    for (let i = 7; i <= 13; i++) positions[String(i)] = { x: 18 + (i - 7) * 10, y: 27, w: 8, h: 16 };
+    return positions;
+  };
+
+  const handleBoardChange = (skin: BoardSkin) => {
+    setSelectedSkin(skin);
+    if (skin.calibration) {
+      setPitPositions(skin.calibration.pitPositions);
+      setGranaryOne(skin.calibration.granaryPositions.playerOne);
+      setGranaryTwo(skin.calibration.granaryPositions.playerTwo);
+    } else {
+      setPitPositions(getDefaultPitPositions());
+      setGranaryOne({ x: 25, y: 50, w: 15, h: 15 });
+      setGranaryTwo({ x: 75, y: 50, w: 15, h: 15 });
+    }
     setSelectedElement(null);
   };
 
-  // Gestion du drag & drop
   const handleMouseDown = (type: ElementType, id: string | number) => {
     setDragging({ type, id });
     setSelectedElement({ type, id });
@@ -51,367 +81,324 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!dragging) return;
-
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-
     if (dragging.type === 'pit') {
-      setPitPositions(prev => ({
+      setPitPositions((prev) => ({
         ...prev,
         [dragging.id]: {
           ...prev[dragging.id as string],
           x: Math.max(0, Math.min(100, x)),
-          y: Math.max(0, Math.min(100, y))
-        }
+          y: Math.max(0, Math.min(100, y)),
+        },
       }));
     } else if (dragging.id === 'one') {
-      setGranaryOne(prev => ({ ...prev, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }));
+      setGranaryOne((prev) => ({ ...prev, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }));
     } else if (dragging.id === 'two') {
-      setGranaryTwo(prev => ({ ...prev, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }));
+      setGranaryTwo((prev) => ({ ...prev, x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }));
     }
   };
 
-  const handleMouseUp = () => {
-    setDragging(null);
+  const handleMouseUp = () => setDragging(null);
+
+  const handleSave = async () => {
+    if (!selectedSkin) return;
+    setSaving(true);
+    try {
+      const calibration: BoardSkinCalibration = {
+        pitPositions,
+        granaryPositions: { playerOne: granaryOne, playerTwo: granaryTwo },
+      };
+
+      await saveCalibration(selectedSkin.id, calibration);
+
+      setBoardSkins((prev) => prev.map((s) => (s.id === selectedSkin.id ? { ...s, calibration } : s)));
+      setSelectedSkin((prev) => (prev ? { ...prev, calibration } : prev));
+
+      const cacheObj: { [url: string]: any } = {};
+      boardSkins.forEach((s) => {
+        if (s.id === selectedSkin.id) cacheObj[s.image_url] = calibration;
+        else if (s.calibration) cacheObj[s.image_url] = s.calibration;
+      });
+      setCalibrationCache(cacheObj);
+
+      toast.success('Calibration enregistrée');
+    } catch (err) {
+      console.error('[BoardCalibrationTool] Save error:', err);
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  // Copier la configuration dans le presse-papier
-  const copyToClipboard = () => {
-    const config = {
-      skinId: selectedConfig.skinId,
-      skinName: selectedConfig.skinName,
-      imageUrl: selectedConfig.imageUrl,
-      pitPositions,
-      granaryPositions: {
-        playerOne: granaryOne,
-        playerTwo: granaryTwo
-      }
-    };
-
-    const code = `export const ${selectedConfig.skinId.toUpperCase()}_CONFIG: BoardSkinConfig = ${JSON.stringify(config, null, 2)};`;
-
-    navigator.clipboard.writeText(code);
-    alert('✅ Configuration copiée ! Collez-la dans config/boardSkinConfigs.ts');
-  };
-
-  // Obtenir la position actuellement sélectionnée pour l'édition fine
   const getSelectedPosition = () => {
     if (!selectedElement) return null;
-    if (selectedElement.type === 'pit') {
-      return pitPositions[selectedElement.id as string];
-    } else if (selectedElement.id === 'one') {
-      return granaryOne;
-    } else {
-      return granaryTwo;
-    }
+    if (selectedElement.type === 'pit') return pitPositions[selectedElement.id as string];
+    if (selectedElement.id === 'one') return granaryOne;
+    return granaryTwo;
   };
 
-  // Mettre à jour la position sélectionnée
   const updateSelectedPosition = (field: 'x' | 'y' | 'w' | 'h', value: number) => {
     if (!selectedElement) return;
-
     if (selectedElement.type === 'pit') {
-      setPitPositions(prev => ({
+      setPitPositions((prev) => ({
         ...prev,
-        [selectedElement.id]: { ...prev[selectedElement.id as string], [field]: value }
+        [selectedElement.id]: { ...prev[selectedElement.id as string], [field]: value },
       }));
     } else if (selectedElement.id === 'one') {
-      setGranaryOne(prev => ({ ...prev, [field]: value }));
+      setGranaryOne((prev) => ({ ...prev, [field]: value }));
     } else {
-      setGranaryTwo(prev => ({ ...prev, [field]: value }));
+      setGranaryTwo((prev) => ({ ...prev, [field]: value }));
     }
   };
 
   const selectedPosition = getSelectedPosition();
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-canvas/85 backdrop-blur-sm flex items-center justify-center">
+        <Loader2 size={20} strokeWidth={1.75} className="text-accent animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 pt-20 sm:pt-24">
+    <div className="fixed inset-0 z-[9999] bg-canvas/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
       <motion.div
         ref={modalRef}
         role="dialog"
-        aria-label="Outil de calibration du tablier"
+        aria-label="Outil de calibration du plateau"
         aria-modal="true"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-7xl bg-gradient-to-br from-gray-900/95 to-black/95 backdrop-blur-xl border-2 border-purple-500/30 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-7xl bg-surface border border-rule shadow-lg overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="bg-black/60 backdrop-blur-xl p-3 sm:p-4 border-b border-purple-500/30 flex justify-between items-center flex-shrink-0">
+        <div className="px-5 py-4 border-b border-rule flex justify-between items-start gap-4 shrink-0">
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
-              <Target className="w-6 h-6 inline mr-2 text-purple-400" aria-hidden="true" /> Calibration du Tablier
+            <p className="kicker">Admin · calibration</p>
+            <h2
+              className="font-display text-2xl text-ink mt-1"
+              style={{ fontVariationSettings: '"opsz" 24, "SOFT" 30' }}
+            >
+              Calibrer le plateau
             </h2>
-            <p className="text-[10px] sm:text-xs text-gray-400 mt-1 hidden sm:block">Calibrez tous les trous (0-13) et les 2 greniers</p>
+            <p className="text-xs text-ink-muted mt-1 hidden sm:block">
+              Positionnez les 14 cases (0-13) et les 2 greniers · valeurs en % du plateau
+            </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all duration-300 focus-visible-ring"
             aria-label="Fermer"
+            className="inline-flex items-center justify-center w-9 h-9 text-ink-muted hover:text-ink hover:bg-canvas transition-colors duration-150 shrink-0"
           >
-            <X className="w-5 h-5" aria-hidden="true" />
+            <X size={16} strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Content */}
+        {/* Body */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
-          {/* Left Panel - Board Preview */}
-          <div className="flex-1 p-2 sm:p-3 lg:p-4 overflow-y-auto min-h-0">
-            {/* Board Selector */}
-            <div className="mb-2 sm:mb-3 bg-white/5 border border-purple-500/20 rounded-xl p-2 sm:p-3">
-              <label className="text-[10px] sm:text-xs font-bold text-purple-400 uppercase mb-1 sm:mb-2 block">
-                <Clipboard className="w-3 h-3 inline mr-1" aria-hidden="true" /> Tablier
-              </label>
-              <div className="grid grid-cols-3 gap-1 sm:gap-2">
-                {getAllBoardConfigs().map((config) => (
-                  <button
-                    key={config.skinId}
-                    onClick={() => handleBoardChange(config)}
-                    aria-pressed={selectedConfig.skinId === config.skinId}
-                    className={`p-1.5 sm:p-2 rounded-lg text-[10px] sm:text-xs font-bold transition-all focus-visible-ring ${selectedConfig.skinId === config.skinId
-                      ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white'
-                      : 'bg-white/10 text-gray-400 hover:bg-white/20'
-                      }`}
-                  >
-                    {config.skinName}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Board Preview */}
-            <div
-              className="relative w-full aspect-[21/9] rounded-xl overflow-hidden shadow-2xl cursor-crosshair"
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              role="application"
-              aria-label="Zone de prévisualisation du tablier"
-            >
-              <img src={selectedConfig.imageUrl} alt="Plateau" className="absolute inset-0 w-full h-full object-cover" />
-
-              {/* Render all pits */}
-              {Object.keys(pitPositions).map((pitIndex) => {
-                const pos = pitPositions[pitIndex];
-                const isPitDragging = dragging?.type === 'pit' && dragging?.id === pitIndex;
-                const isPitSelected = selectedElement?.type === 'pit' && selectedElement?.id === pitIndex;
-
-                return (
-                  <div
-                    key={`pit-${pitIndex}`}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Trou ${pitIndex}`}
-                    aria-pressed={isPitSelected}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleSelect('pit', pitIndex);
+          {/* Left: board preview */}
+          <div className="flex-1 p-4 lg:p-5 overflow-y-auto min-h-0 space-y-4">
+            {/* Skin selector */}
+            <div>
+              <p className="kicker mb-2">Plateau</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-rule border border-rule">
+                {boardSkins.map((skin) => {
+                  const isActive = selectedSkin?.id === skin.id;
+                  return (
+                    <button
+                      key={skin.id}
+                      type="button"
+                      onClick={() => handleBoardChange(skin)}
+                      aria-pressed={isActive}
+                      className={
+                        'h-9 px-3 text-xs font-medium tracking-wide inline-flex items-center justify-center gap-1.5 transition-colors duration-150 ' +
+                        (isActive
+                          ? 'bg-accent text-accent-ink'
+                          : 'bg-canvas text-ink-muted hover:text-ink hover:bg-surface')
                       }
-                    }}
-                    className={`absolute border-2 ${isPitDragging
-                      ? 'border-yellow-400 bg-yellow-500/40'
-                      : isPitSelected
-                        ? 'border-green-400 bg-green-500/30'
-                        : 'border-blue-400 bg-blue-500/20'
-                      } rounded-lg cursor-move transition-all hover:border-green-400 focus-visible-ring`}
-                    style={{
-                      left: `${pos.x}%`,
-                      top: `${pos.y}%`,
-                      width: `${pos.w}%`,
-                      height: `${pos.h}%`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      handleMouseDown('pit', pitIndex);
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-[10px] bg-black/50">
-                      {pitIndex}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Granary One (Player 1 - GAUCHE) */}
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label="Grenier 1 (Gauche)"
-                aria-pressed={selectedElement?.type === 'granary' && selectedElement?.id === 'one'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleSelect('granary', 'one');
-                  }
-                }}
-                className={`absolute border-4 ${dragging?.type === 'granary' && dragging?.id === 'one'
-                  ? 'border-blue-500 bg-blue-500/40'
-                  : selectedElement?.type === 'granary' && selectedElement?.id === 'one'
-                    ? 'border-green-500 bg-green-500/30'
-                    : 'border-blue-400 bg-blue-500/20'
-                  } rounded-lg cursor-move transition-all focus-visible-ring`}
-                style={{
-                  left: `${granaryOne.x}%`,
-                  top: `${granaryOne.y}%`,
-                  width: `${granaryOne.w}%`,
-                  height: `${granaryOne.h}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleMouseDown('granary', 'one');
-                }}
-              >
-                <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs bg-black/50">
-                  G1<br />GAUCHE
-                </div>
-              </div>
-
-              {/* Granary Two (Player 2 - DROIT) */}
-              <div
-                role="button"
-                tabIndex={0}
-                aria-label="Grenier 2 (Droit)"
-                aria-pressed={selectedElement?.type === 'granary' && selectedElement?.id === 'two'}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleSelect('granary', 'two');
-                  }
-                }}
-                className={`absolute border-4 ${dragging?.type === 'granary' && dragging?.id === 'two'
-                  ? 'border-amber-500 bg-amber-500/40'
-                  : selectedElement?.type === 'granary' && selectedElement?.id === 'two'
-                    ? 'border-green-500 bg-green-500/30'
-                    : 'border-amber-400 bg-amber-500/20'
-                  } rounded-lg cursor-move transition-all focus-visible-ring`}
-                style={{
-                  left: `${granaryTwo.x}%`,
-                  top: `${granaryTwo.y}%`,
-                  width: `${granaryTwo.w}%`,
-                  height: `${granaryTwo.h}%`,
-                  transform: 'translate(-50%, -50%)',
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  handleMouseDown('granary', 'two');
-                }}
-              >
-                <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-xs bg-black/50">
-                  G2<br />DROIT
-                </div>
+                    >
+                      <span className="truncate">{skin.name}</span>
+                      {skin.calibration && (
+                        <Check size={11} strokeWidth={2} className={isActive ? 'opacity-90' : 'text-success'} />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+
+            {/* Board preview with draggables */}
+            {selectedSkin && (
+              <div
+                className="relative w-full aspect-[21/9] border border-rule cursor-crosshair overflow-hidden"
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                role="application"
+                aria-label="Zone de calibration"
+              >
+                <img
+                  src={selectedSkin.image_url}
+                  alt="Plateau"
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover select-none"
+                />
+
+                {/* Pits */}
+                {Object.keys(pitPositions).map((pitIndex) => {
+                  const pos = pitPositions[pitIndex];
+                  const isDragging = dragging?.type === 'pit' && dragging?.id === pitIndex;
+                  const isSelected = selectedElement?.type === 'pit' && selectedElement?.id === pitIndex;
+                  return (
+                    <DraggableMarker
+                      key={`pit-${pitIndex}`}
+                      pos={pos}
+                      isSelected={isSelected}
+                      isDragging={isDragging}
+                      label={pitIndex}
+                      ariaLabel={`Case ${pitIndex}`}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        handleMouseDown('pit', pitIndex);
+                      }}
+                      onSelect={() => handleSelect('pit', pitIndex)}
+                    />
+                  );
+                })}
+
+                {/* Granary 1 */}
+                <DraggableMarker
+                  pos={granaryOne}
+                  isSelected={selectedElement?.type === 'granary' && selectedElement?.id === 'one'}
+                  isDragging={dragging?.type === 'granary' && dragging?.id === 'one'}
+                  label="G1"
+                  ariaLabel="Grenier 1 (gauche)"
+                  thick
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDown('granary', 'one');
+                  }}
+                  onSelect={() => handleSelect('granary', 'one')}
+                />
+
+                {/* Granary 2 */}
+                <DraggableMarker
+                  pos={granaryTwo}
+                  isSelected={selectedElement?.type === 'granary' && selectedElement?.id === 'two'}
+                  isDragging={dragging?.type === 'granary' && dragging?.id === 'two'}
+                  label="G2"
+                  ariaLabel="Grenier 2 (droit)"
+                  thick
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    handleMouseDown('granary', 'two');
+                  }}
+                  onSelect={() => handleSelect('granary', 'two')}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Panel - Fine Tuning Controls */}
-          <div className="w-80 border-l border-purple-500/30 bg-black/40 p-4 overflow-y-auto">
-            <h3 className="text-sm font-bold text-purple-400 mb-3 flex items-center"><Sliders className="w-4 h-4 mr-2" aria-hidden="true" /> Ajustements Précis</h3>
+          {/* Right: fine tuning panel */}
+          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-rule p-5 overflow-y-auto bg-canvas">
+            <p className="kicker mb-4">Ajustements précis</p>
 
             {selectedElement ? (
-              <div className="space-y-3">
-                <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-2">
-                  <p className="text-xs text-purple-300 font-bold">
+              <div className="space-y-5">
+                <div className="border-l-2 border-accent pl-3">
+                  <p className="text-xs text-ink-subtle">Sélection</p>
+                  <p
+                    className="font-display text-lg text-ink mt-0.5"
+                    style={{ fontVariationSettings: '"opsz" 18, "SOFT" 30' }}
+                  >
                     {selectedElement.type === 'pit'
-                      ? `Trou ${selectedElement.id}`
-                      : `Grenier ${selectedElement.id === 'one' ? '1 (Gauche)' : '2 (Droit)'}`}
+                      ? `Case ${selectedElement.id}`
+                      : `Grenier ${selectedElement.id === 'one' ? '1 · gauche' : '2 · droit'}`}
                   </p>
                 </div>
 
                 {selectedPosition && (
-                  <>
-                    <div>
-                      <label htmlFor="pos-x" className="text-xs text-gray-400">Position X: {selectedPosition.x.toFixed(1)}%</label>
-                      <input
-                        id="pos-x"
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={selectedPosition.x}
-                        onChange={(e) => updateSelectedPosition('x', parseFloat(e.target.value))}
-                        className="w-full focus-visible-ring"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="pos-y" className="text-xs text-gray-400">Position Y: {selectedPosition.y.toFixed(1)}%</label>
-                      <input
-                        id="pos-y"
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        value={selectedPosition.y}
-                        onChange={(e) => updateSelectedPosition('y', parseFloat(e.target.value))}
-                        className="w-full focus-visible-ring"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="pos-w" className="text-xs text-gray-400">Largeur: {selectedPosition.w.toFixed(1)}%</label>
-                      <input
-                        id="pos-w"
-                        type="range"
-                        min="1"
-                        max="30"
-                        step="0.1"
-                        value={selectedPosition.w}
-                        onChange={(e) => updateSelectedPosition('w', parseFloat(e.target.value))}
-                        className="w-full focus-visible-ring"
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="pos-h" className="text-xs text-gray-400">Hauteur: {selectedPosition.h.toFixed(1)}%</label>
-                      <input
-                        id="pos-h"
-                        type="range"
-                        min="1"
-                        max="30"
-                        step="0.1"
-                        value={selectedPosition.h}
-                        onChange={(e) => updateSelectedPosition('h', parseFloat(e.target.value))}
-                        className="w-full focus-visible-ring"
-                      />
-                    </div>
-                  </>
+                  <div className="space-y-4">
+                    <Slider
+                      id="pos-x"
+                      label="Position X"
+                      value={selectedPosition.x}
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      onChange={(v) => updateSelectedPosition('x', v)}
+                    />
+                    <Slider
+                      id="pos-y"
+                      label="Position Y"
+                      value={selectedPosition.y}
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      onChange={(v) => updateSelectedPosition('y', v)}
+                    />
+                    <Slider
+                      id="pos-w"
+                      label="Largeur"
+                      value={selectedPosition.w}
+                      min={1}
+                      max={30}
+                      step={0.1}
+                      onChange={(v) => updateSelectedPosition('w', v)}
+                    />
+                    <Slider
+                      id="pos-h"
+                      label="Hauteur"
+                      value={selectedPosition.h}
+                      min={1}
+                      max={30}
+                      step={0.1}
+                      onChange={(v) => updateSelectedPosition('h', v)}
+                    />
+                  </div>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 text-center py-8">
-                Cliquez sur un trou ou un grenier pour l'ajuster
+              <p className="text-sm text-ink-muted leading-relaxed">
+                Cliquez sur une case ou un grenier pour l'ajuster.
               </p>
             )}
 
             {/* Instructions */}
-            <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-              <h4 className="text-xs font-bold text-blue-400 mb-2 flex items-center"><Lightbulb className="w-3 h-3 mr-1" aria-hidden="true" /> Instructions</h4>
-              <ul className="text-[10px] text-gray-300 space-y-1">
-                <li>• <strong>Cliquez et glissez</strong> pour déplacer</li>
-                <li>• <strong>Cliquez</strong> pour sélectionner</li>
-                <li>• <strong>Sliders</strong> pour ajustements fins</li>
-                <li>• <strong>Copiez le code</strong> quand fini</li>
+            <div className="mt-8 pt-6 border-t border-rule">
+              <p className="kicker mb-2">Mode d'emploi</p>
+              <ul className="text-xs text-ink-muted leading-relaxed space-y-1">
+                <li>· Cliquer-glisser pour déplacer</li>
+                <li>· Cliquer pour sélectionner</li>
+                <li>· Sliders pour les réglages fins</li>
+                <li>· Enregistrer sauvegarde en base</li>
               </ul>
             </div>
           </div>
         </div>
 
-        {/* Footer - Action Buttons */}
-        <div className="bg-black/60 backdrop-blur-xl p-4 border-t border-purple-500/30 flex gap-3 flex-shrink-0">
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-rule flex items-center justify-end gap-2 shrink-0">
           <button
-            onClick={copyToClipboard}
-            className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white rounded-xl font-bold transition-all duration-300 shadow-lg hover:shadow-green-500/50 focus-visible-ring"
-          >
-            <span className="flex items-center justify-center"><Clipboard className="w-5 h-5 mr-2" aria-hidden="true" /> Copier la Configuration</span>
-          </button>
-          <button
+            type="button"
             onClick={onClose}
-            className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all duration-300 focus-visible-ring"
+            className="h-10 inline-flex items-center justify-center px-4 rounded-md text-sm font-medium text-ink-muted hover:text-ink hover:bg-canvas transition-colors duration-150"
           >
             Fermer
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !selectedSkin}
+            className="h-10 inline-flex items-center justify-center gap-2 px-5 rounded-md text-sm font-medium bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+          >
+            {saving ? <Loader2 size={14} strokeWidth={1.75} className="animate-spin" /> : <Save size={14} strokeWidth={1.75} />}
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
       </motion.div>
@@ -420,3 +407,85 @@ const BoardCalibrationTool: React.FC<BoardCalibrationToolProps> = ({ onClose }) 
 };
 
 export default BoardCalibrationTool;
+
+/* ----------------------------------------------------------------
+   Local components
+   ---------------------------------------------------------------- */
+
+const DraggableMarker: React.FC<{
+  pos: PitPosition;
+  isSelected?: boolean;
+  isDragging?: boolean;
+  label: string;
+  ariaLabel: string;
+  thick?: boolean;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onSelect: () => void;
+}> = ({ pos, isSelected, isDragging, label, ariaLabel, thick, onMouseDown, onSelect }) => {
+  const baseBorder = thick ? 'border-[3px]' : 'border-2';
+  const stateClass = isDragging
+    ? 'border-accent bg-accent/30 ring-1 ring-inset ring-accent'
+    : isSelected
+      ? 'border-accent bg-accent/20'
+      : 'border-clay-50/70 bg-clay-50/10 hover:border-accent';
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      aria-pressed={isSelected}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      onMouseDown={onMouseDown}
+      className={`absolute ${baseBorder} ${stateClass} cursor-move transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent`}
+      style={{
+        left: `${pos.x}%`,
+        top: `${pos.y}%`,
+        width: `${pos.w}%`,
+        height: `${pos.h}%`,
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      <div className="absolute inset-0 flex items-center justify-center bg-clay-900/55 backdrop-blur-[1px]">
+        <span
+          className="font-display tabular-nums text-clay-50 text-[11px] leading-none select-none"
+          style={{ fontVariationSettings: '"opsz" 14, "SOFT" 30' }}
+        >
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+const Slider: React.FC<{
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (v: number) => void;
+}> = ({ id, label, value, min, max, step, onChange }) => (
+  <div>
+    <label htmlFor={id} className="flex items-baseline justify-between mb-2">
+      <span className="kicker">{label}</span>
+      <span className="text-xs text-ink font-mono tabular-nums">{value.toFixed(1)} %</span>
+    </label>
+    <input
+      id={id}
+      type="range"
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(e) => onChange(parseFloat(e.target.value))}
+      className="w-full h-1 rounded-full bg-rule accent-accent cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    />
+  </div>
+);

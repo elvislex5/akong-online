@@ -1,0 +1,31 @@
+{
+  "id": "5636dcf8-ebe9-4e62-8ba7-2b291cfa30b9",
+  "date": "2026-04-30T15:58:26.559Z",
+  "mode": "OnlineHost",
+  "player1": "elvislex4",
+  "player2": "Joueur 2",
+  "moves": [],
+  "initialBoard": [
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "winner": 0,
+  "finalScores": [
+    0,
+    0
+  ],
+  "totalMoves": 0,
+  "durationMs": 21130
+}

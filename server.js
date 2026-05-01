@@ -4,10 +4,22 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
+import { registerAuthRoutes } from './server/auth/index.js';
 
 const app = express();
-app.use(cors());
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'];
+
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json());
+
+// Mount /auth/* endpoints (signup, login, refresh, logout). The whole
+// auth surface lives in server/auth/ — this is the only line that ties
+// it to server.js. See server/auth/index.js for the route table.
+registerAuthRoutes(app);
 
 // Supabase setup (for database access from server)
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -15,7 +27,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY; // Use service key 
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('⚠️  Missing Supabase credentials. Set SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables.');
-  console.log('Server will run without database persistence.');
 }
 
 const supabase = supabaseUrl && supabaseServiceKey
@@ -25,7 +36,7 @@ const supabase = supabaseUrl && supabaseServiceKey
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // TODO: Restrict in production
+    origin: ALLOWED_ORIGINS,
     methods: ["GET", "POST"]
   }
 });
@@ -175,6 +186,71 @@ async function getRoomByCode(roomCode) {
     return null;
   }
 }
+
+// ============================================
+// MATCHMAKING ENGINE
+// ============================================
+
+const MATCHMAKING_INITIAL_RANGE = 100;
+const MATCHMAKING_RANGE_PER_10S = 50;
+const MATCHMAKING_MAX_RANGE = 500;
+
+global.matchmakingQueue = [];
+
+function tryMatchmaking(io) {
+  const queue = global.matchmakingQueue;
+  if (!queue || queue.length < 2) return;
+
+  const now = Date.now();
+
+  for (let i = 0; i < queue.length; i++) {
+    const p1 = queue[i];
+    const waitTime = (now - p1.joinedAt) / 1000;
+    const range1 = Math.min(MATCHMAKING_MAX_RANGE, MATCHMAKING_INITIAL_RANGE + Math.floor(waitTime / 10) * MATCHMAKING_RANGE_PER_10S);
+
+    for (let j = i + 1; j < queue.length; j++) {
+      const p2 = queue[j];
+      if (p1.gameSystem !== p2.gameSystem || p1.cadence !== p2.cadence) continue;
+
+      const diff = Math.abs(p1.rating - p2.rating);
+      const p2Wait = (now - p2.joinedAt) / 1000;
+      const range2 = Math.min(MATCHMAKING_MAX_RANGE, MATCHMAKING_INITIAL_RANGE + Math.floor(p2Wait / 10) * MATCHMAKING_RANGE_PER_10S);
+
+      if (diff <= Math.max(range1, range2)) {
+        // Match found — remove both from queue
+        queue.splice(j, 1);
+        queue.splice(i, 1);
+
+        const roomId = `mm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        console.log(`[Matchmaking] Match: ${p1.username} (${p1.rating}) vs ${p2.username} (${p2.rating}) → room ${roomId}`);
+
+        // Notify both players
+        const matchData = {
+          roomId,
+          gameSystem: p1.gameSystem,
+          cadence: p1.cadence,
+          opponent: null,
+        };
+
+        io.to(p1.socketId).emit('matchmaking_found', {
+          ...matchData,
+          opponent: { userId: p2.userId, username: p2.username, rating: p2.rating },
+          role: 'host',
+        });
+        io.to(p2.socketId).emit('matchmaking_found', {
+          ...matchData,
+          opponent: { userId: p1.userId, username: p1.username, rating: p1.rating },
+          role: 'guest',
+        });
+
+        return; // Process one match per tick
+      }
+    }
+  }
+}
+
+// Run matchmaking every 3 seconds
+setInterval(() => tryMatchmaking(io), 3000);
 
 // ============================================
 // SOCKET.IO CONNECTION HANDLER
@@ -474,9 +550,54 @@ io.on('connection', (socket) => {
   });
 
   // ============================================
+  // MATCHMAKING
+  // ============================================
+
+  // Simple in-memory matchmaking queue
+  // Each entry: { userId, socketId, rating, rd, gameSystem, cadence, joinedAt, username }
+  socket.on('matchmaking_join', async (data) => {
+    const { userId, rating, rd, gameSystem, cadence, username } = data;
+    if (!userId || !gameSystem || !cadence) return;
+
+    const entry = {
+      userId,
+      socketId: socket.id,
+      rating: rating || 1200,
+      rd: rd || 350,
+      gameSystem,
+      cadence,
+      joinedAt: Date.now(),
+      username: username || 'Joueur',
+    };
+
+    // Add to global matchmaking queue
+    if (!global.matchmakingQueue) global.matchmakingQueue = [];
+    global.matchmakingQueue = global.matchmakingQueue.filter(e => e.userId !== userId);
+    global.matchmakingQueue.push(entry);
+
+    socket.emit('matchmaking_status', { status: 'searching', queueSize: global.matchmakingQueue.length });
+    console.log(`[Matchmaking] ${username} (${rating}) joined queue for ${gameSystem}/${cadence}`);
+
+    // Try to find a match
+    tryMatchmaking(io);
+  });
+
+  socket.on('matchmaking_leave', () => {
+    if (global.matchmakingQueue) {
+      global.matchmakingQueue = global.matchmakingQueue.filter(e => e.socketId !== socket.id);
+    }
+    socket.emit('matchmaking_status', { status: 'idle' });
+    console.log(`[Matchmaking] Player left queue: ${socket.id}`);
+  });
+
+  // ============================================
   // DISCONNECT
   // ============================================
   socket.on('disconnect', async () => {
+    // Remove from matchmaking queue on disconnect
+    if (global.matchmakingQueue) {
+      global.matchmakingQueue = global.matchmakingQueue.filter(e => e.socketId !== socket.id);
+    }
     console.log('[Socket] User disconnected:', socket.id);
 
     const userData = socketUserMap.get(socket.id);
@@ -510,6 +631,38 @@ app.get('/health', (req, res) => {
     database: supabase ? 'connected' : 'not configured',
     timestamp: new Date().toISOString()
   });
+});
+
+// AI Pipeline Endpoint: Upload game
+app.post('/api/upload-game', (req, res) => {
+  try {
+    const gameRecord = req.body;
+    if (!gameRecord || !gameRecord.id) {
+      return res.status(400).json({ error: 'Invalid game data' });
+    }
+    
+    const queueDir = path.join(process.cwd(), 'training', 'human_games_queue');
+    if (!fs.existsSync(queueDir)) {
+      fs.mkdirSync(queueDir, { recursive: true });
+    }
+    
+    // Save to <ID>.json
+    const filePath = path.join(queueDir, `game_${gameRecord.id}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(gameRecord, null, 2), 'utf-8');
+    
+    console.log(`[AI Pipeline] Received game ${gameRecord.id}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[AI Pipeline] Error saving game:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// AI Pipeline Endpoint: Trigger AI Update Broadcast
+app.post('/api/ai-updated', (req, res) => {
+  console.log('[AI Pipeline] Broadcasting AI_UPDATED to all clients...');
+  io.emit('AI_UPDATED', { timestamp: Date.now() });
+  res.json({ success: true });
 });
 
 // ============================================

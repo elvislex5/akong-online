@@ -23,3 +23,27 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Rust (engine-rs)
+engine-rs/target/
+engine-rs/Cargo.lock
+
+# EGTB generated artifacts
+egtb-data/
+
+# Training artifacts
+data/
+checkpoints/
+*.pt
+*.npz
+*.onnx
+
+# Accidental secret dumps at repo root (e.g. pasted SMTP keys)
+api brevo smtp *.txt
+*xkeysib*
+
+# Claude Code per-user permissions (shared settings.json is fine to commit)
+.claude/settings.local.json
+
+# Python training venv (gigabytes of installed packages)
+training/venv/

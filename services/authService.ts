@@ -1,89 +1,16 @@
-import { supabase, type Profile, type AuthUser } from './supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import { supabase, type Profile } from './supabase';
 
 /**
- * Authentication Service
- * Handles all auth-related operations using Supabase
+ * Profile + DB helpers.
+ *
+ * Auth itself (signup, login, logout, sessions) lives entirely in our own
+ * stack now — see `services/auth/client.ts` and `contexts/AuthContext.tsx`.
+ * The legacy supabase.auth.* wrappers that used to live here are gone:
+ * supabase-js is configured with the `accessToken` callback, which makes
+ * those methods throw if called.
+ *
+ * What remains in this file are pure DB helpers (profiles + game stats).
  */
-
-// ============================================
-// SIGN UP
-// ============================================
-export async function signUp(email: string, password: string) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-
-  return data;
-}
-
-// ============================================
-// SIGN IN
-// ============================================
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-
-  return data;
-}
-
-// ============================================
-// SIGN IN WITH GOOGLE (OAuth)
-// ============================================
-export async function signInWithGoogle() {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/game`,
-      queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
-      },
-    },
-  });
-
-  if (error) throw error;
-
-  return data;
-}
-
-// ============================================
-// SIGN OUT
-// ============================================
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
-}
-
-// ============================================
-// GET CURRENT SESSION
-// ============================================
-export async function getCurrentSession(): Promise<Session | null> {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  return data.session;
-}
-
-// ============================================
-// GET CURRENT USER
-// ============================================
-export async function getCurrentUser(): Promise<User | null> {
-  const { data, error } = await supabase.auth.getUser();
-
-  // Auth session missing is not an error - it just means user is not logged in
-  if (error && error.message !== 'Auth session missing!') {
-    console.error('Error getting user:', error);
-  }
-
-  return data.user;
-}
 
 // ============================================
 // GET USER PROFILE
@@ -117,6 +44,27 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
   if (error) throw error;
 
   return data;
+}
+
+/**
+ * Atomically bump the user's games_played + matching outcome counter on
+ * the profile. Backed by SQL function `record_game_for_profile` (see
+ * migration 020). Called from App.tsx's game-end effect for every
+ * authenticated user who finishes a game (AI / local / online).
+ *
+ * Errors are swallowed (logged only) — we never want a stats hiccup to
+ * break the game-end UX.
+ */
+export type GameOutcome = 'win' | 'loss' | 'draw';
+
+export async function recordGameForProfile(userId: string, outcome: GameOutcome): Promise<void> {
+  const { error } = await supabase.rpc('record_game_for_profile', {
+    p_user_id: userId,
+    p_outcome: outcome,
+  });
+  if (error) {
+    console.error('[authService] recordGameForProfile error:', error);
+  }
 }
 
 // ============================================
@@ -157,39 +105,4 @@ export async function updateUsername(userId: string, newUsername: string) {
   }
 
   return await updateProfile(userId, { username: newUsername });
-}
-
-// ============================================
-// GET PROFILE WITH AUTH USER
-// ============================================
-export async function getCurrentAuthUser(): Promise<AuthUser | null> {
-  const user = await getCurrentUser();
-  if (!user) return null;
-
-  const profile = await getUserProfile(user.id);
-
-  return {
-    id: user.id,
-    email: user.email || '',
-    profile: profile || undefined,
-  };
-}
-
-// ============================================
-// AUTH STATE CHANGE LISTENER
-// ============================================
-export function onAuthStateChange(callback: (user: User | null) => void) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user || null);
-  });
-
-  return subscription;
-}
-
-// ============================================
-// GET ACCESS TOKEN (for Socket.io authentication)
-// ============================================
-export async function getAccessToken(): Promise<string | null> {
-  const session = await getCurrentSession();
-  return session?.access_token || null;
 }

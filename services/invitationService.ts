@@ -16,7 +16,6 @@ export async function sendInvitation(
   toUserId: string,
   roomId: string
 ): Promise<GameInvitation> {
-  console.log('[invitationService] Sending invitation:', { fromUserId, toUserId, roomId });
 
   const { data, error } = await supabase
     .from('game_invitations')
@@ -82,7 +81,6 @@ export async function acceptInvitation(invitationId: string): Promise<{
   room_id: string;
   room_code: string;
 } | null> {
-  console.log('[invitationService] Accepting invitation:', invitationId);
 
   const { data, error } = await supabase.rpc('accept_invitation', {
     p_invitation_id: invitationId
@@ -104,7 +102,6 @@ export async function acceptInvitation(invitationId: string): Promise<{
  * Decline an invitation
  */
 export async function declineInvitation(invitationId: string): Promise<void> {
-  console.log('[invitationService] Declining invitation:', invitationId);
 
   const { error } = await supabase.rpc('decline_invitation', {
     p_invitation_id: invitationId
@@ -120,7 +117,6 @@ export async function declineInvitation(invitationId: string): Promise<void> {
  * Cancel an invitation (sender cancels)
  */
 export async function cancelInvitation(invitationId: string): Promise<void> {
-  console.log('[invitationService] Cancelling invitation:', invitationId);
 
   const { error } = await supabase.rpc('cancel_invitation', {
     p_invitation_id: invitationId
@@ -161,7 +157,6 @@ export function subscribeToInvitations(
   userId: string,
   callback: (invitation: GameInvitation) => void
 ) {
-  console.log('[invitationService] Subscribing to invitations for user:', userId);
 
   const channel = supabase
     .channel(`invitations:${userId}`)
@@ -174,7 +169,6 @@ export function subscribeToInvitations(
         filter: `to_user_id=eq.${userId}`
       },
       (payload) => {
-        console.log('[invitationService] New invitation received:', payload);
         callback(payload.new as GameInvitation);
       }
     )
@@ -187,14 +181,12 @@ export function subscribeToInvitations(
         filter: `to_user_id=eq.${userId}`
       },
       (payload) => {
-        console.log('[invitationService] Invitation updated:', payload);
         callback(payload.new as GameInvitation);
       }
     )
     .subscribe();
 
   return () => {
-    console.log('[invitationService] Unsubscribing from invitations for user:', userId);
     supabase.removeChannel(channel);
   };
 }
@@ -206,7 +198,6 @@ export function subscribeToSentInvitations(
   userId: string,
   callback: (invitation: GameInvitation) => void
 ) {
-  console.log('[invitationService] Subscribing to sent invitations for user:', userId);
 
   const channel = supabase
     .channel(`sent_invitations:${userId}`)
@@ -219,14 +210,12 @@ export function subscribeToSentInvitations(
         filter: `from_user_id=eq.${userId}`
       },
       (payload) => {
-        console.log('[invitationService] Sent invitation status changed:', payload);
         callback(payload.new as GameInvitation);
       }
     )
     .subscribe();
 
   return () => {
-    console.log('[invitationService] Unsubscribing from sent invitations for user:', userId);
     supabase.removeChannel(channel);
   };
 }
